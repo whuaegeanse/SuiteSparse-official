@@ -147,7 +147,7 @@ endif ( )
 set ( GPUQRENGINE_INCLUDES Include Include/Kernel
     Include/Kernel/Apply Include/Kernel/Assemble Include/Kernel/Factorize )
 
-include_directories ( ${GPUQRENGINE_INCLUDES} ${CUDAToolkit_INCLUDE_DIRS} )
+include_directories ( ${GPUQRENGINE_INCLUDES} ${CUDAToolkit_INCLUDE_DIRS} "../SuiteSparse_GPURuntime/Include" )
 
 #-------------------------------------------------------------------------------
 # dynamic gpuqrengine library properties
@@ -175,7 +175,7 @@ if ( SUITESPARSE_CUDA )
     set_target_properties ( gpuqrengine PROPERTIES POSITION_INDEPENDENT_CODE ON )
     set_target_properties ( gpuqrengine PROPERTIES CUDA_SEPARABLE_COMPILATION ON )
     target_link_libraries ( gpuqrengine PRIVATE CUDA::nvrtc CUDA::cudart_static
-        CUDA::nvToolsExt CUDA::cublas )
+        CUDA::nvToolsExt CUDA::cublas suitesparse_gpuruntime suitesparseconfig )
 endif ( )
 
 target_include_directories ( gpuqrengine
@@ -213,7 +213,7 @@ if ( NOT NSTATIC )
         set_target_properties ( gpuqrengine_static PROPERTIES CUDA_SEPARABLE_COMPILATION on )
         set_target_properties ( gpuqrengine_static PROPERTIES POSITION_INDEPENDENT_CODE on )
         target_link_libraries ( gpuqrengine_static PUBLIC CUDA::nvrtc CUDA::cudart_static
-            CUDA::nvToolsExt CUDA::cublas )
+            CUDA::nvToolsExt CUDA::cublas suitesparse_gpuruntime_static suitesparseconfig_static )
     endif ( )
 
     target_include_directories ( gpuqrengine_static

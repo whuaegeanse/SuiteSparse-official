@@ -25,8 +25,8 @@
 
 static int compareTaskTime (const void * a, const void * b)
 {
-    TaskDescriptor *ta = reinterpret_cast<TaskDescriptor*> (a);
-    TaskDescriptor *tb = reinterpret_cast<TaskDescriptor*> (b);
+    TaskDescriptor *ta = (TaskDescriptor*) (a);
+    TaskDescriptor *tb = (TaskDescriptor*) (b);
 
     int64_t aFlops = getWeightedFlops(ta);
     int64_t bFlops = getWeightedFlops(tb);

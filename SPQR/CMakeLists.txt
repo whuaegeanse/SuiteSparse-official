@@ -152,7 +152,8 @@ configure_file ( "Config/spqr_version.tex.in"
 # include directories
 #-------------------------------------------------------------------------------
 
-include_directories ( Source Include )
+include_directories ( Source Include "../SuiteSparse_GPURuntime/Include"
+    "../GPUQREngine/Include" )
 
 #-------------------------------------------------------------------------------
 # dynamic spqr library properties

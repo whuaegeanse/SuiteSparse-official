@@ -476,8 +476,8 @@ int SuiteSparse_version     // returns SUITESPARSE_VERSION
 #else
 
     // let CMake decide how C calls Fortran
-    #define SUITESPARSE_FORTRAN(name,NAME) name##_
-    #define SUITESPARSE__FORTRAN(name,NAME) name##_
+    #define SUITESPARSE_FORTRAN(name,NAME) name
+    #define SUITESPARSE__FORTRAN(name,NAME) name
 
 #endif
 

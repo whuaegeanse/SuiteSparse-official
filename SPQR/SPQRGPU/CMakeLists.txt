@@ -36,7 +36,7 @@ endif ( )
 
 file ( GLOB SPQR_CUDA_SOURCES "spqrgpu_*.cpp" )
 
-add_library ( spqr_cuda SHARED ${SPQR_CUDA_SOURCES} )
+add_library ( spqr_cuda SHARED ${SPQR_CUDA_SOURCES} "../Source/spqr_cholmod_wrappers.cpp" )
 
 set_target_properties ( spqr_cuda PROPERTIES
     VERSION ${SPQR_VERSION_MAJOR}.${SPQR_VERSION_MINOR}.${SPQR_VERSION_SUB}
@@ -66,7 +66,9 @@ endif ( )
 
 set ( SPQR_CUDA_INCLUDES ../Include )
 
-include_directories ( ${SPQR_CUDA_INCLUDES} ${CUDAToolkit_INCLUDE_DIRS} )
+include_directories ( ${SPQR_CUDA_INCLUDES} ${CUDAToolkit_INCLUDE_DIRS}
+    "../../SuiteSparse_GPURuntime/Include"
+    "../../GPUQREngine/Include" )
 
 if ( TARGET gpuqrengine )
     target_include_directories ( spqr_cuda PRIVATE
@@ -108,10 +110,10 @@ target_link_libraries ( spqr_cuda PRIVATE cholmod )
 
 if ( SUITESPARSE_CUDA )
     target_link_libraries ( spqr_cuda PRIVATE CUDA::nvrtc CUDA::cudart_static
-        CUDA::nvToolsExt CUDA::cublas )
+        CUDA::nvToolsExt CUDA::cublas suitesparse_gpuruntime gpuqrengine )
     if ( NOT NSTATIC )
         target_link_libraries ( spqr_cuda_static PUBLIC CUDA::nvrtc CUDA::cudart_static
-            CUDA::nvToolsExt CUDA::cublas )
+            CUDA::nvToolsExt CUDA::cublas suitesparse_gpuruntime_static gpuqrengine_static )
     endif ( )
 endif ( )
 
