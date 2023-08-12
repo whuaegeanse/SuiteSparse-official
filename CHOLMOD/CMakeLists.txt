@@ -538,9 +538,9 @@ if ( DEMO )
     endif ( )
 
     # Libraries required for Demo programs
-    target_link_libraries ( cholmod_demo   PUBLIC cholmod ${CHOLMOD_CUDA} suitesparseconfig )
-    target_link_libraries ( cholmod_l_demo PUBLIC cholmod ${CHOLMOD_CUDA} suitesparseconfig )
-    target_link_libraries ( cholmod_simple PUBLIC cholmod ${CHOLMOD_CUDA} )
+    target_link_libraries ( cholmod_demo   PUBLIC cholmod cholmod_cuda suitesparseconfig )
+    target_link_libraries ( cholmod_l_demo PUBLIC cholmod cholmod_cuda suitesparseconfig )
+    target_link_libraries ( cholmod_simple PUBLIC cholmod cholmod_cuda )
 
 else ( )
 

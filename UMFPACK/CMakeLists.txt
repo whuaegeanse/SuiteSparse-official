@@ -237,10 +237,10 @@ include_directories ( ${BLAS_INCLUDE_DIRS} )
 if ( NOT NCHOLMOD )
     # link with CHOLMOD and its dependencies, both required and optional
     target_link_libraries ( umfpack PRIVATE
-        cholmod ${CHOLMOD_CUDA_LIBRARIES} )
+        cholmod cholmod_cuda )
     if ( NOT NSTATIC )
         target_link_libraries ( umfpack_static PUBLIC
-            ${CHOLMOD_CUDA_STATIC} )
+            cholmod_cuda_static )
         if ( TARGET cholmod_static )
             target_link_libraries ( umfpack_static PUBLIC cholmod_static )
         else ( )
