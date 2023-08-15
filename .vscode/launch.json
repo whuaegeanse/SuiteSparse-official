@@ -18,7 +18,9 @@
                 "D:/zgh/Libs/all-install/vcpkg/vcpkg-export-20230810-085721/scripts/buildsystems/vcpkg.cmake",
                 "--install_path",
                 "D:/zgh/Libs/all-install/SuiteSparse-dev2",
-                "--with_cuda"
+                "--with_cuda",
+                "--bla_vendor",
+                "All"
             ],
             "console": "integratedTerminal",
             "justMyCode": true
