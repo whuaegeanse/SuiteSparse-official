@@ -44,6 +44,13 @@ def parse_args():
     )
 
     parser.add_argument(
+        "--bla_vendor",
+        default="All",
+        help="CMake generator, e.g., All, OpenBLAS, Intel10_64ilp, "
+        "Intel10_64lp, Apple, Arm_mp, IBMESSL_SMP, Generic",
+    )
+
+    parser.add_argument(
         "--cmake_generator",
         default="",
         help="CMake generator, e.g., Visual Studio 17 2022",
@@ -106,7 +113,8 @@ def parse_args():
     if PLATFORM_IS_WINDOWS:
         args.cmake_config_args.append("-DCMAKE_GENERATOR_PLATFORM=x64")
 
-    args.cmake_config_args.append("-DBLA_VENDOR=All")
+    if args.bla_vendor:
+        args.cmake_config_args.append("-DBLA_VENDOR={}".format(args.bla_vendor))
 
     if args.build_shared:
         args.cmake_config_args.append("-DNSTATIC=ON")
@@ -198,7 +206,7 @@ def main():
     libs = BUILD_LIBS.split(":")
     for lib in libs:
         if not lib:
-           continue
+            continue
         source_path = os.path.join(args.source_path, lib)
         build_dir = os.path.join(args.build_path, lib)
         mkdir_if_not_exists(build_dir)
