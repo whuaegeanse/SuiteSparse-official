@@ -17,7 +17,9 @@
 #include "cholmod.h"
 #include "colamd.h"
 #include "cs.h"
+#if ! defined (NO_GRAPHBLAS)
 #include "GraphBLAS.h"
+#endif
 #include "klu.h"
 #include "ldl.h"
 #include "RBio.h"
