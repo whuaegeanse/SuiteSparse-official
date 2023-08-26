@@ -35,6 +35,7 @@ my_*.out
 .DS_Store
 .nfs*
 .pyc
+.vs
 
 # ignore these specific programs in the Package/Demo directories
 AMD/Demo/amd_demo
