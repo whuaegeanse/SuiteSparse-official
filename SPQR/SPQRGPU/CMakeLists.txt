@@ -36,7 +36,7 @@ endif ( )
 
 file ( GLOB SPQR_CUDA_SOURCES "spqrgpu_*.cpp" )
 
-add_library ( SPQR_CUDA SHARED ${SPQR_CUDA_SOURCES} )
+add_library ( SPQR_CUDA SHARED ${SPQR_CUDA_SOURCES} "../Source/spqr_cholmod_wrappers.cpp" )
 
 set_target_properties ( SPQR_CUDA PROPERTIES
     VERSION ${SPQR_VERSION_MAJOR}.${SPQR_VERSION_MINOR}.${SPQR_VERSION_SUB}
@@ -61,7 +61,7 @@ if ( NOT NSTATIC )
 
     if ( MSVC )
         set_target_properties ( SPQR_CUDA_static PROPERTIES
-            OUTPUT_NAME SPQR_CUDA_static )
+            OUTPUT_NAME spqr_cuda_static )
     endif ( )
 endif ( )
 
@@ -99,20 +99,20 @@ set_target_properties ( SPQR_CUDA_static PROPERTIES CUDA_SEPARABLE_COMPILATION o
 set_target_properties ( SPQR_CUDA_static PROPERTIES POSITION_INDEPENDENT_CODE on )
 
 if ( TARGET SuiteSparse::CHOLMOD_static )
-    target_link_libraries ( SPQR_CUDA_static PUBLIC SuiteSparse::CHOLMOD_static )
+    target_link_libraries ( SPQR_CUDA_static PUBLIC SuiteSparse::CHOLMOD_static SuiteSparse::SuiteSparseConfig_static )
 else ( )
-    target_link_libraries ( SPQR_CUDA_static PUBLIC SuiteSparse::CHOLMOD )
+    target_link_libraries ( SPQR_CUDA_static PUBLIC SuiteSparse::CHOLMOD SuiteSparse::SuiteSparseConfig )
 endif ( )
 endif ( )
 
-target_link_libraries ( SPQR_CUDA PRIVATE SuiteSparse::CHOLMOD )
+target_link_libraries ( SPQR_CUDA PRIVATE SuiteSparse::CHOLMOD SuiteSparse::SuiteSparseConfig  )
 
 if ( SUITESPARSE_CUDA )
     target_link_libraries ( SPQR_CUDA PRIVATE CUDA::nvrtc CUDA::cudart_static
-        CUDA::nvToolsExt CUDA::cublas )
+        CUDA::nvToolsExt CUDA::cublas SuiteSparse::GPUQREngine SuiteSparse::GPURuntime SuiteSparse::CHOLMOD_CUDA SuiteSparse::SuiteSparseConfig )
     if ( NOT NSTATIC )
         target_link_libraries ( SPQR_CUDA_static PUBLIC CUDA::nvrtc CUDA::cudart_static
-            CUDA::nvToolsExt CUDA::cublas )
+            CUDA::nvToolsExt CUDA::cublas SuiteSparse::GPUQREngine_static SuiteSparse::GPURuntime_static SuiteSparse::CHOLMOD_CUDA_static SuiteSparse::SuiteSparseConfig_static )
     endif ( )
 endif ( )
 

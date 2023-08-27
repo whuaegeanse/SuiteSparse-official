@@ -88,13 +88,17 @@ include_directories ( ${SUITESPARSE_GPURUNTIME_INCLUDES} ${CUDAToolkit_INCLUDE_D
 
 add_library ( GPURuntime SHARED ${SUITESPARSE_GPURUNTIME_SOURCES} )
 
+file ( GLOB GPURuntime_PUBLIC_HEADERS "Include/*.hpp" )
+list ( JOIN GPURuntime_PUBLIC_HEADERS ";" GPURuntime_PUBLIC_HEADERS)
+
+
 set_target_properties ( GPURuntime PROPERTIES
     VERSION ${SUITESPARSE_GPURUNTIME_VERSION_MAJOR}.${SUITESPARSE_GPURUNTIME_VERSION_MINOR}.${SUITESPARSE_GPURUNTIME_VERSION_SUB}
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
     OUTPUT_NAME suitesparse_gpuruntime
     SOVERSION ${SUITESPARSE_GPURUNTIME_VERSION_MAJOR}
-    PUBLIC_HEADER "Include/SuiteSparse_GPURuntime.hpp"
+    PUBLIC_HEADER "${GPURuntime_PUBLIC_HEADERS}"
     WINDOWS_EXPORT_ALL_SYMBOLS ON )
 
 target_include_directories ( GPURuntime PRIVATE
@@ -108,7 +112,7 @@ if ( SUITESPARSE_CUDA )
     set_target_properties ( GPURuntime PROPERTIES POSITION_INDEPENDENT_CODE ON )
     set_target_properties ( GPURuntime PROPERTIES CUDA_SEPARABLE_COMPILATION ON )
     target_link_libraries ( GPURuntime PRIVATE CUDA::nvrtc CUDA::cudart_static
-        CUDA::nvToolsExt CUDA::cublas )
+        CUDA::nvToolsExt CUDA::cublas SuiteSparse::SuiteSparseConfig )
 endif ( )
 
 target_include_directories ( GPURuntime 
@@ -145,7 +149,7 @@ if ( NOT NSTATIC )
         set_target_properties ( GPURuntime_static PROPERTIES CUDA_SEPARABLE_COMPILATION on )
         set_target_properties ( GPURuntime_static PROPERTIES POSITION_INDEPENDENT_CODE on )
         target_link_libraries ( GPURuntime_static PUBLIC CUDA::nvrtc CUDA::cudart_static
-            CUDA::nvToolsExt CUDA::cublas )
+            CUDA::nvToolsExt CUDA::cublas SuiteSparse::SuiteSparseConfig_static )
     endif ( )
 
     target_include_directories ( GPURuntime_static 

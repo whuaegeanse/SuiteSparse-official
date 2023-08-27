@@ -88,13 +88,17 @@ else ( )
 endif ( )
 
 add_library ( AMD SHARED ${AMD_SOURCES} )
+
+file ( GLOB AMD_PUBLIC_HEADERS "Include/*.h" )
+list ( JOIN AMD_PUBLIC_HEADERS ";" AMD_PUBLIC_HEADERS)
+
 set_target_properties ( AMD PROPERTIES
     VERSION ${AMD_VERSION_MAJOR}.${AMD_VERSION_MINOR}.${AMD_VERSION_SUB}
     C_STANDARD 11
     C_STANDARD_REQUIRED ON
     OUTPUT_NAME amd
     SOVERSION ${AMD_VERSION_MAJOR}
-    PUBLIC_HEADER "Include/amd.h"
+    PUBLIC_HEADER "${AMD_PUBLIC_HEADERS}"
     WINDOWS_EXPORT_ALL_SYMBOLS ON )
 
 target_include_directories ( AMD

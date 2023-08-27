@@ -280,11 +280,8 @@ include_directories ( ${LAPACK_INCLUDE_DIR} )
 
 # CHOLMOD:
 # link with CHOLMOD and its dependencies, both required and optional
-target_link_libraries ( SPQR PRIVATE
-    SuiteSparse::CHOLMOD ${CHOLMOD_CUDA_LIBRARIES} )
+target_link_libraries ( SPQR PRIVATE SuiteSparse::CHOLMOD )
 if ( NOT NSTATIC )
-    target_link_libraries ( SPQR_static PUBLIC
-        ${CHOLMOD_CUDA_STATIC} )
     if ( TARGET SuiteSparse::CHOLMOD_static )
         target_link_libraries ( SPQR_static PUBLIC SuiteSparse::CHOLMOD_static )
     else ( )
@@ -296,7 +293,7 @@ endif ( )
 message ( STATUS "SPQR cuda:  ${SPQR_CUDA_LIBS} " )
 target_link_libraries ( SPQR PRIVATE ${SPQR_CUDA_LIBS} ${CUDA_LIBRARIES} )
 if ( NOT NSTATIC )
-target_link_libraries ( SPQR_static PUBLIC ${SPQR_CUDA_LIBS} ${CUDA_LIBRARIES} )
+    target_link_libraries ( SPQR_static PUBLIC ${SPQR_CUDA_LIBS} ${CUDA_LIBRARIES} )
 endif ( )
 
 #-------------------------------------------------------------------------------

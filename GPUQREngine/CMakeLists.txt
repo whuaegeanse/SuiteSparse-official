@@ -155,13 +155,17 @@ include_directories ( ${GPUQRENGINE_INCLUDES} ${CUDAToolkit_INCLUDE_DIRS} )
 
 add_library ( GPUQREngine SHARED ${GPUQRENGINE_SOURCES} )
 
+file ( GLOB GPUQREngine_PUBLIC_HEADERS "Include/*.hpp" )
+list ( JOIN GPUQREngine_PUBLIC_HEADERS ";" GPUQREngine_PUBLIC_HEADERS)
+
+
 set_target_properties ( GPUQREngine PROPERTIES
     VERSION ${GPUQRENGINE_VERSION_MAJOR}.${GPUQRENGINE_VERSION_MINOR}.${GPUQRENGINE_VERSION_SUB}
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
     OUTPUT_NAME gpuqrengine
     SOVERSION ${GPUQRENGINE_VERSION_MAJOR}
-    PUBLIC_HEADER "Include/GPUQREngine.hpp"
+    PUBLIC_HEADER "${GPUQREngine_PUBLIC_HEADERS}"
     WINDOWS_EXPORT_ALL_SYMBOLS ON )
 
 target_include_directories ( GPUQREngine PRIVATE
@@ -176,7 +180,7 @@ if ( SUITESPARSE_CUDA )
     set_target_properties ( GPUQREngine PROPERTIES POSITION_INDEPENDENT_CODE ON )
     set_target_properties ( GPUQREngine PROPERTIES CUDA_SEPARABLE_COMPILATION ON )
     target_link_libraries ( GPUQREngine PRIVATE CUDA::nvrtc CUDA::cudart_static
-        CUDA::nvToolsExt CUDA::cublas )
+        CUDA::nvToolsExt CUDA::cublas SuiteSparse::GPURuntime SuiteSparse::SuiteSparseConfig )
 endif ( )
 
 target_include_directories ( GPUQREngine
@@ -214,7 +218,7 @@ if ( NOT NSTATIC )
         set_target_properties ( GPUQREngine_static PROPERTIES CUDA_SEPARABLE_COMPILATION on )
         set_target_properties ( GPUQREngine_static PROPERTIES POSITION_INDEPENDENT_CODE on )
         target_link_libraries ( GPUQREngine_static PUBLIC CUDA::nvrtc CUDA::cudart_static
-            CUDA::nvToolsExt CUDA::cublas )
+            CUDA::nvToolsExt CUDA::cublas SuiteSparse::GPURuntime_static SuiteSparse::SuiteSparseConfig_static )
     endif ( )
 
     target_include_directories ( GPUQREngine_static
