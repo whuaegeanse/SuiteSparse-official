@@ -116,14 +116,14 @@ int TEMPLATE2 (CHOLMOD (gpu_init))
     }
 
     /* divvy up the memory in dev_mempool */
-    gpu_p->d_Lx[0] = (double*)((char*)Common->dev_mempool);
-    gpu_p->d_Lx[1] = (double*)((char*)Common->dev_mempool + Common->devBuffSize);
-    gpu_p->d_C = (double*)((char*)Common->dev_mempool + 2 * Common->devBuffSize);
-    gpu_p->d_A[0] = (double*)((char*)Common->dev_mempool + 3 * Common->devBuffSize);
-    gpu_p->d_A[1] = (double*)((char*)Common->dev_mempool + 4 * Common->devBuffSize);
-    gpu_p->d_Ls = (void*)((char*)Common->dev_mempool + 5 * Common->devBuffSize);
-    gpu_p->d_Map = (void*)((char*)gpu_p->d_Ls + (nls + 1) * sizeof(int64_t));
-    gpu_p->d_RelativeMap = (void*)((char*)gpu_p->d_Map + (n + 1) * sizeof(int64_t)) ;
+    gpu_p->d_Lx[0] = Common->dev_mempool;
+    gpu_p->d_Lx[1] = (char*)Common->dev_mempool + Common->devBuffSize;
+    gpu_p->d_C = (char*)Common->dev_mempool + 2 * Common->devBuffSize;
+    gpu_p->d_A[0] = (char*)Common->dev_mempool + 3 * Common->devBuffSize;
+    gpu_p->d_A[1] = (char*)Common->dev_mempool + 4 * Common->devBuffSize;
+    gpu_p->d_Ls = (char*)Common->dev_mempool + 5 * Common->devBuffSize;
+    gpu_p->d_Map = (char*)gpu_p->d_Ls + (nls + 1) * sizeof(int64_t);
+    gpu_p->d_RelativeMap = (char*)gpu_p->d_Map + (n + 1) * sizeof(int64_t) ;
 
     /* Copy all of the Ls and Lpi data to the device.  If any supernodes are
      * to be computed on the device then this will be needed, so might as
