@@ -70,7 +70,7 @@ int main (int argc, char **argv)
     B = cholmod_l_ones (m, 1, A->xtype, cc) ;
 
     double tol = SPQR_NO_TOL ;
-    long econ = 0 ;
+    int64_t econ = 0 ;
 
     // [Q,R,E] = qr (A), but discard Q
     // SuiteSparseQR <double> (ordering, tol, econ, A, &R, &E, cc) ;
