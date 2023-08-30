@@ -12,10 +12,10 @@
 # cmake 3.22 is required to find the BLAS/LAPACK
 cmake_minimum_required ( VERSION 3.22 )
 
-set ( CHOLMOD_DATE "June 16, 2023" )
+set ( CHOLMOD_DATE "FIXME DATE, 2023" )
 set ( CHOLMOD_VERSION_MAJOR 4 )
-set ( CHOLMOD_VERSION_MINOR 0 )
-set ( CHOLMOD_VERSION_SUB   4 )
+set ( CHOLMOD_VERSION_MINOR 2 )
+set ( CHOLMOD_VERSION_SUB   0 )
 
 message ( STATUS "Building CHOLMOD version: v"
     ${CHOLMOD_VERSION_MAJOR}.
@@ -76,22 +76,22 @@ else ( )
     find_package ( OpenMP )
 endif ( )
 
-find_package ( SuiteSparse_config 7.1.0
+find_package ( SuiteSparse_config 7.2.0
     PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-    find_package ( SuiteSparse_config 7.1.0 REQUIRED )
+    find_package ( SuiteSparse_config 7.2.0 REQUIRED )
 endif ( )
 
-find_package ( COLAMD 3.0.4
+find_package ( COLAMD 3.2.0
     PATHS ${CMAKE_SOURCE_DIR}/../COLAMD/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::COLAMD )
-    find_package ( COLAMD 3.0.4 REQUIRED )
+    find_package ( COLAMD 3.2.0 REQUIRED )
 endif ( )
 
-find_package ( AMD 3.0.4
+find_package ( AMD 3.2.0
     PATHS ${CMAKE_SOURCE_DIR}/../AMD/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::AMD )
-    find_package ( AMD 3.0.4 REQUIRED )
+    find_package ( AMD 3.2.0 REQUIRED )
 endif ( )
 
 #-------------------------------------------------------------------------------
@@ -194,16 +194,16 @@ endif ( )
 
     if ( NOT NCAMD )
         # find CAMD and CCOLAMD
-        find_package ( CAMD 3.0.4
+        find_package ( CAMD 3.2.0
             PATHS ${CMAKE_SOURCE_DIR}/../CAMD/build NO_DEFAULT_PATH )
         if ( NOT TARGET SuiteSparse::CAMD )
-            find_package ( CAMD 3.0.4 )
+            find_package ( CAMD 3.2.0 )
         endif ( )
 
-        find_package ( CCOLAMD 3.0.4
+        find_package ( CCOLAMD 3.2.0
             PATHS ${CMAKE_SOURCE_DIR}/../CCOLAMD/build NO_DEFAULT_PATH )
         if ( NOT TARGET SuiteSparse::CCOLAMD )
-            find_package ( CCOLAMD 3.0.4 )
+            find_package ( CCOLAMD 3.2.0 )
         endif ( )
 
         if ( NOT CAMD_FOUND OR NOT CCOLAMD_FOUND )
@@ -268,14 +268,9 @@ endif ( )
 add_subdirectory ( GPU )
 if ( SUITESPARSE_CUDA )
     # with CUDA
-    set ( CHOLMOD_CUDA CHOLMOD_CUDA ${CUDA_LIBRARIES} )
-    set ( CHOLMOD_CUDA_STATIC CHOLMOD_CUDA_static ${CUDA_LIBRARIES} )
+    message ( STATUS "CUDA libraries: " ${CUDA_LIBRARIES} )
     include_directories ( GPU ${CUDAToolkit_INCLUDE_DIRS} )
     link_directories ( "GPU" "${CUDA_LIBRARIES}" "/usr/local/cuda/lib64/stubs" "/usr/local/cuda/lib64" )
-else ( )
-    # without CUDA and RMM
-    set ( CHOLMOD_CUDA )
-    set ( CHOLMOD_CUDA_STATIC )
 endif ( )
 
 #-------------------------------------------------------------------------------
@@ -378,6 +373,7 @@ if ( OPENMP_FOUND )
     target_link_libraries ( CHOLMOD PRIVATE ${OpenMP_C_LIBRARIES} )
     if ( NOT NSTATIC )
         target_link_libraries ( CHOLMOD_static PUBLIC ${OpenMP_C_LIBRARIES} )
+        list ( APPEND CHOLMOD_STATIC_LIBS ${OpenMP_C_LIBRARIES} )
     endif ( )
     set ( CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   ${OpenMP_C_FLAGS} " )
     set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_C_FLAGS} " )
@@ -388,9 +384,11 @@ endif ( )
 if ( NOT WIN32 )
     target_link_libraries ( CHOLMOD PRIVATE m )
     if ( NOT NSTATIC )
+        list ( APPEND CHOLMOD_STATIC_LIBS "m" )
         target_link_libraries ( CHOLMOD_static PUBLIC m )
     endif ( )
 endif ( )
+        list ( APPEND CHOLMOD_STATIC_LIBS "m" )
 
 # AMD:
 target_link_libraries ( CHOLMOD PRIVATE SuiteSparse::AMD )
@@ -414,33 +412,36 @@ endif ( )
 
 # BLAS and LAPACK: for the Supernodal Module
 if ( NOT NSUPERNODAL )
-    # BLAS:
-    message ( STATUS "BLAS libraries:      ${BLAS_LIBRARIES} ")
-    message ( STATUS "BLAS include:        ${BLAS_INCLUDE_DIRS} ")
-    message ( STATUS "BLAS linker flags:   ${BLAS_LINKER_FLAGS} ")
-    target_link_libraries ( CHOLMOD PRIVATE ${BLAS_LIBRARIES} )
-    if ( NOT NSTATIC )
-        target_link_libraries ( CHOLMOD_static PUBLIC ${BLAS_LIBRARIES} )
-    endif ( )
-    include_directories ( ${BLAS_INCLUDE_DIRS} )
-
     # LAPACK:
     message ( STATUS "LAPACK libraries:    ${LAPACK_LIBRARIES} ")
     message ( STATUS "LAPACK include:      ${LAPACK_INCLUDE_DIRS} ")
     message ( STATUS "LAPACK linker flags: ${LAPACK_LINKER_FLAGS} ")
     target_link_libraries ( CHOLMOD PRIVATE ${LAPACK_LIBRARIES} )
     if ( NOT NSTATIC )
+        list ( APPEND CHOLMOD_STATIC_LIBS ${LAPACK_LIBRARIES} )
         target_link_libraries ( CHOLMOD_static PUBLIC ${LAPACK_LIBRARIES} )
     endif ( )
     include_directories ( ${LAPACK_INCLUDE_DIR} )
+
+    # BLAS:
+    message ( STATUS "BLAS libraries:      ${BLAS_LIBRARIES} ")
+    message ( STATUS "BLAS include:        ${BLAS_INCLUDE_DIRS} ")
+    message ( STATUS "BLAS linker flags:   ${BLAS_LINKER_FLAGS} ")
+    target_link_libraries ( CHOLMOD PRIVATE ${BLAS_LIBRARIES} )
+    if ( NOT NSTATIC )
+        list ( APPEND CHOLMOD_STATIC_LIBS ${BLAS_LIBRARIES} )
+        target_link_libraries ( CHOLMOD_static PUBLIC ${BLAS_LIBRARIES} )
+    endif ( )
+    include_directories ( ${BLAS_INCLUDE_DIRS} )
 endif ( )
 
 # CAMD and CCOLAMD:
 if ( NOT NCAMD )
     target_link_libraries ( CHOLMOD PRIVATE SuiteSparse::CAMD )
     if ( NOT NSTATIC )
+        set ( CHOLMOD_STATIC_MODULES "${CHOLMOD_STATIC_MODULES} CAMD" )
         if ( TARGET SuiteSparse::CAMD_static )
-            target_link_libraries (CHOLMOD_static PUBLIC SuiteSparse::CAMD_static )
+            target_link_libraries ( CHOLMOD_static PUBLIC SuiteSparse::CAMD_static )
         else ( )
             target_link_libraries ( CHOLMOD_static PUBLIC SuiteSparse::CAMD )
         endif ( )
@@ -448,6 +449,7 @@ if ( NOT NCAMD )
 
     target_link_libraries ( CHOLMOD PRIVATE SuiteSparse::CCOLAMD )
     if ( NOT NSTATIC )
+        set ( CHOLMOD_STATIC_MODULES "${CHOLMOD_STATIC_MODULES} CCOLAMD" )
         if ( TARGET SuiteSparse::CCOLAMD_static )
             target_link_libraries ( CHOLMOD_static PUBLIC SuiteSparse::CCOLAMD_static )
         else ( )
@@ -466,9 +468,17 @@ endif ( )
 # CHOLMOD_CUDA
 if ( SUITESPARSE_CUDA )
     message ( STATUS "CHOLMOD cuda: " ${CHOLMOD_CUDA} )
-    target_link_libraries ( CHOLMOD PRIVATE CHOLMOD_CUDA )
+    target_link_libraries ( CHOLMOD PRIVATE CHOLMOD_CUDA ${CUDA_LIBRARIES} )
     if ( NOT NSTATIC )
-        target_link_libraries ( CHOLMOD_static PUBLIC CHOLMOD_CUDA_static )
+        target_link_libraries ( CHOLMOD_static PUBLIC CHOLMOD_CUDA_static ${CUDA_LIBRARIES} )
+    endif ( )
+    target_link_libraries ( CHOLMOD PRIVATE CUDA::nvrtc CUDA::cudart_static
+        CUDA::nvToolsExt CUDA::cublas )
+    target_include_directories ( CHOLMOD INTERFACE
+        $<TARGET_PROPERTY:CUDA::cublas,INTERFACE_INCLUDE_DIRECTORIES> )
+    if ( NOT NSTATIC )
+        target_link_libraries ( CHOLMOD_static PUBLIC CUDA::nvrtc CUDA::cudart_static
+            CUDA::nvToolsExt CUDA::cublas )
     endif ( )
 endif ( )
 
@@ -513,6 +523,55 @@ install ( FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CHOLMODConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/CHOLMODConfigVersion.cmake
     DESTINATION ${SUITESPARSE_LIBDIR}/cmake/CHOLMOD )
+
+# create pkg-config file
+
+# This might be something like:
+#   /usr/lib/libgomp.so;/usr/lib/libpthread.a;m
+# convert to -l flags for pkg-config, i.e.: "-lgomp -lpthread -lm"
+set ( CHOLMOD_STATIC_LIBS_LIST ${CHOLMOD_STATIC_LIBS} )
+set ( CHOLMOD_STATIC_LIBS "" )
+foreach ( _lib ${CHOLMOD_STATIC_LIBS_LIST} )
+    string ( FIND ${_lib} "." _pos REVERSE )
+    if ( ${_pos} EQUAL "-1" )
+        set ( CHOLMOD_STATIC_LIBS "${CHOLMOD_STATIC_LIBS} -l${_lib}" )
+        continue ()
+    endif ( )
+    foreach ( _kind IN ITEMS "IMPORT" "SHARED" "STATIC" )
+        set ( _regex ".*\\/(lib)?([^\\.]*)(${CMAKE_${_kind}_LIBRARY_SUFFIX})" )
+        if ( ${_lib} MATCHES ${_regex} )
+            string ( REGEX REPLACE ${_regex} "\\2" _libname ${_lib} )
+            if ( NOT "${_libname}" STREQUAL "" )
+                set ( CHOLMOD_STATIC_LIBS "${CHOLMOD_STATIC_LIBS} -l${_libname}" )
+                break ()
+            endif ( )
+        endif ( )
+    endforeach ( )
+endforeach ( )
+message ( STATUS "CHOLMOD_STATIC_LIBS: ${CHOLMOD_STATIC_LIBS}" )
+
+set ( prefix "${CMAKE_INSTALL_PREFIX}" )
+set ( exec_prefix "\${prefix}" )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
+if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
+    set ( libdir "${SUITESPARSE_LIBDIR}")
+else ( )
+    set ( libdir "\${exec_prefix}/${SUITESPARSE_LIBDIR}")
+endif ( )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
+if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
+    set ( includedir "${SUITESPARSE_INCLUDEDIR}")
+else ( )
+    set ( includedir "\${prefix}/${SUITESPARSE_INCLUDEDIR}")
+endif ( )
+configure_file (
+    Config/CHOLMOD.pc.in
+    CHOLMOD.pc
+    @ONLY
+    NEWLINE_STYLE LF )
+install ( FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/CHOLMOD.pc
+    DESTINATION ${SUITESPARSE_LIBDIR}/pkgconfig )
 
 #-------------------------------------------------------------------------------
 # Demo library and programs

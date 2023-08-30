@@ -93,9 +93,7 @@ set_target_properties ( CHOLMOD_CUDA_static PROPERTIES POSITION_INDEPENDENT_CODE
 endif ( )
 
 if ( SUITESPARSE_CUDA )
-    # this must be a PUBLIC link, not PRIVATE, so the CHOLMOD library
-    # itself can link against these libraries
-    target_link_libraries ( CHOLMOD_CUDA PUBLIC CUDA::nvrtc CUDA::cudart_static
+    target_link_libraries ( CHOLMOD_CUDA PRIVATE CUDA::nvrtc CUDA::cudart_static
         CUDA::nvToolsExt CUDA::cublas SuiteSparse::SuiteSparseConfig)
     if ( NOT NSTATIC )
         target_link_libraries ( CHOLMOD_CUDA_static PUBLIC CUDA::nvrtc CUDA::cudart_static
@@ -145,3 +143,27 @@ install ( FILES
     ${CMAKE_CURRENT_BINARY_DIR}/../CHOLMOD_CUDAConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/../CHOLMOD_CUDAConfigVersion.cmake
     DESTINATION ${SUITESPARSE_LIBDIR}/cmake/CHOLMOD_CUDA )
+
+# create pkg-config file
+set ( prefix "${CMAKE_INSTALL_PREFIX}" )
+set ( exec_prefix "\${prefix}" )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
+if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
+    set ( libdir "${SUITESPARSE_LIBDIR}")
+else ( )
+    set ( libdir "\${exec_prefix}/${SUITESPARSE_LIBDIR}")
+endif ( )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
+if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
+    set ( includedir "${SUITESPARSE_INCLUDEDIR}")
+else ( )
+    set ( includedir "\${prefix}/${SUITESPARSE_INCLUDEDIR}")
+endif ( )
+configure_file (
+    ../Config/CHOLMOD_CUDA.pc.in
+    CHOLMOD_CUDA.pc
+    @ONLY
+    NEWLINE_STYLE LF )
+install ( FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/CHOLMOD_CUDA.pc
+    DESTINATION ${SUITESPARSE_LIBDIR}/pkgconfig )

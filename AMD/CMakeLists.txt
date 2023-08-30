@@ -10,12 +10,12 @@
 # get the version
 #-------------------------------------------------------------------------------
 
-cmake_minimum_required ( VERSION 3.19 )
+cmake_minimum_required ( VERSION 3.20 )
 
-set ( AMD_DATE "June 16, 2023" )
+set ( AMD_DATE "FIXME DATE, 2023" )
 set ( AMD_VERSION_MAJOR 3 )
-set ( AMD_VERSION_MINOR 0 )
-set ( AMD_VERSION_SUB   4 )
+set ( AMD_VERSION_MINOR 2 )
+set ( AMD_VERSION_SUB   0 )
 
 message ( STATUS "Building AMD version: v"
     ${AMD_VERSION_MAJOR}.
@@ -56,10 +56,10 @@ endif ( )
 # find library dependencies
 #-------------------------------------------------------------------------------
 
-find_package ( SuiteSparse_config 7.1.0
+find_package ( SuiteSparse_config 7.2.0
     PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-    find_package ( SuiteSparse_config 7.1.0 REQUIRED )
+    find_package ( SuiteSparse_config 7.2.0 REQUIRED )
 endif ( )
 
 #-------------------------------------------------------------------------------
@@ -149,6 +149,7 @@ endif ( )
 if ( NOT WIN32 )
     target_link_libraries ( AMD PRIVATE m )
     if ( NOT NSTATIC )
+        set ( AMD_STATIC_LIBS "${AMD_STATIC_LIBS} -lm" )
         target_link_libraries ( AMD_static PUBLIC m )
     endif ( )
 endif ( )
@@ -194,6 +195,30 @@ install ( FILES
     ${CMAKE_CURRENT_BINARY_DIR}/AMDConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/AMDConfigVersion.cmake
     DESTINATION ${SUITESPARSE_LIBDIR}/cmake/AMD )
+
+# create pkg-config file
+set ( prefix "${CMAKE_INSTALL_PREFIX}" )
+set ( exec_prefix "\${prefix}" )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
+if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
+    set ( libdir "${SUITESPARSE_LIBDIR}")
+else ( )
+    set ( libdir "\${exec_prefix}/${SUITESPARSE_LIBDIR}")
+endif ( )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
+if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
+    set ( includedir "${SUITESPARSE_INCLUDEDIR}")
+else ( )
+    set ( includedir "\${prefix}/${SUITESPARSE_INCLUDEDIR}")
+endif ( )
+configure_file (
+    Config/AMD.pc.in
+    AMD.pc
+    @ONLY
+    NEWLINE_STYLE LF )
+install ( FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/AMD.pc
+    DESTINATION ${SUITESPARSE_LIBDIR}/pkgconfig )
 
 #-------------------------------------------------------------------------------
 # Demo library and programs

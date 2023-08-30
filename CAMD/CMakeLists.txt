@@ -9,12 +9,12 @@
 # get the version
 #-------------------------------------------------------------------------------
 
-cmake_minimum_required ( VERSION 3.19 )
+cmake_minimum_required ( VERSION 3.20 )
 
-set ( CAMD_DATE "June 16, 2023" )
+set ( CAMD_DATE "FIXME DATE, 2023" )
 set ( CAMD_VERSION_MAJOR 3 )
-set ( CAMD_VERSION_MINOR 0 )
-set ( CAMD_VERSION_SUB   4 )
+set ( CAMD_VERSION_MINOR 2 )
+set ( CAMD_VERSION_SUB   0 )
 
 message ( STATUS "Building CAMD version: v"
     ${CAMD_VERSION_MAJOR}.
@@ -42,10 +42,10 @@ project ( camd
 # find library dependencies
 #-------------------------------------------------------------------------------
 
-find_package ( SuiteSparse_config 7.1.0
+find_package ( SuiteSparse_config 7.2.0
     PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-    find_package ( SuiteSparse_config 7.1.0 REQUIRED )
+    find_package ( SuiteSparse_config 7.2.0 REQUIRED )
 endif ( )
 
 #-------------------------------------------------------------------------------
@@ -130,6 +130,7 @@ endif ( )
 if ( NOT WIN32 )
     target_link_libraries ( CAMD PRIVATE m )
     if ( NOT NSTATIC )
+        set ( CAMD_STATIC_LIBS "${CAMD_STATIC_LIBS} -lm" )
         target_link_libraries ( CAMD_static PUBLIC m )
     endif ( )
 endif ( )
@@ -175,6 +176,30 @@ install ( FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CAMDConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/CAMDConfigVersion.cmake
     DESTINATION ${SUITESPARSE_LIBDIR}/cmake/CAMD )
+
+# create pkg-config file
+set ( prefix "${CMAKE_INSTALL_PREFIX}" )
+set ( exec_prefix "\${prefix}" )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
+if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
+    set ( libdir "${SUITESPARSE_LIBDIR}")
+else ( )
+    set ( libdir "\${exec_prefix}/${SUITESPARSE_LIBDIR}")
+endif ( )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
+if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
+    set ( includedir "${SUITESPARSE_INCLUDEDIR}")
+else ( )
+    set ( includedir "\${prefix}/${SUITESPARSE_INCLUDEDIR}")
+endif ( )
+configure_file (
+    Config/CAMD.pc.in
+    CAMD.pc
+    @ONLY
+    NEWLINE_STYLE LF )
+install ( FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/CAMD.pc
+    DESTINATION ${SUITESPARSE_LIBDIR}/pkgconfig )
 
 #-------------------------------------------------------------------------------
 # Demo library and programs

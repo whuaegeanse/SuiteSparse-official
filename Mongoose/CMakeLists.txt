@@ -29,7 +29,7 @@
 #
 #   make distclean
 
-cmake_minimum_required ( VERSION 3.19 )
+cmake_minimum_required ( VERSION 3.20 )
 
 #-------------------------------------------------------------------------------
 # SuiteSparse policies
@@ -43,11 +43,11 @@ include ( SuiteSparsePolicy )
 
 #-------------------------------------------------------------------------------
 
-set(Mongoose_DATE "June 16, 2023")
-set(Mongoose_NUMERIC_DATE "2023-06-16")
+set(Mongoose_DATE "FIXME DATE, 2023")
+set(Mongoose_NUMERIC_DATE "2023-FIXME-DATE")
 set(Mongoose_VERSION_MAJOR 3)
-set(Mongoose_VERSION_MINOR 0)
-set(Mongoose_VERSION_PATCH 5)
+set(Mongoose_VERSION_MINOR 2)
+set(Mongoose_VERSION_PATCH 0)
 
 project(Mongoose
         VERSION "${Mongoose_VERSION_MAJOR}.${Mongoose_VERSION_MINOR}.${Mongoose_VERSION_PATCH}"
@@ -73,10 +73,10 @@ configure_file (
         NEWLINE_STYLE LF
 )
 
-find_package ( SuiteSparse_config 7.1.0
+find_package ( SuiteSparse_config 7.2.0
     PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-    find_package ( SuiteSparse_config 7.1.0 REQUIRED )
+    find_package ( SuiteSparse_config 7.2.0 REQUIRED )
 endif ( )
 
 include_directories("${PROJECT_BINARY_DIR}")
@@ -487,6 +487,30 @@ install ( FILES
     ${CMAKE_CURRENT_BINARY_DIR}/MongooseConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/MongooseConfigVersion.cmake
     DESTINATION ${SUITESPARSE_LIBDIR}/cmake/Mongoose )
+
+# create pkg-config file
+set ( prefix "${CMAKE_INSTALL_PREFIX}" )
+set ( exec_prefix "\${prefix}" )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
+if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
+    set ( libdir "${SUITESPARSE_LIBDIR}")
+else ( )
+    set ( libdir "\${exec_prefix}/${SUITESPARSE_LIBDIR}")
+endif ( )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
+if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
+    set ( includedir "${SUITESPARSE_INCLUDEDIR}")
+else ( )
+    set ( includedir "\${prefix}/${SUITESPARSE_INCLUDEDIR}")
+endif ( )
+configure_file (
+    Config/Mongoose.pc.in
+    Mongoose.pc
+    @ONLY
+    NEWLINE_STYLE LF )
+install ( FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/Mongoose.pc
+    DESTINATION ${SUITESPARSE_LIBDIR}/pkgconfig )
 
 #-------------------------------------------------------------------------------
 # report status

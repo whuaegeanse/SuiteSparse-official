@@ -11,7 +11,7 @@
 #-------------------------------------------------------------------------------
 
 # cmake 3.22 is required to find the BLAS/LAPACK
-cmake_minimum_required ( VERSION 3.19 )
+cmake_minimum_required ( VERSION 3.20 )
 
 message ( STATUS "Building SPQR_CUDA version: v"
     ${SPQR_VERSION_MAJOR}.
@@ -142,12 +142,12 @@ export ( EXPORT SPQR_CUDATargets
 # install export target, config and version files for find_package
 install ( EXPORT SPQR_CUDATargets
     NAMESPACE SuiteSparse::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SPQR_CUDA )
+    DESTINATION ${SUITESPARSE_LIBDIR}/cmake/SPQR_CUDA )
 
 configure_package_config_file (
     ../Config/SPQR_CUDAConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/../SPQR_CUDAConfig.cmake
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SPQR_CUDA )
+    INSTALL_DESTINATION ${SUITESPARSE_LIBDIR}/cmake/SPQR_CUDA )
 
 write_basic_package_version_file (
     ${CMAKE_CURRENT_BINARY_DIR}/../SPQR_CUDAConfigVersion.cmake
@@ -156,5 +156,28 @@ write_basic_package_version_file (
 install ( FILES
     ${CMAKE_CURRENT_BINARY_DIR}/../SPQR_CUDAConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/../SPQR_CUDAConfigVersion.cmake
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SPQR_CUDA )
+    DESTINATION ${SUITESPARSE_LIBDIR}/cmake/SPQR_CUDA )
 
+# create pkg-config file
+set ( prefix "${CMAKE_INSTALL_PREFIX}" )
+set ( exec_prefix "\${prefix}" )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
+if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
+    set ( libdir "${SUITESPARSE_LIBDIR}")
+else ( )
+    set ( libdir "\${exec_prefix}/${SUITESPARSE_LIBDIR}")
+endif ( )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
+if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
+    set ( includedir "${SUITESPARSE_INCLUDEDIR}")
+else ( )
+    set ( includedir "\${prefix}/${SUITESPARSE_INCLUDEDIR}")
+endif ( )
+configure_file (
+    ../Config/SPQR_CUDA.pc.in
+    SPQR_CUDA.pc
+    @ONLY
+    NEWLINE_STYLE LF )
+install ( FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/SPQR_CUDA.pc
+    DESTINATION ${SUITESPARSE_LIBDIR}/pkgconfig )

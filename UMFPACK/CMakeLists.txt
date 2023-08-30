@@ -12,10 +12,10 @@
 # cmake 3.22 is required to find the BLAS in SuiteSparse_config
 cmake_minimum_required ( VERSION 3.22 )
 
-set ( UMFPACK_DATE "June 16, 2023" )
+set ( UMFPACK_DATE "FIXME DATE, 2023" )
 set ( UMFPACK_VERSION_MAJOR 6 )
-set ( UMFPACK_VERSION_MINOR 1 )
-set ( UMFPACK_VERSION_SUB   1 )
+set ( UMFPACK_VERSION_MINOR 2 )
+set ( UMFPACK_VERSION_SUB   0 )
 
 message ( STATUS "Building UMFPACK version: v"
     ${UMFPACK_VERSION_MAJOR}.
@@ -30,15 +30,24 @@ set ( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     ${CMAKE_SOURCE_DIR}/../CHOLMOD/cmake_modules
     ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/cmake_modules )
 
+option ( ENABLE_CUDA "Enable CUDA acceleration" on )
+
 include ( SuiteSparsePolicy )
 
 #-------------------------------------------------------------------------------
 # define the project
 #-------------------------------------------------------------------------------
 
-project ( umfpack
-    VERSION "${UMFPACK_VERSION_MAJOR}.${UMFPACK_VERSION_MINOR}.${UMFPACK_VERSION_SUB}"
-    LANGUAGES C )
+if ( SUITESPARSE_CUDA )
+    # UMFPACK with CHOLMOD (which can use CUDA)
+    project ( umfpack
+        VERSION "${UMFPACK_VERSION_MAJOR}.${UMFPACK_VERSION_MINOR}.${UMFPACK_VERSION_SUB}"
+        LANGUAGES C CXX CUDA )
+else ( )
+    project ( umfpack
+        VERSION "${UMFPACK_VERSION_MAJOR}.${UMFPACK_VERSION_MINOR}.${UMFPACK_VERSION_SUB}"
+        LANGUAGES C )
+endif ( )
 
 #-------------------------------------------------------------------------------
 # find library dependencies
@@ -52,15 +61,15 @@ else ( )
     find_package ( OpenMP )
 endif ( )
 
-find_package ( SuiteSparse_config 7.1.0
+find_package ( SuiteSparse_config 7.2.0
     PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-    find_package ( SuiteSparse_config 7.1.0 REQUIRED )
+    find_package ( SuiteSparse_config 7.2.0 REQUIRED )
 endif ( )
-find_package ( AMD 3.0.4
+find_package ( AMD 3.2.0
     PATHS ${CMAKE_SOURCE_DIR}/../AMD/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::AMD )
-    find_package ( AMD 3.0.4 REQUIRED )
+    find_package ( AMD 3.2.0 REQUIRED )
 endif ( )
 include ( SuiteSparseBLAS )     # requires cmake 3.22
 
@@ -68,40 +77,45 @@ option ( NCHOLMOD "ON: do not use CHOLMOD.  OFF (default): use CHOLMOD" off )
 
 if ( NOT NCHOLMOD )
     # look for CHOLMOD (optional fill-reducing orderings)
-    find_package ( CHOLMOD 4.0.4
+    find_package ( CHOLMOD 4.2.0
         PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::CHOLMOD )
-        find_package ( CHOLMOD 4.0.4 )
+        find_package ( CHOLMOD 4.2.0 )
     endif ( )
 
-    find_package ( CHOLMOD_CUDA 4.0.4
-        PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
-    if ( NOT TARGET SuiteSparse::CHOLMOD_CUDA )
-        find_package ( CHOLMOD_CUDA 4.0.4 REQUIRED )
+    if ( SUITESPARSE_CUDA )
+        find_package ( CHOLMOD_CUDA 4.2.0
+            PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
+        if ( NOT TARGET SuiteSparse::CHOLMOD_CUDA )
+            find_package ( CHOLMOD_CUDA 4.2.0 )
+        endif ( )
     endif ( )
 
     # look for CHOLMOD's dependencies: AMD and COLAMD are required.  CAMD and
     # CCOLAMD are optional, but must be found if CHOLMOD was built with them.
-    find_package ( COLAMD 3.0.4
+    find_package ( COLAMD 3.2.0
         PATHS ${CMAKE_SOURCE_DIR}/../COLAMD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::COLAMD )
-        find_package ( COLAMD 3.0.4 )
+        find_package ( COLAMD 3.2.0 )
     endif ( )
 
-    find_package ( CAMD 3.0.4
+    find_package ( CAMD 3.2.0
         PATHS ${CMAKE_SOURCE_DIR}/../CAMD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::CAMD )
-        find_package ( CAMD 3.0.4 )
+        find_package ( CAMD 3.2.0 )
     endif ( )
 
-    find_package ( CCOLAMD 3.0.4
+    find_package ( CCOLAMD 3.2.0
         PATHS ${CMAKE_SOURCE_DIR}/../CCOLAMD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::CCOLAMD )
-        find_package ( CCOLAMD 3.0.4 )
+        find_package ( CCOLAMD 3.2.0 )
     endif ( )
 
     if ( NOT CHOLMOD_FOUND OR NOT AMD_FOUND OR NOT COLAMD_FOUND )
         # CHOLMOD not found so disable it
+        set ( NCHOLMOD true )
+    endif ( )
+    if ( SUITESPARSE_CUDA AND NOT CHOLMOD_CUDA_FOUND )
         set ( NCHOLMOD true )
     endif ( )
 endif ( )
@@ -200,6 +214,7 @@ if ( OPENMP_FOUND )
     target_link_libraries ( UMFPACK PRIVATE ${OpenMP_C_LIBRARIES} )
     if ( NOT NSTATIC )
         target_link_libraries ( UMFPACK_static PUBLIC ${OpenMP_C_LIBRARIES} )
+        list ( APPEND UMFPACK_STATIC_LIBS ${OpenMP_C_LIBRARIES} )
     endif ( )
     set ( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} " )
     include_directories ( ${OpenMP_C_INCLUDE_DIRS} )
@@ -209,6 +224,7 @@ endif ( )
 if ( NOT WIN32 )
     target_link_libraries ( UMFPACK PRIVATE m )
     if ( NOT NSTATIC )
+        list ( APPEND UMFPACK_STATIC_LIBS "m" )
         target_link_libraries ( UMFPACK_static PUBLIC m )
     endif ( )
 endif ( )
@@ -231,6 +247,7 @@ message ( STATUS "BLAS include:        ${BLAS_INCLUDE_DIRS} ")
 message ( STATUS "BLAS linker flags:   ${BLAS_LINKER_FLAGS} ")
 target_link_libraries ( UMFPACK PRIVATE ${BLAS_LIBRARIES} )
 if ( NOT NSTATIC )
+    list ( APPEND UMFPACK_STATIC_LIBS ${BLAS_LIBRARIES} )
     target_link_libraries ( UMFPACK_static PUBLIC ${BLAS_LIBRARIES} )
 endif ( )
 include_directories ( ${BLAS_INCLUDE_DIRS} )
@@ -238,9 +255,11 @@ include_directories ( ${BLAS_INCLUDE_DIRS} )
 # CHOLMOD:
 if ( NOT NCHOLMOD )
     # link with CHOLMOD and its dependencies, both required and optional
+    message ( STATUS "CHOLMOD cuda libraries: " ${CHOLMOD_CUDA_LIBRARIES} )
     target_link_libraries ( UMFPACK PRIVATE
         SuiteSparse::CHOLMOD ${CHOLMOD_CUDA_LIBRARIES} )
     if ( NOT NSTATIC )
+        set ( UMFPACK_STATIC_MODULES "${UMFPACK_STATIC_MODULES} CHOLMOD CHOLMOD_CUDA" )
         target_link_libraries ( UMFPACK_static PUBLIC
             ${CHOLMOD_CUDA_STATIC} )
         if ( TARGET SuiteSparse::CHOLMOD_static )
@@ -249,6 +268,7 @@ if ( NOT NCHOLMOD )
             target_link_libraries ( UMFPACK_static PUBLIC SuiteSparse::CHOLMOD )
         endif ( )
     endif ( )
+
 endif ( )
 
 #-------------------------------------------------------------------------------
@@ -292,6 +312,54 @@ install ( FILES
     ${CMAKE_CURRENT_BINARY_DIR}/UMFPACKConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/UMFPACKConfigVersion.cmake
     DESTINATION ${SUITESPARSE_LIBDIR}/cmake/UMFPACK )
+# create pkg-config file
+
+# This might be something like:
+#   /usr/lib/libgomp.so;/usr/lib/libpthread.a;m
+# convert to -l flags for pkg-config, i.e.: "-lgomp -lpthread -lm"
+set ( UMFPACK_STATIC_LIBS_LIST ${UMFPACK_STATIC_LIBS} )
+set ( UMFPACK_STATIC_LIBS "" )
+foreach ( _lib ${UMFPACK_STATIC_LIBS_LIST} )
+    string ( FIND ${_lib} "." _pos REVERSE )
+    if ( ${_pos} EQUAL "-1" )
+        set ( UMFPACK_STATIC_LIBS "${UMFPACK_STATIC_LIBS} -l${_lib}" )
+        continue ()
+    endif ( )
+    foreach ( _kind IN ITEMS "IMPORT" "SHARED" "STATIC" )
+        set ( _regex ".*\\/(lib)?([^\\.]*)(${CMAKE_${_kind}_LIBRARY_SUFFIX})" )
+        if ( ${_lib} MATCHES ${_regex} )
+            string ( REGEX REPLACE ${_regex} "\\2" _libname ${_lib} )
+            if ( NOT "${_libname}" STREQUAL "" )
+                set ( UMFPACK_STATIC_LIBS "${UMFPACK_STATIC_LIBS} -l${_libname}" )
+                break ()
+            endif ( )
+        endif ( )
+    endforeach ( )
+endforeach ( )
+message ( STATUS "UMFPACK_STATIC_LIBS: ${UMFPACK_STATIC_LIBS}" )
+
+set ( prefix "${CMAKE_INSTALL_PREFIX}" )
+set ( exec_prefix "\${prefix}" )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
+if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
+    set ( libdir "${SUITESPARSE_LIBDIR}")
+else ( )
+    set ( libdir "\${exec_prefix}/${SUITESPARSE_LIBDIR}")
+endif ( )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
+if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
+    set ( includedir "${SUITESPARSE_INCLUDEDIR}")
+else ( )
+    set ( includedir "\${prefix}/${SUITESPARSE_INCLUDEDIR}")
+endif ( )
+configure_file (
+    Config/UMFPACK.pc.in
+    UMFPACK.pc
+    @ONLY
+    NEWLINE_STYLE LF )
+install ( FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/UMFPACK.pc
+    DESTINATION ${SUITESPARSE_LIBDIR}/pkgconfig )
 
 #-------------------------------------------------------------------------------
 # Demo library and programs

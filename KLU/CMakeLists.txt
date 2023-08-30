@@ -10,12 +10,12 @@
 # get the version
 #-------------------------------------------------------------------------------
 
-cmake_minimum_required ( VERSION 3.19 )
+cmake_minimum_required ( VERSION 3.20 )
 
-set ( KLU_DATE "June 16, 2023" )
+set ( KLU_DATE "FIXME DATE, 2023" )
 set ( KLU_VERSION_MAJOR 2 )
-set ( KLU_VERSION_MINOR 0 )
-set ( KLU_VERSION_SUB   4 )
+set ( KLU_VERSION_MINOR 2 )
+set ( KLU_VERSION_SUB   0 )
 
 message ( STATUS "Building KLU version: v"
     ${KLU_VERSION_MAJOR}.
@@ -29,75 +29,90 @@ message ( STATUS "Building KLU version: v"
 set ( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/cmake_modules )
 
+option ( ENABLE_CUDA "Enable CUDA acceleration" on )
+
 include ( SuiteSparsePolicy )
 
 #-------------------------------------------------------------------------------
 # define the project
 #-------------------------------------------------------------------------------
 
-project ( klu
-    VERSION "${KLU_VERSION_MAJOR}.${KLU_VERSION_MINOR}.${KLU_VERSION_SUB}"
-    LANGUAGES C )
+if ( SUITESPARSE_CUDA )
+    # KLU with CHOLMOD (which can use CUDA)
+    project ( klu
+        VERSION "${KLU_VERSION_MAJOR}.${KLU_VERSION_MINOR}.${KLU_VERSION_SUB}"
+        LANGUAGES C CXX CUDA )
+else ( )
+    # KLU without CHOLMOD (thus no CUDA)
+    project ( klu
+        VERSION "${KLU_VERSION_MAJOR}.${KLU_VERSION_MINOR}.${KLU_VERSION_SUB}"
+        LANGUAGES C )
+endif ( )
 
 #-------------------------------------------------------------------------------
 # find library dependencies
 #-------------------------------------------------------------------------------
 
-find_package ( SuiteSparse_config 7.1.0
+find_package ( SuiteSparse_config 7.2.0
     PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-    find_package ( SuiteSparse_config 7.1.0 REQUIRED )
+    find_package ( SuiteSparse_config 7.2.0 REQUIRED )
 endif ( )
-find_package ( BTF 2.0.4
+find_package ( BTF 2.2.0
     PATHS ${CMAKE_SOURCE_DIR}/../BTF/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::BTF )
-    find_package ( BTF 2.0.4 REQUIRED )
+    find_package ( BTF 2.2.0 REQUIRED )
 endif ( )
 
-find_package ( COLAMD 3.0.4
+find_package ( COLAMD 3.2.0
     PATHS ${CMAKE_SOURCE_DIR}/../COLAMD/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::COLAMD )
-    find_package ( COLAMD 3.0.4 REQUIRED )
+    find_package ( COLAMD 3.2.0 REQUIRED )
 endif ( )
 
-find_package ( AMD 3.0.4
+find_package ( AMD 3.2.0
     PATHS ${CMAKE_SOURCE_DIR}/../AMD/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::AMD )
-    find_package ( AMD 3.0.4 REQUIRED )
+    find_package ( AMD 3.2.0 REQUIRED )
 endif ( )
 
 option ( NCHOLMOD "ON: do not use CHOLMOD.  OFF (default): use CHOLMOD" off )
 
 if ( NOT NCHOLMOD )
     # look for CHOLMOD (optional fill-reducing orderings)
-    find_package ( CHOLMOD 4.0.4
+    find_package ( CHOLMOD 4.2.0
         PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::CHOLMOD )
-        find_package ( CHOLMOD 4.0.4 )
+        find_package ( CHOLMOD 4.2.0 )
     endif ( )
 
-    find_package ( CHOLMOD_CUDA 4.0.4
-        PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
-    if ( NOT TARGET SuiteSparse::CHOLMOD_CUDA )
-        find_package ( CHOLMOD_CUDA 4.0.4 )
+    if ( SUITESPARSE_CUDA )
+        find_package ( CHOLMOD_CUDA 4.2.0
+            PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
+        if ( NOT TARGET SuiteSparse::CHOLMOD_CUDA )
+            find_package ( CHOLMOD_CUDA 4.2.0 )
+        endif ( )
     endif ( )
 
     # look for CHOLMOD's dependencies: AMD and COLAMD are required.  CAMD and
     # CCOLAMD are optional, but must be found if CHOLMOD was built with them.
-    find_package ( CAMD 3.0.4
+    find_package ( CAMD 3.2.0
         PATHS ${CMAKE_SOURCE_DIR}/../CAMD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::CAMD )
-        find_package ( CAMD 3.0.4 )
+        find_package ( CAMD 3.2.0 )
     endif ( )
 
-    find_package ( CCOLAMD 3.0.4
+    find_package ( CCOLAMD 3.2.0
         PATHS ${CMAKE_SOURCE_DIR}/../CCOLAMD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::CCOLAMD )
-        find_package ( CCOLAMD 3.0.4 )
+        find_package ( CCOLAMD 3.2.0 )
     endif ( )
 
     if ( NOT CHOLMOD_FOUND OR NOT AMD_FOUND OR NOT COLAMD_FOUND )
         # CHOLMOD not found so disable it
+        set ( NCHOLMOD true )
+    endif ( )
+    if ( SUITESPARSE_CUDA AND NOT CHOLMOD_CUDA_FOUND )
         set ( NCHOLMOD true )
     endif ( )
 endif ( )
@@ -236,6 +251,7 @@ endif ( )
 if ( NOT WIN32 )
     target_link_libraries ( KLU PRIVATE m )
     if ( NOT NSTATIC )
+        set ( KLU_STATIC_LIBS "${KLU_STATIC_LIBS} -lm" )
         target_link_libraries ( KLU_static PUBLIC m )
     endif ( )
 endif ( )
@@ -280,24 +296,19 @@ if ( NOT NCHOLMOD )
 
     # CHOLMOD:
     # link with CHOLMOD and its dependencies, both required and optional
+    # CHOLMOD without CUDA
     target_link_libraries ( KLU PRIVATE
-        SuiteSparse::CHOLMOD SuiteSparse::CHOLMOD_CUDA )
+        SuiteSparse::CHOLMOD )
     target_link_libraries ( KLU_CHOLMOD PRIVATE
-        SuiteSparse::CHOLMOD SuiteSparse::CHOLMOD_CUDA )
+        SuiteSparse::CHOLMOD )
     if ( NOT NSTATIC )
+       set ( KLU_STATIC_MODULES "${KLU_STATIC_MODULES} CHOLMOD" )
        if ( TARGET SuiteSparse::CHOLMOD_static )
             target_link_libraries ( KLU_static PUBLIC SuiteSparse::CHOLMOD_static )
             target_link_libraries ( KLU_CHOLMOD_static PUBLIC SuiteSparse::CHOLMOD_static )
         else ( )
             target_link_libraries ( KLU_static PUBLIC SuiteSparse::CHOLMOD )
             target_link_libraries ( KLU_CHOLMOD_static PUBLIC SuiteSparse::CHOLMOD )
-        endif ( )
-        if ( TARGET SuiteSparse::CHOLMOD_CUDA_static )
-            target_link_libraries ( KLU_static PUBLIC SuiteSparse::CHOLMOD_CUDA_static )
-            target_link_libraries ( KLU_CHOLMOD_static PUBLIC SuiteSparse::CHOLMOD_CUDA_static )
-        else ( )
-            target_link_libraries ( KLU_static PUBLIC SuiteSparse::CHOLMOD_CUDA )
-            target_link_libraries ( KLU_CHOLMOD_static PUBLIC SuiteSparse::CHOLMOD_CUDA )
         endif ( )
     endif ( )
 
@@ -356,6 +367,30 @@ install ( FILES
     ${CMAKE_CURRENT_BINARY_DIR}/KLUConfigVersion.cmake
     DESTINATION ${SUITESPARSE_LIBDIR}/cmake/KLU )
 
+# create pkg-config file
+set ( prefix "${CMAKE_INSTALL_PREFIX}" )
+set ( exec_prefix "\${prefix}" )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
+if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
+    set ( libdir "${SUITESPARSE_LIBDIR}")
+else ( )
+    set ( libdir "\${exec_prefix}/${SUITESPARSE_LIBDIR}")
+endif ( )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
+if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
+    set ( includedir "${SUITESPARSE_INCLUDEDIR}")
+else ( )
+    set ( includedir "\${prefix}/${SUITESPARSE_INCLUDEDIR}")
+endif ( )
+configure_file (
+    Config/KLU.pc.in
+    KLU.pc
+    @ONLY
+    NEWLINE_STYLE LF )
+install ( FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/KLU.pc
+    DESTINATION ${SUITESPARSE_LIBDIR}/pkgconfig )
+
 if ( NOT NCHOLMOD )
     install ( TARGETS KLU_CHOLMOD
         EXPORT KLU_CHOLMODTargets
@@ -393,6 +428,29 @@ if ( NOT NCHOLMOD )
         ${CMAKE_CURRENT_BINARY_DIR}/KLU_CHOLMODConfigVersion.cmake
         DESTINATION ${SUITESPARSE_LIBDIR}/cmake/KLU_CHOLMOD )
 
+    # create pkg-config file
+    set ( prefix "${CMAKE_INSTALL_PREFIX}" )
+    set ( exec_prefix "\${prefix}" )
+    cmake_path ( IS_ABSOLUTE SUITESPARSE_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
+    if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
+        set ( libdir "${SUITESPARSE_LIBDIR}")
+    else ( )
+        set ( libdir "\${exec_prefix}/${SUITESPARSE_LIBDIR}")
+    endif ( )
+    cmake_path ( IS_ABSOLUTE SUITESPARSE_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
+    if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
+        set ( includedir "${SUITESPARSE_INCLUDEDIR}")
+    else ( )
+        set ( includedir "\${prefix}/${SUITESPARSE_INCLUDEDIR}")
+    endif ( )
+    configure_file (
+        Config/KLU_CHOLMOD.pc.in
+        KLU_CHOLMOD.pc
+        @ONLY
+        NEWLINE_STYLE LF )
+    install ( FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/KLU_CHOLMOD.pc
+        DESTINATION ${SUITESPARSE_LIBDIR}/pkgconfig )
 endif ( )
 
 #-------------------------------------------------------------------------------

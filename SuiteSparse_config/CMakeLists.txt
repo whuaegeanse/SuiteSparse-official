@@ -14,11 +14,9 @@
 cmake_minimum_required ( VERSION 3.22 )
 
 # version of both SuiteSparse and SuiteSparse_config
-# FIXME: update version for next release of SuiteSparse
-# FIXME: revise find_package ( SuiteSparse_config ... ) in all packages.
-set ( SUITESPARSE_DATE "June 29, 2023" )
+set ( SUITESPARSE_DATE "FIXME DATE, 2023" )
 set ( SUITESPARSE_VERSION_MAJOR 7 )
-set ( SUITESPARSE_VERSION_MINOR 1 )
+set ( SUITESPARSE_VERSION_MINOR 2 )
 set ( SUITESPARSE_VERSION_SUB   0 )
 
 message ( STATUS "Building SuiteSparse_config version: v"
@@ -204,5 +202,29 @@ install ( FILES
     ${CMAKE_CURRENT_BINARY_DIR}/SuiteSparse_configConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/SuiteSparse_configConfigVersion.cmake
     DESTINATION ${SUITESPARSE_LIBDIR}/cmake/SuiteSparse_config )
+
+# create pkg-config file
+set ( prefix "${CMAKE_INSTALL_PREFIX}" )
+set ( exec_prefix "\${prefix}" )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
+if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
+    set ( libdir "${SUITESPARSE_LIBDIR}")
+else ( )
+    set ( libdir "\${exec_prefix}/${SUITESPARSE_LIBDIR}")
+endif ( )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
+if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
+    set ( includedir "${SUITESPARSE_INCLUDEDIR}")
+else ( )
+    set ( includedir "\${prefix}/${SUITESPARSE_INCLUDEDIR}")
+endif ( )
+configure_file (
+    Config/SuiteSparse_config.pc.in
+    SuiteSparse_config.pc
+    @ONLY
+    NEWLINE_STYLE LF )
+install ( FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/SuiteSparse_config.pc
+    DESTINATION ${SUITESPARSE_LIBDIR}/pkgconfig )
 
 include ( SuiteSparseReport )
