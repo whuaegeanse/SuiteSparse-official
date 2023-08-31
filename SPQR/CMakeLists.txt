@@ -125,14 +125,12 @@ endif ( )
 include ( SuiteSparseBLAS )     # requires cmake 3.22
 include ( SuiteSparseLAPACK )   # requires cmake 3.22
 
-add_subdirectory ( SPQRGPU )
-set ( SPQR_CUDA_LIBS SPQR_CUDA ${CUDA_LIBRARIES} )
-if ( SUITESPARSE_CUDA )
-    list ( APPEND SPQR_CUDA_LIBS SuiteSparse::GPUQREngine SuiteSparse::GPURuntime SuiteSparse::CHOLMOD_CUDA )
-endif ( )
-
 if ( SUITESPARSE_CUDA )
     # with CUDA
+    add_subdirectory ( SPQRGPU )
+    set ( SPQR_CUDA_LIBS SPQR_CUDA ${CUDA_LIBRARIES} )
+    list ( APPEND SPQR_CUDA_LIBS SuiteSparse::GPUQREngine SuiteSparse::GPURuntime SuiteSparse::CHOLMOD_CUDA )
+
     include_directories ( SPQRGPU ${CUDAToolkit_INCLUDE_DIRS} )
     link_directories ( "SPQRGPU" "${CUDA_LIBRARIES}" "/usr/local/cuda/lib64/stubs" "/usr/local/cuda/lib64" )
 endif ( )
@@ -173,8 +171,8 @@ set_target_properties ( SPQR PROPERTIES
     WINDOWS_EXPORT_ALL_SYMBOLS ON )
 
 target_include_directories ( SPQR 
-    INTERFACE "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>"
-              "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>" )
+    INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
+              $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
 
 #-------------------------------------------------------------------------------
 # static spqr library properties
@@ -198,8 +196,8 @@ if ( NOT NSTATIC )
     endif ( )
 
     target_include_directories ( SPQR_static 
-        INTERFACE "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>"
-                  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>" )
+        INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
+                  $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
 
 endif ( )
 
@@ -293,11 +291,13 @@ if ( NOT NSTATIC )
     endif ( )
 endif ( )
 
-# CUDA
-message ( STATUS "SPQR cuda:  ${SPQR_CUDA_LIBS} " )
-target_link_libraries ( SPQR PRIVATE ${SPQR_CUDA_LIBS} ${CUDA_LIBRARIES} )
-if ( NOT NSTATIC )
-    target_link_libraries ( SPQR_static PUBLIC ${SPQR_CUDA_LIBS} ${CUDA_LIBRARIES} )
+if ( SUITESPARSE_CUDA )
+    # CUDA
+    message ( STATUS "SPQR cuda:  ${SPQR_CUDA_LIBS} " )
+    target_link_libraries ( SPQR PRIVATE ${SPQR_CUDA_LIBS} ${CUDA_LIBRARIES} )
+    if ( NOT NSTATIC )
+        target_link_libraries ( SPQR_static PUBLIC ${SPQR_CUDA_LIBS} ${CUDA_LIBRARIES} )
+    endif ( )
 endif ( )
 
 #-------------------------------------------------------------------------------
@@ -331,9 +331,18 @@ install ( EXPORT SPQRTargets
     NAMESPACE SuiteSparse::
     DESTINATION ${SUITESPARSE_LIBDIR}/cmake/SPQR )
 
+# generate config file to be used in common build tree
+set ( SUITESPARSE_IN_BUILD_TREE on )
 configure_package_config_file (
     Config/SPQRConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/SPQRConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/SPQRConfig.cmake )
+
+# generate config file to be installed
+set ( SUITESPARSE_IN_BUILD_TREE off )
+configure_package_config_file (
+    Config/SPQRConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/target/SPQRConfig.cmake
     INSTALL_DESTINATION ${SUITESPARSE_LIBDIR}/cmake/SPQR )
 
 write_basic_package_version_file (
@@ -341,7 +350,7 @@ write_basic_package_version_file (
     COMPATIBILITY SameMajorVersion )
 
 install ( FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/SPQRConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/target/SPQRConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/SPQRConfigVersion.cmake
     DESTINATION ${SUITESPARSE_LIBDIR}/cmake/SPQR )
 
