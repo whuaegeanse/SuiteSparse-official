@@ -103,8 +103,8 @@ if ( NOT NSTATIC )
     endif ( )
 
     target_include_directories ( RBio_static 
-        INTERFACE "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>"
-                  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>" )
+        INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
+                  $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
 
 endif ( )
 
@@ -175,7 +175,10 @@ install ( FILES
     ${CMAKE_CURRENT_BINARY_DIR}/RBioConfigVersion.cmake
     DESTINATION ${SUITESPARSE_LIBDIR}/cmake/RBio )
 
+#-------------------------------------------------------------------------------
 # create pkg-config file
+#-------------------------------------------------------------------------------
+
 set ( prefix "${CMAKE_INSTALL_PREFIX}" )
 set ( exec_prefix "\${prefix}" )
 cmake_path ( IS_ABSOLUTE SUITESPARSE_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
