@@ -249,13 +249,16 @@ else ( )
 endif ( )
 
 # Build the Demo executable
-add_executable ( demo_exe ${DEMO_FILES} )
-set_target_properties ( demo_exe PROPERTIES
-        OUTPUT_NAME demo )
-if ( NSTATIC )
-    target_link_libraries ( demo_exe Mongoose )
-else ( )
-    target_link_libraries ( demo_exe Mongoose_static )
+option ( DEMO "ON: Build the demo programs.  OFF (default): do not build the demo programs." off )
+if ( DEMO )
+    add_executable ( demo_exe ${DEMO_FILES} )
+    set_target_properties ( demo_exe PROPERTIES
+            OUTPUT_NAME demo )
+    if ( NSTATIC )
+        target_link_libraries ( demo_exe Mongoose )
+    else ( )
+        target_link_libraries ( demo_exe Mongoose_static )
+    endif ( )
 endif ( )
 
 # Coverage and Unit Testing Setup
