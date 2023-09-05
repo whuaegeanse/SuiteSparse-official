@@ -19,6 +19,7 @@
                 "--install_path",
                 "D:/zgh/Libs/all-install/SuiteSparse-dev2",
                 "--with_cuda",
+                "--with_demo",
                 "--bla_vendor",
                 "All",
                 "--blas_underscore"
