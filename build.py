@@ -198,7 +198,7 @@ def build_cmake_project(
 def main():
     args = parse_args()
 
-    BUILD_LIBS = "SuiteSparse_config:Mongoose:AMD:BTF:CAMD:CCOLAMD:COLAMD:CHOLMOD:CSparse:CXSparse:LDL:KLU:UMFPACK:RBio:SuiteSparse_GPURuntime:GPUQREngine:SPQR:GraphBLAS:SPEX"
+    BUILD_LIBS = "SuiteSparse_config:Mongoose:AMD:BTF:CAMD:CCOLAMD:COLAMD:CHOLMOD:CXSparse:LDL:KLU:UMFPACK:RBio:SuiteSparse_GPURuntime:GPUQREngine:SPQR:GraphBLAS:SPEX"
 
     mkdir_if_not_exists(args.build_path)
 
