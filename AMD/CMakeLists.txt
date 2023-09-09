@@ -12,7 +12,7 @@
 
 cmake_minimum_required ( VERSION 3.20 )
 
-set ( AMD_DATE "FIXME DATE, 2023" )
+set ( AMD_DATE "Sept 8, 2023" )
 set ( AMD_VERSION_MAJOR 3 )
 set ( AMD_VERSION_MINOR 2 )
 set ( AMD_VERSION_SUB   0 )
@@ -200,28 +200,30 @@ install ( FILES
 # create pkg-config file
 #-------------------------------------------------------------------------------
 
-set ( prefix "${CMAKE_INSTALL_PREFIX}" )
-set ( exec_prefix "\${prefix}" )
-cmake_path ( IS_ABSOLUTE SUITESPARSE_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
-if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
-    set ( libdir "${SUITESPARSE_LIBDIR}")
-else ( )
-    set ( libdir "\${exec_prefix}/${SUITESPARSE_LIBDIR}")
+if ( NOT MSVC )
+    set ( prefix "${CMAKE_INSTALL_PREFIX}" )
+    set ( exec_prefix "\${prefix}" )
+    cmake_path ( IS_ABSOLUTE SUITESPARSE_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
+    if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
+        set ( libdir "${SUITESPARSE_LIBDIR}")
+    else ( )
+        set ( libdir "\${exec_prefix}/${SUITESPARSE_LIBDIR}")
+    endif ( )
+    cmake_path ( IS_ABSOLUTE SUITESPARSE_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
+    if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
+        set ( includedir "${SUITESPARSE_INCLUDEDIR}")
+    else ( )
+        set ( includedir "\${prefix}/${SUITESPARSE_INCLUDEDIR}")
+    endif ( )
+    configure_file (
+        Config/AMD.pc.in
+        AMD.pc
+        @ONLY
+        NEWLINE_STYLE LF )
+    install ( FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/AMD.pc
+        DESTINATION ${SUITESPARSE_LIBDIR}/pkgconfig )
 endif ( )
-cmake_path ( IS_ABSOLUTE SUITESPARSE_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
-if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
-    set ( includedir "${SUITESPARSE_INCLUDEDIR}")
-else ( )
-    set ( includedir "\${prefix}/${SUITESPARSE_INCLUDEDIR}")
-endif ( )
-configure_file (
-    Config/AMD.pc.in
-    AMD.pc
-    @ONLY
-    NEWLINE_STYLE LF )
-install ( FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/AMD.pc
-    DESTINATION ${SUITESPARSE_LIBDIR}/pkgconfig )
 
 #-------------------------------------------------------------------------------
 # Demo library and programs

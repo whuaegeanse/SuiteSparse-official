@@ -17,7 +17,7 @@
 
 cmake_minimum_required ( VERSION 3.13 )
 
-set ( CSPARSE_DATE "FIXME DATE, 2023" )
+set ( CSPARSE_DATE "Sept 8, 2023" )
 set ( CSPARSE_VERSION_MAJOR 4 )
 set ( CSPARSE_VERSION_MINOR 2 )
 set ( CSPARSE_VERSION_SUB   0 )
@@ -130,28 +130,30 @@ endif ( )
 # create pkg-config file
 #-------------------------------------------------------------------------------
 
-set ( prefix "${CMAKE_INSTALL_PREFIX}" )
-set ( exec_prefix "\${prefix}" )
-cmake_path ( IS_ABSOLUTE CMAKE_INSTALL_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
-if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
-    set ( libdir "${CMAKE_INSTALL_LIBDIR}")
-else ( )
-    set ( libdir "\${exec_prefix}/${CMAKE_INSTALL_LIBDIR}")
+if ( NOT MSVC )
+    set ( prefix "${CMAKE_INSTALL_PREFIX}" )
+    set ( exec_prefix "\${prefix}" )
+    cmake_path ( IS_ABSOLUTE CMAKE_INSTALL_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
+    if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
+        set ( libdir "${CMAKE_INSTALL_LIBDIR}")
+    else ( )
+        set ( libdir "\${exec_prefix}/${CMAKE_INSTALL_LIBDIR}")
+    endif ( )
+    cmake_path ( IS_ABSOLUTE CMAKE_INSTALL_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
+    if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
+        set ( includedir "${CMAKE_INSTALL_INCLUDEDIR}")
+    else ( )
+        set ( includedir "\${prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
+    endif ( )
+    configure_file (
+        Config/CSparse.pc.in
+        CSparse.pc
+        @ONLY
+        NEWLINE_STYLE LF )
+    # install ( FILES
+    #     ${CMAKE_CURRENT_BINARY_DIR}/CSparse.pc
+    #     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig )
 endif ( )
-cmake_path ( IS_ABSOLUTE CMAKE_INSTALL_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
-if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
-    set ( includedir "${CMAKE_INSTALL_INCLUDEDIR}")
-else ( )
-    set ( includedir "\${prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
-endif ( )
-configure_file (
-    Config/CSparse.pc.in
-    CSparse.pc
-    @ONLY
-    NEWLINE_STYLE LF )
-# install ( FILES
-#     ${CMAKE_CURRENT_BINARY_DIR}/CSparse.pc
-#     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig )
 
 #-------------------------------------------------------------------------------
 # Demo library and programs
