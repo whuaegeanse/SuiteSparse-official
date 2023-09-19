@@ -13,6 +13,7 @@ Name: GraphBLAS
 URL: https://github.com/DrTimothyAldenDavis/SuiteSparse
 Description: Complete implementation of the GraphBLAS standard in SuiteSparse
 Version: @GraphBLAS_VERSION_MAJOR@.@GraphBLAS_VERSION_MINOR@.@GraphBLAS_VERSION_SUB@
+Requires.private: @GRAPHBLAS_STATIC_MODULES@
 Libs: -L${libdir} -lgraphblas
 Libs.private: @GRAPHBLAS_STATIC_LIBS@
 Cflags: -I${includedir}

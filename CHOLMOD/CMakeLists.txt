@@ -12,10 +12,10 @@
 # cmake 3.22 is required to find the BLAS/LAPACK
 cmake_minimum_required ( VERSION 3.22 )
 
-set ( CHOLMOD_DATE "Sept 8, 2023" )
+set ( CHOLMOD_DATE "Sept 18, 2023" )
 set ( CHOLMOD_VERSION_MAJOR 4 )
 set ( CHOLMOD_VERSION_MINOR 2 )
-set ( CHOLMOD_VERSION_SUB   0 )
+set ( CHOLMOD_VERSION_SUB   1 )
 
 message ( STATUS "Building CHOLMOD version: v"
     ${CHOLMOD_VERSION_MAJOR}.
@@ -474,10 +474,13 @@ endif ( )
 
 # CHOLMOD_CUDA
 if ( SUITESPARSE_CUDA )
-    message ( STATUS "CHOLMOD cuda: " ${CHOLMOD_CUDA} )
     target_link_libraries ( CHOLMOD PRIVATE CHOLMOD_CUDA ${CUDA_LIBRARIES} )
+    set ( CHOLMOD_STATIC_MODULES "${CHOLMOD_STATIC_MODULES} CHOLMOD_CUDA" )
+    set ( CHOLMOD_CFLAGS "${CHOLMOD_CFLAGS} -DSUITESPARSE_CUDA" )
+    target_compile_definitions ( CHOLMOD PUBLIC "SUITESPARSE_CUDA" )
     if ( NOT NSTATIC )
         target_link_libraries ( CHOLMOD_static PUBLIC CHOLMOD_CUDA_static ${CUDA_LIBRARIES} )
+        target_compile_definitions ( CHOLMOD_static PUBLIC "SUITESPARSE_CUDA" )
     endif ( )
     target_link_libraries ( CHOLMOD PRIVATE CUDA::nvrtc CUDA::cudart_static
         CUDA::nvToolsExt CUDA::cublas )
@@ -569,7 +572,11 @@ if ( NOT MSVC )
             set ( CHOLMOD_STATIC_LIBS "${CHOLMOD_STATIC_LIBS} -l${_lib}" )
             continue ()
         endif ( )
-        foreach ( _kind IN ITEMS "IMPORT" "SHARED" "STATIC" )
+        set ( _kinds "SHARED" "STATIC" )
+        if ( WIN32 )
+            list ( PREPEND _kinds "IMPORT" )
+        endif ( )
+        foreach ( _kind IN LISTS _kinds )
             set ( _regex ".*\\/(lib)?([^\\.]*)(${CMAKE_${_kind}_LIBRARY_SUFFIX})" )
             if ( ${_lib} MATCHES ${_regex} )
                 string ( REGEX REPLACE ${_regex} "\\2" _libname ${_lib} )

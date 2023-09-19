@@ -12,10 +12,10 @@
 # cmake 3.22 is required to find the BLAS in SuiteSparse_config
 cmake_minimum_required ( VERSION 3.22 )
 
-set ( UMFPACK_DATE "Sept 8, 2023" )
+set ( UMFPACK_DATE "Sept 18, 2023" )
 set ( UMFPACK_VERSION_MAJOR 6 )
 set ( UMFPACK_VERSION_MINOR 2 )
-set ( UMFPACK_VERSION_SUB   0 )
+set ( UMFPACK_VERSION_SUB   1 )
 
 message ( STATUS "Building UMFPACK version: v"
     ${UMFPACK_VERSION_MAJOR}.
@@ -81,14 +81,6 @@ if ( NOT NCHOLMOD )
         PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::CHOLMOD )
         find_package ( CHOLMOD 4.2.0 )
-    endif ( )
-
-    if ( SUITESPARSE_CUDA )
-        find_package ( CHOLMOD_CUDA 4.2.0
-            PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
-        if ( NOT TARGET SuiteSparse::CHOLMOD_CUDA )
-            find_package ( CHOLMOD_CUDA 4.2.0 )
-        endif ( )
     endif ( )
 
     # look for CHOLMOD's dependencies: AMD and COLAMD are required.  CAMD and
@@ -255,13 +247,9 @@ include_directories ( ${BLAS_INCLUDE_DIRS} )
 # CHOLMOD:
 if ( NOT NCHOLMOD )
     # link with CHOLMOD and its dependencies, both required and optional
-    message ( STATUS "CHOLMOD cuda libraries: " ${CHOLMOD_CUDA_LIBRARIES} )
-    target_link_libraries ( UMFPACK PRIVATE
-        SuiteSparse::CHOLMOD ${CHOLMOD_CUDA_LIBRARIES} )
+    target_link_libraries ( UMFPACK PRIVATE SuiteSparse::CHOLMOD )
     if ( NOT NSTATIC )
-        set ( UMFPACK_STATIC_MODULES "${UMFPACK_STATIC_MODULES} CHOLMOD CHOLMOD_CUDA" )
-        target_link_libraries ( UMFPACK_static PUBLIC
-            ${CHOLMOD_CUDA_STATIC} )
+        set ( UMFPACK_STATIC_MODULES "${UMFPACK_STATIC_MODULES} CHOLMOD" )
         if ( TARGET SuiteSparse::CHOLMOD_static )
             target_link_libraries ( UMFPACK_static PUBLIC SuiteSparse::CHOLMOD_static )
         else ( )
@@ -329,7 +317,11 @@ if ( NOT MSVC )
             set ( UMFPACK_STATIC_LIBS "${UMFPACK_STATIC_LIBS} -l${_lib}" )
             continue ()
         endif ( )
-        foreach ( _kind IN ITEMS "IMPORT" "SHARED" "STATIC" )
+        set ( _kinds "SHARED" "STATIC" )
+        if ( WIN32 )
+            list ( PREPEND _kinds "IMPORT" )
+        endif ( )
+        foreach ( _kind IN LISTS _kinds )
             set ( _regex ".*\\/(lib)?([^\\.]*)(${CMAKE_${_kind}_LIBRARY_SUFFIX})" )
             if ( ${_lib} MATCHES ${_regex} )
                 string ( REGEX REPLACE ${_regex} "\\2" _libname ${_lib} )

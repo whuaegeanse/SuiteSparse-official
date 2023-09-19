@@ -12,10 +12,10 @@
 
 cmake_minimum_required ( VERSION 3.20 )
 
-set ( KLU_DATE "Sept 8, 2023" )
+set ( KLU_DATE "Sept 18, 2023" )
 set ( KLU_VERSION_MAJOR 2 )
 set ( KLU_VERSION_MINOR 2 )
-set ( KLU_VERSION_SUB   0 )
+set ( KLU_VERSION_SUB   1 )
 
 message ( STATUS "Building KLU version: v"
     ${KLU_VERSION_MAJOR}.
@@ -84,14 +84,6 @@ if ( NOT NCHOLMOD )
         PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::CHOLMOD )
         find_package ( CHOLMOD 4.2.0 )
-    endif ( )
-
-    if ( SUITESPARSE_CUDA )
-        find_package ( CHOLMOD_CUDA 4.2.0
-            PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
-        if ( NOT TARGET SuiteSparse::CHOLMOD_CUDA )
-            find_package ( CHOLMOD_CUDA 4.2.0 )
-        endif ( )
     endif ( )
 
     # look for CHOLMOD's dependencies: AMD and COLAMD are required.  CAMD and

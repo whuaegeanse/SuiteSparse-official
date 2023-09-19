@@ -13,10 +13,10 @@
 # cmake 3.22 is required to find the BLAS in SuiteSparsePolicy.cmake
 cmake_minimum_required ( VERSION 3.22 )
 
-set ( SPQR_DATE "Sept 8, 2023" )
+set ( SPQR_DATE "Sept 18, 2023" )
 set ( SPQR_VERSION_MAJOR 4 )
 set ( SPQR_VERSION_MINOR 2 )
-set ( SPQR_VERSION_SUB   0 )
+set ( SPQR_VERSION_SUB   1 )
 
 message ( STATUS "Building SPQR version: v"
     ${SPQR_VERSION_MAJOR}.
@@ -355,7 +355,11 @@ if ( NOT MSVC )
             set ( SPQR_STATIC_LIBS "${SPQR_STATIC_LIBS} -l${_lib}" )
             continue ()
         endif ( )
-        foreach ( _kind IN ITEMS "IMPORT" "SHARED" "STATIC" )
+        set ( _kinds "SHARED" "STATIC" )
+        if ( WIN32 )
+            list ( PREPEND _kinds "IMPORT" )
+        endif ( )
+        foreach ( _kind IN LISTS _kinds )
             set ( _regex ".*\\/(lib)?([^\\.]*)(${CMAKE_${_kind}_LIBRARY_SUFFIX})" )
             if ( ${_lib} MATCHES ${_regex} )
                 string ( REGEX REPLACE ${_regex} "\\2" _libname ${_lib} )
