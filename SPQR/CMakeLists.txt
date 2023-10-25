@@ -13,10 +13,10 @@
 # cmake 3.22 is required to find the BLAS in SuiteSparsePolicy.cmake
 cmake_minimum_required ( VERSION 3.22 )
 
-set ( SPQR_DATE "Sept 18, 2023" )
+set ( SPQR_DATE "Oct 23, 2023" )
 set ( SPQR_VERSION_MAJOR 4 )
 set ( SPQR_VERSION_MINOR 2 )
-set ( SPQR_VERSION_SUB   1 )
+set ( SPQR_VERSION_SUB   2 )
 
 message ( STATUS "Building SPQR version: v"
     ${SPQR_VERSION_MAJOR}.
@@ -54,63 +54,23 @@ else ( )
     find_package ( OpenMP )
 endif ( )
 
-find_package ( SuiteSparse_config 7.2.0
+find_package ( SuiteSparse_config 7.3.0
     PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-    find_package ( SuiteSparse_config 7.2.0 REQUIRED )
+    find_package ( SuiteSparse_config 7.3.0 REQUIRED )
 endif ( )
 
-find_package ( AMD 3.2.0
-    PATHS ${CMAKE_SOURCE_DIR}/../AMD/build NO_DEFAULT_PATH )
-if ( NOT TARGET SuiteSparse::AMD )
-    find_package ( AMD 3.2.0 REQUIRED )
-endif ( )
-
-find_package ( COLAMD 3.2.0
-    PATHS ${CMAKE_SOURCE_DIR}/../COLAMD/build NO_DEFAULT_PATH )
-if ( NOT TARGET SuiteSparse::COLAMD )
-    find_package ( COLAMD 3.2.0 REQUIRED )
-endif ( )
-
-# It would be nice if just checking for CHOLMOD would automatically pull in
-# the targets for its dependencies.
-find_package ( CHOLMOD 4.2.0
+find_package ( CHOLMOD 5.0.0
     PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::CHOLMOD )
-    find_package ( CHOLMOD 4.2.0 REQUIRED )
-endif ( )
-
-# look for CHOLMOD's dependencies: AMD and COLAMD are required.  CAMD and
-# CCOLAMD are optional, but must be found if CHOLMOD was built with them.
-find_package ( CAMD 3.2.0
-    PATHS ${CMAKE_SOURCE_DIR}/../CAMD/build NO_DEFAULT_PATH )
-if ( NOT TARGET SuiteSparse::CAMD )
-    find_package ( CAMD 3.2.0 )
-endif ( )
-
-find_package ( CCOLAMD 3.2.0
-    PATHS ${CMAKE_SOURCE_DIR}/../CCOLAMD/build NO_DEFAULT_PATH )
-if ( NOT TARGET SuiteSparse::CCOLAMD )
-    find_package ( CCOLAMD 3.2.0 )
+    find_package ( CHOLMOD 5.0.0 REQUIRED )
 endif ( )
 
 if ( SUITESPARSE_CUDA )
-    find_package ( SuiteSparse_GPURuntime 3.2.0
-        PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_GPURuntime/build NO_DEFAULT_PATH )
-    if ( NOT TARGET SuiteSparse::GPURuntime )
-        find_package ( SuiteSparse_GPURuntime 3.2.0 REQUIRED )
-    endif ( )
-
-    find_package ( GPUQREngine 3.2.0
-        PATHS ${CMAKE_SOURCE_DIR}/../GPUQREngine/build NO_DEFAULT_PATH )
-    if ( NOT TARGET SuiteSparse::GPUQREngine )
-        find_package ( GPUQREngine 3.2.0 REQUIRED )
-    endif ( )
-
-    find_package ( CHOLMOD_CUDA 4.2.0
+    find_package ( CHOLMOD_CUDA 5.0.0
         PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::CHOLMOD_CUDA )
-        find_package ( CHOLMOD_CUDA 4.2.0 REQUIRED )
+        find_package ( CHOLMOD_CUDA 5.0.0 REQUIRED )
     endif ( )
 endif ( )
 
@@ -119,6 +79,8 @@ include ( SuiteSparseLAPACK )   # requires cmake 3.22
 
 if ( SUITESPARSE_CUDA )
     # with CUDA
+    add_subdirectory ( GPURuntime )
+    add_subdirectory ( GPUQREngine )
     add_subdirectory ( SPQRGPU )
 endif ( )
 
@@ -254,13 +216,8 @@ endif ( )
 
 if ( SUITESPARSE_CUDA )
     # CUDA
-    target_link_libraries ( SPQR PRIVATE SuiteSparse::CHOLMOD_CUDA SPQR_CUDA )
-    # SPQR includes files from the following targets that are not installed by
-    # them.  That looks strange and will only work before they are installed.
-    # Maybe, those two targets aren't actually standalone libraries but should
-    # be part of the SPQR project?
     target_link_libraries ( SPQR PRIVATE
-        SuiteSparse::GPUQREngine SuiteSparse::GPURuntime )
+        SuiteSparse::CHOLMOD_CUDA SPQR_CUDA GPUQREngine GPURuntime )
     target_compile_definitions ( SPQR PUBLIC "SUITESPARSE_CUDA" )
     set ( SPQR_CFLAGS "-DSUITESPARSE_CUDA" )
     if ( NOT NSTATIC )
@@ -269,19 +226,9 @@ if ( SUITESPARSE_CUDA )
         else ( )
             target_link_libraries ( SPQR_static PUBLIC SuiteSparse::CHOLMOD_CUDA )
         endif ( )
-        target_link_libraries ( SPQR_static PUBLIC SPQR_CUDA_static )
+        target_link_libraries ( SPQR_static PUBLIC
+            SPQR_CUDA_static GPUQREngine_static GPURuntime_static )
         target_compile_definitions ( SPQR_static PUBLIC "SUITESPARSE_CUDA" )
-
-        if ( TARGET SuiteSparse::GPUQREngine_static )
-            target_link_libraries ( SPQR_static PUBLIC SuiteSparse::GPUQREngine_static )
-        else ( )
-            target_link_libraries ( SPQR_static PUBLIC SuiteSparse::GPUQREngine )
-        endif ( )
-        if ( TARGET SuiteSparse::GPURuntime_static )
-            target_link_libraries ( SPQR_static PUBLIC SuiteSparse::GPURuntime_static )
-        else ( )
-            target_link_libraries ( SPQR_static PUBLIC SuiteSparse::GPURuntime )
-        endif ( )
     endif ( )
 endif ( )
 
@@ -317,14 +264,14 @@ install ( EXPORT SPQRTargets
     DESTINATION ${SUITESPARSE_LIBDIR}/cmake/SPQR )
 
 # generate config file to be used in common build tree
-set ( SUITESPARSE_IN_BUILD_TREE on )
+set ( SUITESPARSE_IN_BUILD_TREE ON )
 configure_package_config_file (
     Config/SPQRConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/SPQRConfig.cmake
     INSTALL_DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/SPQRConfig.cmake )
 
 # generate config file to be installed
-set ( SUITESPARSE_IN_BUILD_TREE off )
+set ( SUITESPARSE_IN_BUILD_TREE OFF )
 configure_package_config_file (
     Config/SPQRConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/target/SPQRConfig.cmake

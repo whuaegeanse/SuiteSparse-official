@@ -12,10 +12,10 @@
 cmake_minimum_required ( VERSION 3.20 )
 
 # cmake inserts the date and version number into Include/my.h:
-set ( MY_DATE "Oct 16, 2023" )
+set ( MY_DATE "Oct 23, 2023" )
 set ( MY_VERSION_MAJOR 1 )
 set ( MY_VERSION_MINOR 4 )
-set ( MY_VERSION_PATCH 2 )
+set ( MY_VERSION_PATCH 3 )
 
 message ( STATUS "Building MY library version: v"
     ${MY_VERSION_MAJOR}.
@@ -61,34 +61,27 @@ project ( my
 #-------------------------------------------------------------------------------
 
 # look for all SuiteSparse packages:
-find_package ( SuiteSparse_config 7.2.2 REQUIRED )
+find_package ( SuiteSparse_config 7.3.0 REQUIRED )
 find_package ( AMD 3.2.1 REQUIRED )
 find_package ( BTF 2.2.1 REQUIRED )
 find_package ( CAMD 3.2.1 REQUIRED )
 find_package ( CCOLAMD 3.2.1 REQUIRED )
 find_package ( COLAMD 3.2.1 REQUIRED )
-find_package ( CHOLMOD 4.2.2 REQUIRED )
+find_package ( CHOLMOD 5.0.0 REQUIRED )
 find_package ( CXSparse 4.2.1 REQUIRED )
 find_package ( GraphBLAS 8.2.1 )
-find_package ( KLU 2.2.1 REQUIRED )
-find_package ( KLU_CHOLMOD 2.2.1 REQUIRED )
+find_package ( KLU 2.2.2 REQUIRED )
+find_package ( KLU_CHOLMOD 2.2.2 REQUIRED )
 find_package ( LDL 3.2.1 REQUIRED )
 find_package ( Mongoose 3.2.1 REQUIRED )
 find_package ( RBio 4.2.1 REQUIRED )
 find_package ( SPEX 2.2.1 REQUIRED )
-find_package ( SPQR 4.2.1 REQUIRED )
-find_package ( UMFPACK 6.2.1 REQUIRED )
-
-if ( TARGET CUDA::nvrtc )
-    # CHOLMOD and SPQR have been compiled with CUDA enabled.
-    find_package ( SuiteSparse_GPURuntime 3.2.1 REQUIRED )
-    find_package ( GPUQREngine 3.2.1 REQUIRED )
-endif ( )
+find_package ( SPQR 4.2.2 REQUIRED )
+find_package ( UMFPACK 6.2.2 REQUIRED )
 
 # look for all external libaries:
 find_package ( OpenMP REQUIRED )
-find_package ( GMP 6.1.2 REQUIRED )
-find_package ( MPFR 4.0.2 REQUIRED )
+
 include ( SuiteSparseBLAS )
 
 #-------------------------------------------------------------------------------
@@ -299,19 +292,6 @@ else ( )
     target_link_libraries ( my_cxx_static PUBLIC SuiteSparse::CXSparse )
 endif ( )
 
-# GPUQREngine:
-if ( ENABLE_CUDA )
-    target_link_libraries ( my PRIVATE SuiteSparse::GPUQREngine )
-    target_link_libraries ( my_cxx PRIVATE SuiteSparse::GPUQREngine )
-    if ( TARGET SuiteSparse::GPUQREngine_static )
-        target_link_libraries ( my_static PUBLIC SuiteSparse::GPUQREngine_static )
-        target_link_libraries ( my_cxx_static PUBLIC SuiteSparse::GPUQREngine_static )
-    else ( )
-        target_link_libraries ( my_static PUBLIC SuiteSparse::GPUQREngine )
-        target_link_libraries ( my_cxx_static PUBLIC SuiteSparse::GPUQREngine )
-    endif ( )
-endif ( )
-
 # GraphBLAS:
 if ( TARGET SuiteSparse::GraphBLAS )
     target_link_libraries ( my PRIVATE SuiteSparse::GraphBLAS )
@@ -416,19 +396,6 @@ if ( TARGET SuiteSparse::SuiteSparseConfig_static )
 else ( )
     target_link_libraries ( my_static PUBLIC SuiteSparse::SuiteSparseConfig )
     target_link_libraries ( my_cxx_static PUBLIC SuiteSparse::SuiteSparseConfig )
-endif ( )
-
-# GPURuntime:
-if ( ENABLE_CUDA )
-    target_link_libraries ( my PRIVATE SuiteSparse::GPURuntime )
-    target_link_libraries ( my_cxx PRIVATE SuiteSparse::GPURuntime )
-    if ( TARGET SuiteSparse::GPURuntime_static )
-        target_link_libraries ( my_static PUBLIC SuiteSparse::GPURuntime_static )
-        target_link_libraries ( my_cxx_static PUBLIC SuiteSparse::GPURuntime_static )
-    else ( )
-        target_link_libraries ( my_static PUBLIC SuiteSparse::GPURuntime )
-        target_link_libraries ( my_cxx_static PUBLIC SuiteSparse::GPURuntime )
-    endif ( )
 endif ( )
 
 # UMFPACK:
