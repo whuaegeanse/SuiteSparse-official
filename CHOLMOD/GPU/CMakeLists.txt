@@ -28,7 +28,7 @@ set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSUITESPARSE_CUDA" )
 message ( STATUS "C++ flags for CUDA:  ${CMAKE_CXX_FLAGS}" )
 message ( STATUS "nvcc flags for CUDA: ${CMAKE_CUDA_FLAGS}" )
 file ( GLOB CHOLMOD_CUDA_SOURCES "cholmod_gpu.c" "cholmod_l_gpu.c"
-    "cholmod_gpu_kernels.cu" "../Core/cholmod_error.c" "../Core/cholmod_l_error.c" )
+    "cholmod_gpu_kernels.cu" "../Utility/cholmod_error.c" "../Utility/cholmod_l_error.c" )
 
 add_library ( CHOLMOD_CUDA SHARED ${CHOLMOD_CUDA_SOURCES} )
 
