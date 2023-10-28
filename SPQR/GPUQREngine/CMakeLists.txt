@@ -12,60 +12,46 @@
 
 cmake_minimum_required ( VERSION 3.20 )
 
-set ( GPUQRENGINE_DATE "Sept 18, 2023" )
+set ( GPUQRENGINE_DATE "Oct 23, 2023" )
 set ( GPUQRENGINE_VERSION_MAJOR 3 )
 set ( GPUQRENGINE_VERSION_MINOR 2 )
-set ( GPUQRENGINE_VERSION_SUB   1 )
+set ( GPUQRENGINE_VERSION_SUB   2 )
 
 message ( STATUS "Building GPUQRENGINE version: v"
     ${GPUQRENGINE_VERSION_MAJOR}.
     ${GPUQRENGINE_VERSION_MINOR}.
     ${GPUQRENGINE_VERSION_SUB} " (" ${GPUQRENGINE_DATE} ")" )
 
-#-------------------------------------------------------------------------------
-# SuiteSparse policies
-#-------------------------------------------------------------------------------
-
-set ( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
-    ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/cmake_modules )
-
-option ( ENABLE_CUDA "Enable CUDA acceleration" on )
-
-include ( SuiteSparsePolicy )
+set ( GPUQRENGINE_VERSION_MAJOR ${GPUQRENGINE_VERSION_MAJOR} PARENT_SCOPE )
+set ( GPUQRENGINE_VERSION_MINOR ${GPUQRENGINE_VERSION_MINOR} PARENT_SCOPE )
+set ( GPUQRENGINE_VERSION_SUB   ${GPUQRENGINE_VERSION_SUB} PARENT_SCOPE )
 
 #-------------------------------------------------------------------------------
 # define the project
 #-------------------------------------------------------------------------------
 
-if ( SUITESPARSE_CUDA )
-    project ( gpuqrengine 
-        VERSION "${GPUQRENGINE_VERSION_MAJOR}.${GPUQRENGINE_VERSION_MINOR}.${GPUQRENGINE_VERSION_SUB}"
-        LANGUAGES C CXX CUDA )
-else ( )
-    # CUDA not available
-    project ( gpuqrengine 
-        VERSION "${GPUQRENGINE_VERSION_MAJOR}.${GPUQRENGINE_VERSION_MINOR}.${GPUQRENGINE_VERSION_SUB}"
-        LANGUAGES C CXX )
-    message ( STATUS "CUDA not enabled:  library will be empty" )
-endif ( )
+project ( gpuqrengine 
+    VERSION "${GPUQRENGINE_VERSION_MAJOR}.${GPUQRENGINE_VERSION_MINOR}.${GPUQRENGINE_VERSION_SUB}"
+    LANGUAGES CXX CUDA )
+
+#-------------------------------------------------------------------------------
+# SuiteSparse policies
+#-------------------------------------------------------------------------------
+
+set ( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
+    ${PROJECT_SOURCE_DIR}/../../SuiteSparse_config/cmake_modules )
+
+include ( SuiteSparsePolicy )
 
 #-------------------------------------------------------------------------------
 # find library dependencies
 #-------------------------------------------------------------------------------
 
 # for the library itself
-find_package ( SuiteSparse_config 7.2.0
-    PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
+find_package ( SuiteSparse_config 7.3.0
+    PATHS ${CMAKE_SOURCE_DIR}/../../SuiteSparse_config/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-    find_package ( SuiteSparse_config 7.2.0 REQUIRED )
-endif ( )
-
-if ( SUITESPARSE_CUDA )
-    find_package ( SuiteSparse_GPURuntime 3.2.0
-        PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_GPURuntime/build NO_DEFAULT_PATH )
-    if ( NOT TARGET SuiteSparse::GPURuntime )
-        find_package ( SuiteSparse_GPURuntime 3.2.0 REQUIRED )
-    endif ( )
+    find_package ( SuiteSparse_config 7.3.0 REQUIRED )
 endif ( )
 
 # Demo disabled for GPUQREngine v2.x
@@ -73,45 +59,14 @@ set ( DEMO_OK false )
 
 if ( DEMO AND DEMO_OK )
     # for the demo only:
-    find_package ( AMD 3.2.0
-        PATHS ${CMAKE_SOURCE_DIR}/../AMD/build NO_DEFAULT_PATH )
-    if ( NOT TARGET SuiteSparse::AMD )
-        find_package ( AMD 3.2.0 )
-    endif ( )
-
-    find_package ( COLAMD 3.2.0
-        PATHS ${CMAKE_SOURCE_DIR}/../COLAMD/build NO_DEFAULT_PATH )
-    if ( NOT TARGET SuiteSparse::COLAMD )
-        find_package ( COLAMD 3.2.0 )
-    endif ( )
-
-    find_package ( CAMD 3.2.0
-        PATHS ${CMAKE_SOURCE_DIR}/../CAMD/build NO_DEFAULT_PATH )
-    if ( NOT TARGET SuiteSparse::CAMD )
-        find_package ( CAMD 3.2.0 )
-    endif ( )
-
-    find_package ( CCOLAMD 3.2.0
-        PATHS ${CMAKE_SOURCE_DIR}/../CCOLAMD/build NO_DEFAULT_PATH )
-    if ( NOT TARGET SuiteSparse::CCOLAMD )
-        find_package ( CCOLAMD 3.2.0 )
-    endif ( )
-
-    find_package ( CHOLMOD 4.2.0
-        PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
+    find_package ( CHOLMOD 5.0.0
+        PATHS ${CMAKE_SOURCE_DIR}/../../CHOLMOD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::CHOLMOD )
-        find_package ( CHOLMOD 4.2.0 )
-    endif ( )
-
-    find_package ( CHOLMOD_CUDA 4.2.0
-        PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
-    if ( NOT TARGET SuiteSparse::CHOLMOD_CUDA )
-        find_package ( CHOLMOD_CUDA 4.2.0 )
+        find_package ( CHOLMOD 5.0.0 )
     endif ( )
 endif ( )
 
-if ( SUITESPARSE_CUDA AND CHOLMOD_FOUND AND AMD_FOUND AND COLAMD_FOUND AND 
-    CAMD_FOUND AND CCOLAMD_FOUND )
+if ( SUITESPARSE_CUDA AND CHOLMOD_FOUND )
     set ( DEMO_OK true )
 else ( )
     set ( DEMO_OK false )
@@ -127,26 +82,10 @@ configure_file ( "Config/GPUQREngine.hpp.in"
 
 #-------------------------------------------------------------------------------
 
-if ( SUITESPARSE_CUDA )
-    set ( CMAKE_CUDA_FLAGS "-cudart=static -lineinfo -DSUITESPARSE_CUDA" )
-    set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSUITESPARSE_CUDA" )
-    message ( STATUS "C++ flags for CUDA:  ${CMAKE_CXX_FLAGS}" )
-    message ( STATUS "nvcc flags for CUDA: ${CMAKE_CUDA_FLAGS}" )
-endif ( )
-
-set ( CMAKE_CXX_STANDARD 17 )
-set ( CMAKE_C_STANDARD 11 )
-
-if ( SUITESPARSE_CUDA )
-    file ( GLOB GPUQRENGINE_SOURCES "Source/*.cpp" "Source/*.cu" "Source/*/*.cpp" )
-else ( )
-    file ( GLOB GPUQRENGINE_SOURCES "Source/*.cpp" )
-endif ( )
+file ( GLOB GPUQRENGINE_SOURCES "Source/*.cpp" "Source/*.cu" "Source/*/*.cpp" )
 
 set ( GPUQRENGINE_INCLUDES Include Include/Kernel
     Include/Kernel/Apply Include/Kernel/Assemble Include/Kernel/Factorize )
-
-include_directories ( ${GPUQRENGINE_INCLUDES} ${CUDAToolkit_INCLUDE_DIRS} )
 
 #-------------------------------------------------------------------------------
 # dynamic gpuqrengine library properties
@@ -164,19 +103,15 @@ set_target_properties ( GPUQREngine PROPERTIES
     WINDOWS_EXPORT_ALL_SYMBOLS ON )
 
 target_include_directories ( GPUQREngine PRIVATE
-    ${CUDAToolkit_INCLUDE_DIRS}
     ${GPUQRENGINE_INCLUDES}
-    "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
+    "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>"
+    "$<TARGET_PROPERTY:GPURuntime,INTERFACE_INCLUDE_DIRECTORIES>" )
 
-if ( SUITESPARSE_CUDA )
-    target_include_directories ( GPUQREngine PRIVATE
-        "$<TARGET_PROPERTY:SuiteSparse::GPURuntime,INTERFACE_INCLUDE_DIRECTORIES>" )
-
-    set_target_properties ( GPUQREngine PROPERTIES POSITION_INDEPENDENT_CODE ON )
-    set_target_properties ( GPUQREngine PROPERTIES CUDA_SEPARABLE_COMPILATION ON )
-    target_link_libraries ( GPUQREngine PRIVATE CUDA::nvrtc CUDA::cudart_static
-        CUDA::nvToolsExt CUDA::cublas )
-endif ( )
+set_target_properties ( GPUQREngine PROPERTIES POSITION_INDEPENDENT_CODE ON )
+set_target_properties ( GPUQREngine PROPERTIES CUDA_SEPARABLE_COMPILATION ON )
+target_link_libraries ( GPUQREngine PRIVATE
+    CUDA::nvrtc CUDA::cudart_static CUDA::nvToolsExt CUDA::cublas SuiteSparse::SuiteSparseConfig GPURuntime )
+target_compile_definitions ( GPUQREngine PRIVATE "SUITESPARSE_CUDA" )
 
 target_include_directories ( GPUQREngine
     INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
@@ -206,15 +141,14 @@ if ( NOT NSTATIC )
         ${GPUQRENGINE_INCLUDES}
         "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
 
-    if ( SUITESPARSE_CUDA )
-        target_include_directories ( GPUQREngine_static PRIVATE
-            "$<TARGET_PROPERTY:SuiteSparse::GPURuntime,INTERFACE_INCLUDE_DIRECTORIES>" )
+    target_include_directories ( GPUQREngine_static PRIVATE
+        "$<TARGET_PROPERTY:GPURuntime,INTERFACE_INCLUDE_DIRECTORIES>" )
 
-        set_target_properties ( GPUQREngine_static PROPERTIES CUDA_SEPARABLE_COMPILATION on )
-        set_target_properties ( GPUQREngine_static PROPERTIES POSITION_INDEPENDENT_CODE on )
-        target_link_libraries ( GPUQREngine_static PUBLIC CUDA::nvrtc CUDA::cudart_static
-            CUDA::nvToolsExt CUDA::cublas )
-    endif ( )
+    set_target_properties ( GPUQREngine_static PROPERTIES CUDA_SEPARABLE_COMPILATION ON )
+    set_target_properties ( GPUQREngine_static PROPERTIES POSITION_INDEPENDENT_CODE ON )
+    target_link_libraries ( GPUQREngine_static PUBLIC
+        CUDA::nvrtc CUDA::cudart_static CUDA::nvToolsExt CUDA::cublas )
+    target_compile_definitions ( GPUQREngine_static PRIVATE "SUITESPARSE_CUDA" )
 
     target_include_directories ( GPUQREngine_static
         INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
@@ -312,19 +246,11 @@ if ( DEMO AND DEMO_OK )
 
     # Libraries required for Demo programs
     target_link_libraries ( gpuqrengine_demo PUBLIC GPUQREngine
-        SuiteSparse::CHOLMOD SuiteSparse::AMD SuiteSparse::COLAMD
-        SuiteSparse::CAMD SuiteSparse::CCOLAMD SuiteSparse::CHOLMOD_CUDA
-        SuiteSparse::GPURuntime SuiteSparse::SuiteSparseConfig )
+        SuiteSparse::CHOLMOD SuiteSparse::CHOLMOD_CUDA
+        GPURuntime SuiteSparse::SuiteSparseConfig )
 
 else ( )
 
     message ( STATUS "Skipping the demos in GPUQREngine/Demo" )
 
 endif ( )
-
-#-------------------------------------------------------------------------------
-# report status
-#-------------------------------------------------------------------------------
-
-include ( SuiteSparseReport )
-

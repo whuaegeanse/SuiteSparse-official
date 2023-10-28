@@ -90,13 +90,16 @@ if ( NOT NSTATIC )
     endif ( )
 endif ( )
 
-target_link_libraries ( SPQR_CUDA PRIVATE SuiteSparse::CHOLMOD SuiteSparse::SuiteSparseConfig  )
+target_link_libraries ( SPQR_CUDA PRIVATE SuiteSparse::SuiteSparseConfig
+    SuiteSparse::CHOLMOD )
 
 target_link_libraries ( SPQR_CUDA PRIVATE CUDA::nvrtc CUDA::cudart_static
-    CUDA::nvToolsExt CUDA::cublas SuiteSparse::GPUQREngine SuiteSparse::GPURuntime SuiteSparse::CHOLMOD_CUDA SuiteSparse::SuiteSparseConfig )
+    CUDA::nvToolsExt CUDA::cublas SuiteSparse::SuiteSparseConfig SuiteSparse::CHOLMOD_CUDA
+    GPUQREngine GPURuntime )
 if ( NOT NSTATIC )
     target_link_libraries ( SPQR_CUDA_static PUBLIC CUDA::nvrtc CUDA::cudart_static
-        CUDA::nvToolsExt CUDA::cublas SuiteSparse::GPUQREngine_static SuiteSparse::GPURuntime_static SuiteSparse::CHOLMOD_CUDA_static SuiteSparse::SuiteSparseConfig_static )
+        CUDA::nvToolsExt SuiteSparse::SuiteSparseConfig_static SuiteSparse::CHOLMOD_CUDA_static 
+        CUDA::cublas GPUQREngine_static GPURuntime_static )
 endif ( )
 
 #-------------------------------------------------------------------------------

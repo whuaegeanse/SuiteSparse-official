@@ -49,10 +49,10 @@ include ( SuiteSparsePolicy )
 # find library dependencies
 #-------------------------------------------------------------------------------
 
-find_package ( SuiteSparse_config 7.2.0
+find_package ( SuiteSparse_config 7.3.0
     PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-    find_package ( SuiteSparse_config 7.2.0 REQUIRED )
+    find_package ( SuiteSparse_config 7.3.0 REQUIRED )
 endif ( )
 
 #-------------------------------------------------------------------------------
@@ -98,7 +98,7 @@ target_include_directories ( GPURuntime PRIVATE
 set_target_properties ( GPURuntime PROPERTIES POSITION_INDEPENDENT_CODE ON )
 set_target_properties ( GPURuntime PROPERTIES CUDA_SEPARABLE_COMPILATION ON )
 target_link_libraries ( GPURuntime PRIVATE
-    CUDA::nvrtc CUDA::cudart_static CUDA::nvToolsExt CUDA::cublas )
+    CUDA::nvrtc CUDA::cudart_static CUDA::nvToolsExt CUDA::cublas SuiteSparse::SuiteSparseConfig )
 target_compile_definitions ( GPURuntime PRIVATE "SUITESPARSE_CUDA" )
 
 target_include_directories ( GPURuntime 
