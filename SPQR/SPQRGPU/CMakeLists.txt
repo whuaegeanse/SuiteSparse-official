@@ -61,9 +61,6 @@ set ( SPQR_CUDA_INCLUDES ../Include )
 target_include_directories ( SPQR_CUDA PRIVATE
     "$<TARGET_PROPERTY:GPUQREngine,INTERFACE_INCLUDE_DIRECTORIES>"
     "$<TARGET_PROPERTY:GPURuntime,INTERFACE_INCLUDE_DIRECTORIES>" )
-target_include_directories ( SPQR_CUDA_static PRIVATE
-    "$<TARGET_PROPERTY:GPUQREngine,INTERFACE_INCLUDE_DIRECTORIES>"
-    "$<TARGET_PROPERTY:GPURuntime,INTERFACE_INCLUDE_DIRECTORIES>" )
 
 target_include_directories ( SPQR_CUDA PRIVATE
         ${CUDAToolkit_INCLUDE_DIRS}
@@ -74,6 +71,10 @@ set_target_properties ( SPQR_CUDA PROPERTIES CUDA_SEPARABLE_COMPILATION ON )
 target_compile_definitions ( SPQR_CUDA PRIVATE "SUITESPARSE_CUDA" )
 
 if ( NOT NSTATIC )
+    target_include_directories ( SPQR_CUDA_static PRIVATE
+        "$<TARGET_PROPERTY:GPUQREngine,INTERFACE_INCLUDE_DIRECTORIES>"
+        "$<TARGET_PROPERTY:GPURuntime,INTERFACE_INCLUDE_DIRECTORIES>" )
+
     target_include_directories ( SPQR_CUDA_static PRIVATE
         ${CUDAToolkit_INCLUDE_DIRS}
         ${SPQR_CUDA_INCLUDES}
