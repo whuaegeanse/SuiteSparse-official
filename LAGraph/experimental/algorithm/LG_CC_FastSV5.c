@@ -674,8 +674,19 @@ int LG_CC_FastSV5           // SuiteSparse:GraphBLAS method, with GxB extensions
         GrB_Index offset = 0 ;
         for (tid = 0 ; tid < nthreads ; tid++)
         {
-            memcpy (Tj + offset, Tj + Tp [range [tid]],
-                sizeof (GrB_Index) * count [tid]) ;
+
+//          this memcpy is not safe (src/dest can overlap)
+//          memcpy (Tj + offset, Tj + Tp [range [tid]],
+//              sizeof (GrB_Index) * count [tid]) ;
+
+            // use a for loop instead
+            GrB_Index *Tj_dest = Tj + offset ;
+            GrB_Index *Tj_src  = Tj + Tp [range [tid]] ;
+            for (int64_t k = 0 ; k < count [tid] ; k++)
+            {
+                Tj_dest [k] = Tj_src [k] ;
+            }
+
             offset += count [tid] ;
             count [tid] = offset - count [tid] ;
         }

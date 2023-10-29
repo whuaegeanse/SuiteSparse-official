@@ -177,6 +177,7 @@ include_directories ( "/usr/local/include" )
 
 # tell LAGraph where to find its own source (for LAGraph/data files)
 set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DLGDIR=${CMAKE_SOURCE_DIR}" )
+# set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O" )
 
 #-------------------------------------------------------------------------------
 # compiler options
