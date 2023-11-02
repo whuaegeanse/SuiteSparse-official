@@ -71,10 +71,9 @@ set_target_properties ( SPQR_CUDA PROPERTIES POSITION_INDEPENDENT_CODE ON )
 set_target_properties ( SPQR_CUDA PROPERTIES CUDA_SEPARABLE_COMPILATION ON )
 target_compile_definitions ( SPQR_CUDA PRIVATE "SUITESPARSE_CUDA" )
 
-target_link_libraries ( SPQR_CUDA PRIVATE SuiteSparse::CHOLMOD )
-
 target_link_libraries ( SPQR_CUDA PRIVATE CUDA::nvrtc CUDA::cudart_static
-    CUDA::nvToolsExt CUDA::cublas )
+    CUDA::nvToolsExt CUDA::cublas SuiteSparse::SuiteSparseConfig 
+    SuiteSparse::CHOLMOD_CUDA SuiteSparse::CHOLMOD GPUQREngine GPURuntime )
 
 if ( NOT NSTATIC )
     target_include_directories ( SPQR_CUDA_static PRIVATE
@@ -90,21 +89,26 @@ if ( NOT NSTATIC )
     set_target_properties ( SPQR_CUDA_static PROPERTIES POSITION_INDEPENDENT_CODE ON )
     target_compile_definitions ( SPQR_CUDA_static PRIVATE "SUITESPARSE_CUDA" )
 
+    if ( TARGET SuiteSparse::SuiteSparseConfig_static )
+        target_link_libraries ( SPQR_CUDA_static PUBLIC SuiteSparse::SuiteSparseConfig_static )
+    else ( )
+        target_link_libraries ( SPQR_CUDA_static PUBLIC SuiteSparse::SuiteSparseConfig )
+    endif ( )
+
+    if ( TARGET SuiteSparse::CHOLMOD_CUDA_static )
+        target_link_libraries ( SPQR_CUDA_static PUBLIC SuiteSparse::CHOLMOD_CUDA_static )
+    else ( )
+        target_link_libraries ( SPQR_CUDA_static PUBLIC SuiteSparse::CHOLMOD_CUDA )
+    endif ( )
+
     if ( TARGET SuiteSparse::CHOLMOD_static )
         target_link_libraries ( SPQR_CUDA_static PUBLIC SuiteSparse::CHOLMOD_static )
     else ( )
         target_link_libraries ( SPQR_CUDA_static PUBLIC SuiteSparse::CHOLMOD )
     endif ( )
-endif ( )
 
-target_link_libraries ( SPQR_CUDA PRIVATE SuiteSparse::CHOLMOD )
-
-target_link_libraries ( SPQR_CUDA PRIVATE CUDA::nvrtc CUDA::cudart_static
-    CUDA::nvToolsExt CUDA::cublas )
-if ( NOT NSTATIC )
     target_link_libraries ( SPQR_CUDA_static PUBLIC CUDA::nvrtc CUDA::cudart_static
-        CUDA::nvToolsExt SuiteSparse::SuiteSparseConfig_static SuiteSparse::CHOLMOD_CUDA_static 
-        CUDA::cublas GPUQREngine_static GPURuntime_static )
+    CUDA::nvToolsExt CUDA::cublas GPUQREngine_static GPURuntime_static )
 endif ( )
 
 #-------------------------------------------------------------------------------
