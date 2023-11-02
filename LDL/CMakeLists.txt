@@ -43,10 +43,10 @@ project ( ldl
 #-------------------------------------------------------------------------------
 option ( DEMO "ON: Build the demo programs.  OFF (default): do not build the demo programs." OFF )
 
-find_package ( SuiteSparse_config 7.3.0
+find_package ( SuiteSparse_config 7.3.1
     PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
 if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-    find_package ( SuiteSparse_config 7.3.0 REQUIRED )
+    find_package ( SuiteSparse_config 7.3.1 REQUIRED )
 endif ( )
 
 if ( DEMO )

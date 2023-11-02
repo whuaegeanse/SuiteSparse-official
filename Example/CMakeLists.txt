@@ -56,7 +56,7 @@ project ( my
 #-------------------------------------------------------------------------------
 
 # look for all SuiteSparse packages:
-find_package ( SuiteSparse_config 7.3.0 REQUIRED )
+find_package ( SuiteSparse_config 7.3.1 REQUIRED )
 find_package ( AMD 3.2.1 REQUIRED )
 find_package ( BTF 2.2.1 REQUIRED )
 find_package ( CAMD 3.2.1 REQUIRED )
