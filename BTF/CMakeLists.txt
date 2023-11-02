@@ -113,15 +113,11 @@ endif ( )
 #-------------------------------------------------------------------------------
 
 # SuiteSparseConfig:
-target_link_libraries ( BTF PRIVATE SuiteSparse::SuiteSparseConfig )
 target_include_directories ( BTF PUBLIC
     "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
 if ( NOT NSTATIC )
-    if ( TARGET SuiteSparse::SuiteSparseConfig_static )
-        target_link_libraries ( BTF_static PUBLIC SuiteSparse::SuiteSparseConfig_static )
-    else ( )
-        target_link_libraries ( BTF_static PUBLIC SuiteSparse::SuiteSparseConfig )
-    endif ( )
+    target_include_directories ( BTF_static PUBLIC
+        "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
 endif ( )
 
 # libm:
@@ -180,7 +176,7 @@ write_basic_package_version_file (
     COMPATIBILITY SameMajorVersion )
 
 install ( FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/BTFConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/target/BTFConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/BTFConfigVersion.cmake
     DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/BTF )
 

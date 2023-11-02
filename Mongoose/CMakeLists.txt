@@ -521,7 +521,7 @@ write_basic_package_version_file (
     COMPATIBILITY SameMajorVersion )
 
 install ( FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/MongooseConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/target/MongooseConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/MongooseConfigVersion.cmake
     DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/Mongoose )
 
