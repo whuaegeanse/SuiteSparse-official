@@ -7,24 +7,29 @@
 
 # See the User Guide for details on how to compile SuiteSparse:GraphBLAS.
 
-#-------------------------------------------------------------------------------
-# get the version
-#-------------------------------------------------------------------------------
-
 cmake_minimum_required ( VERSION 3.20 )
 
-set ( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
-    ${CMAKE_SOURCE_DIR}/cmake_modules )
+#-------------------------------------------------------------------------------
+# define the project
+#-------------------------------------------------------------------------------
 
-include ( GraphBLAS_version )
+project ( graphblas
+        LANGUAGES C )
 
 #-------------------------------------------------------------------------------
 # SuiteSparse policies
 #-------------------------------------------------------------------------------
 
-# CUDA is under development for now, and not deployed in production:
-  set ( ENABLE_CUDA false )
-# set ( ENABLE_CUDA true )
+set ( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
+    ${PROJECT_SOURCE_DIR}/cmake_modules )
+
+#-------------------------------------------------------------------------------
+# get the version
+#-------------------------------------------------------------------------------
+
+include ( GraphBLAS_version )
+
+set ( PROJECT_VERSION "${GraphBLAS_VERSION_MAJOR}.${GraphBLAS_VERSION_MINOR}.${GraphBLAS_VERSION_SUB}" )
 
 #-------------------------------------------------------------------------------
 # SuiteSparse policies
@@ -34,26 +39,30 @@ include ( GraphBLAS_version )
 # by default
 set ( NSTATIC_DEFAULT_ON true )
 
-include ( SuiteSparsePolicy )
-include ( GraphBLAS_JIT_paths )
+# CUDA is under development for now, and not deployed in production:
+  set ( ENABLE_CUDA false )
+# set ( ENABLE_CUDA true )
 
-#-------------------------------------------------------------------------------
-# define the project
-#-------------------------------------------------------------------------------
+include ( SuiteSparsePolicy )
+
+if ( GRAPHBLAS_NSTATIC )
+    # ignore current value of NSTATIC and set it to ON
+    set ( NSTATIC ON )
+endif ( )
+
+# FIXME: force COMPACT mode in GraphBLAS (while debugging)
+set ( COMPACT ON )
 
 if ( SUITESPARSE_CUDA )
     # FOR NOW: do not compile FactoryKernels when developing the CUDA kernels
-    set ( COMPACT on )
+    set ( COMPACT ON )
     message ( STATUS "GraphBLAS CUDA JIT: enabled")
-    project ( graphblas
-            VERSION "${GraphBLAS_VERSION_MAJOR}.${GraphBLAS_VERSION_MINOR}.${GraphBLAS_VERSION_SUB}"
-            LANGUAGES CUDA C )
+    enable_language ( CUDA )
 else ( )
     message ( STATUS "GraphBLAS CUDA JIT: disabled")
-    project ( graphblas
-            VERSION "${GraphBLAS_VERSION_MAJOR}.${GraphBLAS_VERSION_MINOR}.${GraphBLAS_VERSION_SUB}"
-            LANGUAGES C )
 endif ( )
+
+include ( GraphBLAS_JIT_paths )
 
 #-------------------------------------------------------------------------------
 # find OpenMP, CUDA, RMM, and cpu_features
@@ -217,6 +226,9 @@ if ( NJIT )
             "Source/FactoryKernels/*.c" )
     endif ( )
 else ( )
+    # generate compressed JIT sources
+    add_subdirectory ( JITpackage )
+
     if ( COMPACT )
         # with the JIT; but do not compile the FactoryKernels
         file ( GLOB GRAPHBLAS_SOURCES "Source/*.c" "Config/*.c" "PreJIT/*.c" 
@@ -254,6 +266,11 @@ if ( WIN32 )
     target_compile_definitions ( GraphBLAS PRIVATE GB_DLL_EXPORT )
 endif ( )
 
+if ( NOT NJIT )
+    # Make sure compressed sources are built before library
+    add_dependencies ( GraphBLAS grb_jitpackage )
+endif ( )
+
 #-------------------------------------------------------------------------------
 # static graphblas library properties
 #-------------------------------------------------------------------------------
@@ -284,6 +301,12 @@ if ( NOT NSTATIC )
 #       add_dependencies ( GraphBLAS_static rmm_wrap )
         target_compile_definitions ( GraphBLAS_static PRIVATE "SUITESPARSE_CUDA" )
     endif ( )
+
+    if ( NOT NJIT )
+        # Make sure compressed sources are built before library
+        add_dependencies ( GraphBLAS_static grb_jitpackage )
+    endif ( )
+
 endif ( )
 
 #-------------------------------------------------------------------------------
@@ -609,4 +632,6 @@ endif ( )
 # report status
 #-------------------------------------------------------------------------------
 
-include ( SuiteSparseReport )
+if ( NOT SUITESPARSE_ROOT_CMAKELISTS )
+    include ( SuiteSparseReport )
+endif ( )

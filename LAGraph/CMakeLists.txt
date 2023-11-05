@@ -38,26 +38,34 @@
 
 cmake_minimum_required ( VERSION 3.13 )
 
-set ( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
-    ${CMAKE_SOURCE_DIR}/cmake_modules
-    ${CMAKE_SOURCE_DIR}/../cmake_modules
-    ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/cmake_modules
-    )
-
 cmake_policy ( SET CMP0042 NEW )
 cmake_policy ( SET CMP0048 NEW )
 set ( CMAKE_MACOSX_RPATH TRUE )
 
 # version of LAGraph
 set ( LAGraph_DATE "Aug 2, 2023" )
-set ( LAGraph_VERSION_MAJOR 1 )
-set ( LAGraph_VERSION_MINOR 0 )
-set ( LAGraph_VERSION_SUB   2 )
+set ( LAGraph_VERSION_MAJOR 1 CACHE STRING "" FORCE )
+set ( LAGraph_VERSION_MINOR 0 CACHE STRING "" FORCE )
+set ( LAGraph_VERSION_SUB   2 CACHE STRING "" FORCE )
 
-include ( SuiteSparsePolicy )
+#-------------------------------------------------------------------------------
+# define the project
+#-------------------------------------------------------------------------------
 
 project ( lagraph
           VERSION "${LAGraph_VERSION_MAJOR}.${LAGraph_VERSION_MINOR}.${LAGraph_VERSION_SUB}" )
+
+#-------------------------------------------------------------------------------
+# SuiteSparse policies
+#-------------------------------------------------------------------------------
+
+set ( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
+    ${PROJECT_SOURCE_DIR}/cmake_modules
+    ${PROJECT_SOURCE_DIR}/../cmake_modules
+    ${PROJECT_SOURCE_DIR}/../SuiteSparse_config/cmake_modules
+    )
+
+include ( SuiteSparsePolicy )
 
 enable_language ( C )
 
@@ -80,29 +88,28 @@ configure_file (
 #   make test_coverage
 
 if ( "${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
-	if ( COVERAGE )
-                message ( STATUS "============== Code coverage enabled ===============" )
-		set ( CMAKE_BUILD_TYPE Debug )
-                # On the Mac, you need gcov-11 from homebrew (part of gcc-11):
-                # and uncomment this line:
-                # set ( GCOV_PATH /usr/local/bin/gcov-11)
-		include ( CodeCoverage )
+    if ( COVERAGE )
+        message ( STATUS "============== Code coverage enabled ===============" )
+        set ( CMAKE_BUILD_TYPE Debug )
+        # On the Mac, you need gcov-11 from homebrew (part of gcc-11):
+        # and uncomment this line:
+        # set ( GCOV_PATH /usr/local/bin/gcov-11)
+        include ( CodeCoverage )
 
-		append_coverage_compiler_flags ( )
+        append_coverage_compiler_flags ( )
 
-		# turn off optimization for non-skewed coverage reports
-		set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -DCOVERAGE" )
+        # turn off optimization for non-skewed coverage reports
+        set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -DCOVERAGE" )
 
-		setup_target_for_coverage_lcov (
-			NAME test_coverage
-			EXECUTABLE ctest
-			DEPENDENCIES ${PROJECT_NAME}
-			BASE_DIRECTORY "."
-			NO_DEMANGLE TRUE
-                        EXCLUDE "*/benchmark/*" "deps/json*/*"
-                            "src/test/include/acutest.h"
-		)
-	endif ( )
+        setup_target_for_coverage_lcov (
+            NAME test_coverage
+            EXECUTABLE ctest
+            DEPENDENCIES ${PROJECT_NAME}
+            BASE_DIRECTORY "."
+            NO_DEMANGLE TRUE
+            EXCLUDE "*/benchmark/*" "deps/json*/*" "src/test/include/acutest.h"
+            )
+    endif ( )
 endif ( )
 
 # For development only, not for end-users:
@@ -116,18 +123,27 @@ endif ( )
 # Find the GraphBLAS installation
 #-------------------------------------------------------------------------------
 
-# If GraphBLAS is not in a standard installation location, either
-#     export GRAPHBLAS_ROOT <path>
-# or
-#     GRAPHBLAS_ROOT=<path> cmake ..
-# or uncomment the next line:
-# set ( ENV{GRAPHBLAS_ROOT} ${CMAKE_SOURCE_DIR}/../GraphBLAS )
-message ( STATUS "GraphBLAS_ROOT: ${GraphBLAS_ROOT} $ENV{GraphBLAS_ROOT}" )
-message ( STATUS "GRAPHBLAS_ROOT: ${GRAPHBLAS_ROOT} $ENV{GRAPHBLAS_ROOT}" )
-find_package ( GraphBLAS 8.2.1
-    PATHS ${CMAKE_SOURCE_DIR}/../GraphBLAS/build NO_DEFAULT_PATH )
-if ( NOT TARGET SuiteSparse::GraphBLAS )
-    find_package ( GraphBLAS 8.2.1 REQUIRED )
+if ( SUITESPARSE_ROOT_CMAKELISTS )
+
+    add_library ( GraphBLAS::GraphBLAS ALIAS GraphBLAS )
+    if ( TARGET GraphBLAS_static )
+        add_library ( GraphBLAS::GraphBLAS_static ALIAS GraphBLAS_static )
+    endif ( )
+
+else ( )
+
+    # If GraphBLAS is not in a standard installation location, either
+    #     export GRAPHBLAS_ROOT <path>
+    # or
+    #     GRAPHBLAS_ROOT=<path> cmake ..
+    # or uncomment the next line:
+    # set ( ENV{GRAPHBLAS_ROOT} ${PROJECT_SOURCE_DIR}/../GraphBLAS )
+
+    message ( STATUS "GraphBLAS_ROOT: ${GraphBLAS_ROOT} $ENV{GraphBLAS_ROOT}" )
+    message ( STATUS "GRAPHBLAS_ROOT: ${GRAPHBLAS_ROOT} $ENV{GRAPHBLAS_ROOT}" )
+
+    find_package ( GraphBLAS 8.2.1 MODULE REQUIRED )
+
 endif ( )
 
 #-------------------------------------------------------------------------------
@@ -141,6 +157,9 @@ else ( )
         set ( OPENMP_C_FOUND OFF )
     else ( )
         find_package ( OpenMP )
+        if ( OPENMP_C_FOUND AND NOT NSTATIC )
+            list ( APPEND LAGRAPH_STATIC_LIBS ${OpenMP_C_LIBRARIES} )
+        endif ( )
         find_package ( Threads )
     endif ( )
 endif ( )
@@ -150,7 +169,7 @@ endif ( )
 #-------------------------------------------------------------------------------
 
 message ( STATUS "CMAKE build type:          " ${CMAKE_BUILD_TYPE} )
-message ( STATUS "CMAKE source directory:    " ${CMAKE_SOURCE_DIR} )
+message ( STATUS "CMAKE source directory:    " ${PROJECT_SOURCE_DIR} )
 message ( STATUS "CMAKE build directory:     " ${CMAKE_BINARY_DIR} )
 
 if ( ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
@@ -169,14 +188,13 @@ message ( STATUS "CMAKE have OpenMP:         " ${OPENMP_C_FOUND} )
 # include directories for LAGraph library
 #-------------------------------------------------------------------------------
 
-include_directories ( ${CMAKE_SOURCE_DIR}/include
-                      ${CMAKE_SOURCE_DIR}/src/utility
-                      ${CMAKE_SOURCE_DIR}/test/include
-                      ${GRAPHBLAS_INCLUDE_DIR} )
+include_directories ( ${PROJECT_SOURCE_DIR}/include
+                      ${PROJECT_SOURCE_DIR}/src/utility
+                      ${PROJECT_SOURCE_DIR}/test/include )
 include_directories ( "/usr/local/include" )
 
 # tell LAGraph where to find its own source (for LAGraph/data files)
-set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DLGDIR=${CMAKE_SOURCE_DIR}" )
+set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DLGDIR=${PROJECT_SOURCE_DIR}" )
 # set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O" )
 
 #-------------------------------------------------------------------------------
@@ -257,19 +275,115 @@ endif ( )
 # LAGraph installation location
 #-------------------------------------------------------------------------------
 
-# install in ${CMAKE_INSTALL_PREFIX}/lib and ${CMAKE_INSTALL_PREFIX}/include.
-# Requires "sudo make install" if this is /usr/local (default).
+include ( CMakePackageConfigHelpers )
 
-message ( STATUS "Installation in: ${CMAKE_INSTALL_PREFIX}" )
-include ( GNUInstallDirs )
-
-install ( TARGETS lagraph lagraphx
+install ( TARGETS LAGraph LAGraphX
+    EXPORT LAGraphTargets
     LIBRARY DESTINATION ${SUITESPARSE_LIBDIR}
     ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
     RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
     PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
 
-install ( TARGETS lagraph_static lagraphx_static
-    ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
-    PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+if ( NOT NSTATIC )
+    install ( TARGETS LAGraph_static LAGraphX_static
+        EXPORT LAGraphTargets
+        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
+        PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+endif ( )
 
+
+# create (temporary) export target file during build
+export ( EXPORT LAGraphTargets
+    NAMESPACE SuiteSparse::
+    FILE ${CMAKE_CURRENT_BINARY_DIR}/LAGraphTargets.cmake )
+
+# install export target, config and version files for find_package
+install ( EXPORT LAGraphTargets
+    NAMESPACE SuiteSparse::
+    DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/LAGraph )
+
+# generate config file to be used in common build tree
+set ( SUITESPARSE_IN_BUILD_TREE ON )
+configure_package_config_file (
+    config/LAGraphConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/LAGraphConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/LAGraphConfig.cmake )
+
+# generate config file to be installed
+set ( SUITESPARSE_IN_BUILD_TREE OFF )
+configure_package_config_file (
+    config/LAGraphConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/target/LAGraphConfig.cmake
+    INSTALL_DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/LAGraph )
+
+write_basic_package_version_file (
+    ${CMAKE_CURRENT_BINARY_DIR}/LAGraphConfigVersion.cmake
+    COMPATIBILITY SameMajorVersion )
+
+install ( FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/target/LAGraphConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/LAGraphConfigVersion.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/FindGraphBLAS.cmake
+    DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/LAGraph )
+
+#-------------------------------------------------------------------------------
+# create pkg-config file
+#-------------------------------------------------------------------------------
+
+if ( NOT MSVC )
+    if ( NOT NSTATIC )
+        if ( NOT WIN32 )
+            list ( APPEND LAGRAPH_STATIC_LIBS "m" )
+        endif ( )
+        list ( APPEND LAGRAPH_STATIC_LIBS ${GRAPHBLAS_LIBRARY} )
+    endif ( )
+    # This might be something like:
+    #   /usr/lib/libgomp.so;/usr/lib/libpthread.a;m
+    # convert to -l flags for pkg-config, i.e.: "-lgomp -lpthread -lm"
+    set ( LAGRAPH_STATIC_LIBS_LIST ${LAGRAPH_STATIC_LIBS} )
+    set ( LAGRAPH_STATIC_LIBS "" )
+    foreach ( _lib ${LAGRAPH_STATIC_LIBS_LIST} )
+        string ( FIND ${_lib} "." _pos REVERSE )
+        if ( ${_pos} EQUAL "-1" )
+            set ( LAGRAPH_STATIC_LIBS "${LAGRAPH_STATIC_LIBS} -l${_lib}" )
+            continue ()
+        endif ( )
+        set ( _kinds "SHARED" "STATIC" )
+        if ( WIN32 )
+            list ( PREPEND _kinds "IMPORT" )
+        endif ( )
+        foreach ( _kind IN LISTS _kinds )
+            set ( _regex ".*\\/(lib)?([^\\.]*)(${CMAKE_${_kind}_LIBRARY_SUFFIX})" )
+            if ( ${_lib} MATCHES ${_regex} )
+                string ( REGEX REPLACE ${_regex} "\\2" _libname ${_lib} )
+                if ( NOT "${_libname}" STREQUAL "" )
+                    set ( LAGRAPH_STATIC_LIBS "${LAGRAPH_STATIC_LIBS} -l${_libname}" )
+                    break ()
+                endif ( )
+            endif ( )
+        endforeach ( )
+    endforeach ( )
+
+    set ( prefix "${CMAKE_INSTALL_PREFIX}" )
+    set ( exec_prefix "\${prefix}" )
+    cmake_path ( IS_ABSOLUTE SUITESPARSE_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
+    if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
+        set ( libdir "${SUITESPARSE_LIBDIR}")
+    else ( )
+        set ( libdir "\${exec_prefix}/${SUITESPARSE_LIBDIR}")
+    endif ( )
+    cmake_path ( IS_ABSOLUTE SUITESPARSE_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
+    if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
+        set ( includedir "${SUITESPARSE_INCLUDEDIR}")
+    else ( )
+        set ( includedir "\${prefix}/${SUITESPARSE_INCLUDEDIR}")
+    endif ( )
+    configure_file (
+        config/LAGraph.pc.in
+        LAGraph.pc
+        @ONLY
+        NEWLINE_STYLE LF )
+    install ( FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/LAGraph.pc
+        DESTINATION ${SUITESPARSE_PKGFILEDIR}/pkgconfig )
+endif ( )
