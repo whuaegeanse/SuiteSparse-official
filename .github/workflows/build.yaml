@@ -191,7 +191,14 @@ jobs:
           cmake --build .
           echo "::endgroup::"
           printf "::group::\033[0;32m==>\033[0m Executing example\n"
+          printf "\033[1;35m  C binary with shared libraries\033[0m\n"
           LD_LIBRARY_PATH=${GITHUB_WORKSPACE}/lib ./my_demo
+          printf "\033[1;35m  C++ binary with shared libraries\033[0m\n"
+          LD_LIBRARY_PATH=${GITHUB_WORKSPACE}/lib ./my_cxx_demo
+          printf "\033[1;35m  C binary with statically linked libraries\033[0m\n"
+          ./my_demo_static
+          printf "\033[1;35m  C++ binary with statically linked libraries\033[0m\n"
+          ./my_cxx_demo_static
           echo "::endgroup::"
 
 
@@ -310,7 +317,14 @@ jobs:
           cmake --build .
           echo "::endgroup::"
           printf "::group::\033[0;32m==>\033[0m Executing example\n"
+          printf "\033[1;35m  C binary with shared libraries\033[0m\n"
           ./my_demo
+          printf "\033[1;35m  C++ binary with shared libraries\033[0m\n"
+          ./my_cxx_demo
+          printf "\033[1;35m  C binary with statically linked libraries\033[0m\n"
+          ./my_demo_static
+          printf "\033[1;35m  C++ binary with statically linked libraries\033[0m\n"
+          ./my_cxx_demo_static
           echo "::endgroup::"
 
 
@@ -371,6 +385,7 @@ jobs:
             ${{ matrix.target-prefix }}-ccache
             ${{ matrix.target-prefix }}-openblas
             ${{ matrix.target-prefix }}-omp
+            ${{ matrix.target-prefix }}-python
             ${{ matrix.target-prefix }}-gmp
             ${{ matrix.target-prefix }}-mpfr
 
@@ -421,6 +436,7 @@ jobs:
                   -DCMAKE_CXX_COMPILER_LAUNCHER="ccache" \
                   -DCMAKE_Fortran_COMPILER_LAUNCHER="ccache" \
                   -DBLA_VENDOR="OpenBLAS" \
+                  -DPython_EXECUTABLE="$(which python)" \
                   ..
             echo "::endgroup::"
             echo "::group::Build $lib"
@@ -468,8 +484,20 @@ jobs:
           cmake --build .
           echo "::endgroup::"
           printf "::group::\033[0;32m==>\033[0m Executing example\n"
+          printf "\033[1;35m  C binary with shared libraries\033[0m\n"
           PATH="${GITHUB_WORKSPACE}/bin:${PATH}" \
             ./my_demo
+          printf "\033[1;35m  C++ binary with shared libraries\033[0m\n"
+          PATH="${GITHUB_WORKSPACE}/bin:${PATH}" \
+            ./my_cxx_demo
+          # We don't build a static version of GraphBLAS in CI.
+          # So we need to prepare the environment also for the following tests.
+          printf "\033[1;35m  C binary with statically linked libraries\033[0m\n"
+          PATH="${GITHUB_WORKSPACE}/bin:${PATH}" \
+            ./my_demo_static
+          printf "\033[1;35m  C++ binary with statically linked libraries\033[0m\n"
+          PATH="${GITHUB_WORKSPACE}/bin:${PATH}" \
+            ./my_cxx_demo_static
           echo "::endgroup::"
 
 
@@ -664,5 +692,19 @@ jobs:
           cmake --build . --config Release
           echo "::endgroup::"
           printf "::group::\033[0;32m==>\033[0m Executing example\n"
-          PATH="${GITHUB_WORKSPACE}/bin;${GITHUB_WORKSPACE}/dependencies/bin;${PATH}" ./Release/my_demo
+          printf "\033[1;35m  C binary with shared libraries\033[0m\n"
+          PATH="${GITHUB_WORKSPACE}/bin;${GITHUB_WORKSPACE}/dependencies/bin;${PATH}" \
+            ./Release/my_demo
+          printf "\033[1;35m  C++ binary with shared libraries\033[0m\n"
+          PATH="${GITHUB_WORKSPACE}/bin;${GITHUB_WORKSPACE}/dependencies/bin;${PATH}" \
+            ./Release/my_cxx_demo
+          # We don't build a static version of GraphBLAS in CI.
+          # So we need to prepare the environment also for the following tests.
+          # Additionally, gmp, mpfr and BLAS are always shared libraries.
+          printf "\033[1;35m  C binary with statically linked libraries\033[0m\n"
+          PATH="${GITHUB_WORKSPACE}/bin;${GITHUB_WORKSPACE}/dependencies/bin;${PATH}" \
+            ./Release/my_demo_static
+          printf "\033[1;35m  C++ binary with statically linked libraries\033[0m\n"
+          PATH="${GITHUB_WORKSPACE}/bin;${GITHUB_WORKSPACE}/dependencies/bin;${PATH}" \
+            ./Release/my_cxx_demo_static
           echo "::endgroup::"

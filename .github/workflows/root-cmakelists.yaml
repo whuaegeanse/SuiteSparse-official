@@ -109,9 +109,8 @@ jobs:
           ccache -s
           echo "/usr/lib/ccache" >> $GITHUB_PATH
 
-      - name: build libraries
+      - name: configure
         run: |
-          printf "::group::   \033[0;32m==>\033[0m Configuring\n"
           mkdir -p ${GITHUB_WORKSPACE}/build && cd ${GITHUB_WORKSPACE}/build
           cmake -DCMAKE_BUILD_TYPE="Release" \
                 -DCMAKE_INSTALL_PREFIX=".." \
@@ -121,10 +120,11 @@ jobs:
                 -DBLA_VENDOR="OpenBLAS" \
                 ${{ matrix.cuda-cmake-flags }} \
                 ..
-          echo "::endgroup::"
-          printf "::group::   \033[0;32m==>\033[0m Building\n"
+
+      - name: build libraries
+        run: |
+          cd ${GITHUB_WORKSPACE}/build
           cmake --build .
-          echo "::endgroup::"
 
       - name: build demos
         run: |
@@ -150,6 +150,11 @@ jobs:
           path: ~/.ccache
           key: ${{ steps.ccache-prepare.outputs.key }}
 
+      - name: check
+        run: |
+          cd ${GITHUB_WORKSPACE}/build
+          ctest . || ctest . --rerun-failed --output-on-failure
+
       - name: install
         run: |
           printf "\033[0;32m==>\033[0m Installing libraries\n"
@@ -170,7 +175,14 @@ jobs:
           cmake --build .
           echo "::endgroup::"
           printf "::group::\033[0;32m==>\033[0m Executing example\n"
+          printf "\033[1;35m  C binary with shared libraries\033[0m\n"
           LD_LIBRARY_PATH=${GITHUB_WORKSPACE}/lib ./my_demo
+          printf "\033[1;35m  C++ binary with shared libraries\033[0m\n"
+          LD_LIBRARY_PATH=${GITHUB_WORKSPACE}/lib ./my_cxx_demo
+          printf "\033[1;35m  C binary with statically linked libraries\033[0m\n"
+          ./my_demo_static
+          printf "\033[1;35m  C++ binary with statically linked libraries\033[0m\n"
+          ./my_cxx_demo_static
           echo "::endgroup::"
 
 
@@ -240,6 +252,7 @@ jobs:
           install: >-
             mingw-w64-ucrt-x86_64-gmp
             mingw-w64-ucrt-x86_64-mpfr
+            mingw-w64-ucrt-x86_64-python
 
           msystem: UCRT64
 
@@ -296,9 +309,8 @@ jobs:
       - name: setup MSVC toolchain
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: build libraries
+      - name: configure
         run: |
-          printf "::group::   \033[0;32m==>\033[0m Configuring\n"
           mkdir -p ${GITHUB_WORKSPACE}/build && cd ${GITHUB_WORKSPACE}/build
           cmake -G"Ninja Multi-Config" \
                 -DCMAKE_BUILD_TYPE="Release" \
@@ -309,13 +321,25 @@ jobs:
                 -DCMAKE_Fortran_COMPILER_LAUNCHER="ccache" \
                 -DNFORTRAN=ON \
                 -DBLA_VENDOR="All" \
+                -DPython_EXECUTABLE="C:/msys64/ucrt64/bin/python.exe" \
                 ..
+
+      - name: build libraries
+        run: |
+          cd ${GITHUB_WORKSPACE}/build
+          cmake --build . --config Release
+
+      - name: build demos
+        run: |
+          printf "::group::   \033[0;32m==>\033[0m Configuring for demos\n"
+          cd ${GITHUB_WORKSPACE}/build
+          cmake -DDEMO=ON ..
           echo "::endgroup::"
-          printf "::group::   \033[0;32m==>\033[0m Building\n"
+          printf "::group::   \033[0;32m==>\033[0m Building demos\n"
+          cd ${GITHUB_WORKSPACE}/build
           cmake --build . --config Release
           echo "::endgroup::"
-
-      # FIXME: Build and run tests and demos
+          # FIXME: How to run the demos without Makefile?
 
       - name: ccache status
         continue-on-error: true
@@ -328,6 +352,12 @@ jobs:
         with:
           path: ${{ steps.ccache-prepare.outputs.ccachedir }}
           key: ${{ steps.ccache-prepare.outputs.key }}
+
+      - name: check
+        run: |
+          cd ${GITHUB_WORKSPACE}/build
+          PATH="${GITHUB_WORKSPACE}/bin;${GITHUB_WORKSPACE}/dependencies/bin;C:/msys64/ucrt64/bin;${PATH}" \
+            ctest -C Release . || ctest -C Release . --rerun-failed --output-on-failure
 
       - name: install
         run: |
@@ -349,5 +379,19 @@ jobs:
           cmake --build . --config Release
           echo "::endgroup::"
           printf "::group::\033[0;32m==>\033[0m Executing example\n"
-          PATH="${GITHUB_WORKSPACE}/bin;${GITHUB_WORKSPACE}/dependencies/bin;${PATH}" ./Release/my_demo
+          printf "\033[1;35m  C binary with shared libraries\033[0m\n"
+          PATH="${GITHUB_WORKSPACE}/bin;${GITHUB_WORKSPACE}/dependencies/bin;${PATH}" \
+            ./Release/my_demo
+          printf "\033[1;35m  C++ binary with shared libraries\033[0m\n"
+          PATH="${GITHUB_WORKSPACE}/bin;${GITHUB_WORKSPACE}/dependencies/bin;${PATH}" \
+            ./Release/my_cxx_demo
+          # We don't build a static version of GraphBLAS in CI.
+          # So we need to prepare the environment also for the following tests.
+          # Additionally, gmp, mpfr and BLAS are always shared libraries.
+          printf "\033[1;35m  C binary with statically linked libraries\033[0m\n"
+          PATH="${GITHUB_WORKSPACE}/bin;${GITHUB_WORKSPACE}/dependencies/bin;${PATH}" \
+            ./Release/my_demo_static
+          printf "\033[1;35m  C++ binary with statically linked libraries\033[0m\n"
+          PATH="${GITHUB_WORKSPACE}/bin;${GITHUB_WORKSPACE}/dependencies/bin;${PATH}" \
+            ./Release/my_cxx_demo_static
           echo "::endgroup::"

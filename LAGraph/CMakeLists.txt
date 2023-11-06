@@ -170,7 +170,7 @@ endif ( )
 
 message ( STATUS "CMAKE build type:          " ${CMAKE_BUILD_TYPE} )
 message ( STATUS "CMAKE source directory:    " ${PROJECT_SOURCE_DIR} )
-message ( STATUS "CMAKE build directory:     " ${CMAKE_BINARY_DIR} )
+message ( STATUS "CMAKE build directory:     " ${PROJECT_BINARY_DIR} )
 
 if ( ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     message ( STATUS "CMAKE C Flags debug:       " ${CMAKE_C_FLAGS_DEBUG} )
@@ -258,10 +258,6 @@ message ( STATUS "CMAKE C flags: " ${CMAKE_C_FLAGS} )
 #-------------------------------------------------------------------------------
 # enable testing and add subdirectories
 #-------------------------------------------------------------------------------
-
-# allow ctest to find the binaries:
-set ( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} )
-set ( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} )
 
 enable_testing ( )
 
