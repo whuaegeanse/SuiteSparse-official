@@ -104,22 +104,22 @@ configure_file ( "Config/spqr_version.tex.in"
 file ( GLOB SPQR_SOURCES "Source/spqr_*.cpp" "Source/SuiteSparseQR*.cpp" )
 
 if ( BUILD_SHARED_LIBS )
-add_library ( SPQR SHARED ${SPQR_SOURCES} )
-
-set_target_properties ( SPQR PROPERTIES
-    VERSION ${SPQR_VERSION_MAJOR}.${SPQR_VERSION_MINOR}.${SPQR_VERSION_SUB}
-    CXX_STANDARD 11
-    CXX_STANDARD_REQUIRED ON
-    C_STANDARD 11
-    C_STANDARD_REQUIRED ON
-    OUTPUT_NAME spqr
-    SOVERSION ${SPQR_VERSION_MAJOR}
-    WINDOWS_EXPORT_ALL_SYMBOLS ON )
-
-target_include_directories ( SPQR 
-    PRIVATE Source Include
-    INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
-              $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
+    add_library ( SPQR SHARED ${SPQR_SOURCES} )
+    
+    set_target_properties ( SPQR PROPERTIES
+        VERSION ${SPQR_VERSION_MAJOR}.${SPQR_VERSION_MINOR}.${SPQR_VERSION_SUB}
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED ON
+        C_STANDARD 11
+        C_STANDARD_REQUIRED ON
+        OUTPUT_NAME spqr
+        SOVERSION ${SPQR_VERSION_MAJOR}
+        WINDOWS_EXPORT_ALL_SYMBOLS ON )
+    
+    target_include_directories ( SPQR 
+        PRIVATE Source Include
+        INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
+                  $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
 endif ( )
 
 #-------------------------------------------------------------------------------
