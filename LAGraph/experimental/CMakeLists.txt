@@ -23,37 +23,38 @@ file ( GLOB LAGRAPHX_LIB_SOURCES "utility/*.c" "algorithm/*.c" )
 # dynamic lagraphx library properties
 #-------------------------------------------------------------------------------
 
-add_library ( LAGraphX SHARED ${LAGRAPHX_LIB_SOURCES} )
-SET_TARGET_PROPERTIES ( LAGraphX PROPERTIES
-    VERSION ${LAGraph_VERSION_MAJOR}.${LAGraph_VERSION_MINOR}.${LAGraph_VERSION_SUB}
-    SOVERSION ${LAGraph_VERSION_MAJOR}
-    OUTPUT_NAME lagraphx
-    C_STANDARD_REQUIRED ON
-    C_STANDARD 11
-    PUBLIC_HEADER "include/LAGraphX.h"
-    RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/dlls )
-target_link_libraries ( LAGraphX PRIVATE LAGraph GraphBLAS::GraphBLAS )
+if ( BUILD_SHARED_LIBS )
+    add_library ( LAGraphX SHARED ${LAGRAPHX_LIB_SOURCES} )
+    set_target_properties ( LAGraphX PROPERTIES
+        VERSION ${LAGraph_VERSION_MAJOR}.${LAGraph_VERSION_MINOR}.${LAGraph_VERSION_SUB}
+        SOVERSION ${LAGraph_VERSION_MAJOR}
+        OUTPUT_NAME lagraphx
+        C_STANDARD_REQUIRED ON
+        C_STANDARD 11
+        PUBLIC_HEADER "include/LAGraphX.h"
+        RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/dlls )
+    target_link_libraries ( LAGraphX PRIVATE LAGraph GraphBLAS::GraphBLAS )
 
-target_include_directories ( LAGraphX PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
+    target_include_directories ( LAGraphX PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
 
-target_compile_definitions ( LAGraphX PRIVATE LGX_LIBRARY )
-target_compile_definitions ( LAGraphX PUBLIC LGX_DLL )
+    target_compile_definitions ( LAGraphX PRIVATE LGX_LIBRARY )
+    target_compile_definitions ( LAGraphX PUBLIC LGX_DLL )
+endif ( )
 
 #-------------------------------------------------------------------------------
 # static lagraphx library properties
 #-------------------------------------------------------------------------------
 
-if ( NOT NSTATIC )
+if ( BUILD_STATIC_LIBS )
     add_library ( LAGraphX_static STATIC ${LAGRAPHX_LIB_SOURCES} )
-    SET_TARGET_PROPERTIES ( LAGraphX_static PROPERTIES
-        VERSION ${LAGraph_VERSION_MAJOR}.${LAGraph_VERSION_MINOR}.${LAGraph_VERSION_SUB}
+    set_target_properties ( LAGraphX_static PROPERTIES
         OUTPUT_NAME lagraphx
         POSITION_INDEPENDENT_CODE OFF
-        SOVERSION ${LAGraph_VERSION_MAJOR}
         C_STANDARD_REQUIRED ON
-        C_STANDARD 11 )
+        C_STANDARD 11
+        PUBLIC_HEADER "include/LAGraphX.h" )
 
     if ( MSVC )
         set_target_properties ( LAGraphX_static PROPERTIES
@@ -76,8 +77,10 @@ endif ( )
 #-------------------------------------------------------------------------------
 
 if ( OPENMP_C_FOUND )
-    target_link_libraries ( LAGraphX PRIVATE OpenMP::OpenMP_C )
-    if ( NOT NSTATIC )
+    if ( BUILD_SHARED_LIBS )
+        target_link_libraries ( LAGraphX PRIVATE OpenMP::OpenMP_C )
+    endif ( )
+    if ( BUILD_STATIC_LIBS )
         target_link_libraries ( LAGraphX_static PUBLIC OpenMP::OpenMP_C )
     endif ( )
 endif ( )

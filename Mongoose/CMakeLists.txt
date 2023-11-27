@@ -197,12 +197,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 # set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-if ( NOT NSTATIC )
+if ( BUILD_STATIC_LIBS )
     # Build the Mongoose library
     add_library ( Mongoose_static STATIC ${MONGOOSE_LIB_FILES} )
 #   set_property ( TARGET Mongoose_static PROPERTY POSITION_INDEPENDENT_CODE ON )
     set_target_properties ( Mongoose_static PROPERTIES
-            OUTPUT_NAME mongoose )
+        OUTPUT_NAME mongoose
+        PUBLIC_HEADER "Include/Mongoose.hpp" )
 
     if ( MSVC )
         set_target_properties ( Mongoose_static PROPERTIES
@@ -220,32 +221,26 @@ if ( NOT NSTATIC )
     endif ( )
 endif ( )
 
-# Build the Mongoose library for dynamic linking
-add_library ( Mongoose SHARED ${MONGOOSE_LIB_FILES} )
-set_property ( TARGET Mongoose PROPERTY POSITION_INDEPENDENT_CODE ON )
-set_target_properties ( Mongoose PROPERTIES
+if ( BUILD_SHARED_LIBS )
+    # Build the Mongoose library for dynamic linking
+    add_library ( Mongoose SHARED ${MONGOOSE_LIB_FILES} )
+    set_property ( TARGET Mongoose PROPERTY POSITION_INDEPENDENT_CODE ON )
+    set_target_properties ( Mongoose PROPERTIES
         OUTPUT_NAME mongoose
+        SOVERSION ${Mongoose_VERSION_MAJOR}
+        PUBLIC_HEADER "Include/Mongoose.hpp"
         WINDOWS_EXPORT_ALL_SYMBOLS ON )
 
-target_include_directories ( Mongoose
-    INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
-              $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
+    target_include_directories ( Mongoose
+        INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
+                  $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
 
-target_link_libraries ( Mongoose PRIVATE SuiteSparse::SuiteSparseConfig )
-target_include_directories ( Mongoose PUBLIC
-    "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
+    target_link_libraries ( Mongoose PRIVATE SuiteSparse::SuiteSparseConfig )
+    target_include_directories ( Mongoose PUBLIC
+        "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
 
-# if(CMAKE_MAJOR_VERSION GREATER 2)
-#     set_target_properties(Mongoose PROPERTIES VERSION ${PROJECT_VERSION})
-#     set_target_properties(Mongoose PROPERTIES SOVERSION ${Mongoose_VERSION_MAJOR})
-# else()
-    set_target_properties ( Mongoose PROPERTIES
-        VERSION ${Mongoose_VERSION_MAJOR}.${Mongoose_VERSION_MINOR}.${Mongoose_VERSION_PATCH}
-        SOVERSION ${Mongoose_VERSION_MAJOR} )
-# endif()
-
-set_target_properties ( Mongoose PROPERTIES PUBLIC_HEADER Include/Mongoose.hpp )
-target_include_directories ( Mongoose PRIVATE . )
+    target_include_directories ( Mongoose PRIVATE . )
+endif ( )
 
 #-------------------------------------------------------------------------------
 
@@ -264,10 +259,10 @@ endif ( )
 add_executable ( mongoose_exe ${EXE_FILES} )
 set_target_properties ( mongoose_exe PROPERTIES
         OUTPUT_NAME mongoose )
-if ( NSTATIC )
-    target_link_libraries ( mongoose_exe Mongoose )
-else ( )
+if ( BUILD_STATIC_LIBS )
     target_link_libraries ( mongoose_exe Mongoose_static )
+else ( )
+    target_link_libraries ( mongoose_exe Mongoose )
 endif ( )
 if ( TARGET SuiteSparse::SuiteSparseConfig_static )
     target_link_libraries ( mongoose_exe SuiteSparse::SuiteSparseConfig_static )
@@ -276,16 +271,13 @@ else ( )
 endif ( )
 
 # Build the Demo executable
-option ( DEMO "ON: Build the demo programs.  OFF (default): do not build the demo programs." off )
-if ( DEMO )
-    add_executable ( demo_exe ${DEMO_FILES} )
-    set_target_properties ( demo_exe PROPERTIES
-            OUTPUT_NAME demo )
-    if ( NSTATIC )
-        target_link_libraries ( demo_exe Mongoose )
-    else ( )
-        target_link_libraries ( demo_exe Mongoose_static )
-    endif ( )
+add_executable ( demo_exe ${DEMO_FILES} )
+set_target_properties ( demo_exe PROPERTIES
+        OUTPUT_NAME demo )
+if ( BUILD_STATIC_LIBS )
+    target_link_libraries ( demo_exe Mongoose_static )
+else ( )
+    target_link_libraries ( demo_exe Mongoose )
 endif ( )
 if ( TARGET SuiteSparse::SuiteSparseConfig_static )
     target_link_libraries ( demo_exe SuiteSparse::SuiteSparseConfig_static )
@@ -314,7 +306,7 @@ if ( Python_Interpreter_FOUND )
     add_test ( NAME Mongoose_IO_Test
         COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/Tests/runTests -min 1 -max 15 -t io -k )
 
-    if ( WIN32 )
+    if ( WIN32 AND BUILD_SHARED_LIBS )
         set_tests_properties ( Mongoose_IO_Test PROPERTIES
             ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Mongoose>" )
     endif ( )
@@ -336,7 +328,7 @@ if ( Python_Interpreter_FOUND )
     add_test ( NAME Mongoose_Target_Split_Test
         COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/Tests/runTests -min 1 -max 15 -t edgesep -s 0.3 )
 
-    if ( WIN32 )
+    if ( WIN32 AND BUILD_SHARED_LIBS )
         set_tests_properties ( Mongoose_Edge_Separator_Test Mongoose_Edge_Separator_Test_2 Mongoose_Weighted_Edge_Separator_Test Mongoose_Target_Split_Test PROPERTIES
             ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Mongoose>" )
     endif ( )
@@ -352,7 +344,7 @@ if ( Python_Interpreter_FOUND )
     add_test ( NAME Mongoose_Memory_Test
         COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/Tests/runTests -min 1 -max 15 -t memory )
 
-    if ( WIN32 )
+    if ( WIN32 AND BUILD_SHARED_LIBS )
         set_tests_properties ( Mongoose_Memory_Test PROPERTIES
             ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Mongoose>" )
     endif ( )
@@ -361,10 +353,10 @@ if ( Python_Interpreter_FOUND )
     add_executable ( mongoose_test_performance
         Tests/Mongoose_Test_Performance.cpp
         Tests/Mongoose_Test_Performance_exe.cpp )
-    if ( NSTATIC )
-        target_link_libraries ( mongoose_test_performance Mongoose )
-    else ( )
+    if ( BUILD_STATIC_LIBS )
         target_link_libraries ( mongoose_test_performance Mongoose_static )
+    else ( )
+        target_link_libraries ( mongoose_test_performance Mongoose )
     endif ( )
     if ( TARGET SuiteSparse::SuiteSparseConfig_static )
         target_link_libraries ( mongoose_test_performance SuiteSparse::SuiteSparseConfig_static )
@@ -379,7 +371,7 @@ if ( Python_Interpreter_FOUND )
     add_test ( NAME Mongoose_Performance_Test_2
         COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/Tests/runTests -t performance -i 21 39 1557 1562 353 2468 1470 1380 505 182 201 2331 760 1389 2401 2420 242 250 1530 1533 -p )
 
-    if ( WIN32 )
+    if ( WIN32 AND BUILD_SHARED_LIBS )
         set_tests_properties ( Mongoose_Performance_Test Mongoose_Performance_Test_2 PROPERTIES
             ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Mongoose>" )
     endif ( )
@@ -389,10 +381,10 @@ endif ( )
 add_executable ( mongoose_test_reference
     Tests/Mongoose_Test_Reference.cpp
     Tests/Mongoose_Test_Reference_exe.cpp )
-if ( NSTATIC )
-    target_link_libraries ( mongoose_test_reference Mongoose )
-else ( )
+if ( BUILD_STATIC_LIBS )
     target_link_libraries ( mongoose_test_reference Mongoose_static )
+else ( )
+    target_link_libraries ( mongoose_test_reference Mongoose )
 endif ( )
 if ( TARGET SuiteSparse::SuiteSparseConfig_static )
     target_link_libraries ( mongoose_test_reference SuiteSparse::SuiteSparseConfig_static )
@@ -426,7 +418,7 @@ add_test ( NAME Mongoose_Unit_Test_EdgeSep
     COMMAND ${TESTING_OUTPUT_PATH}/mongoose_unit_test_edgesep
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/Tests )
 
-if (WIN32)
+if ( WIN32 AND BUILD_SHARED_LIBS )
     set_tests_properties ( Mongoose_Unit_Test_IO Mongoose_Unit_Test_Graph Mongoose_Unit_Test_EdgeSep PROPERTIES
         ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Mongoose>" )
 endif ( )
@@ -498,7 +490,7 @@ set_target_properties ( mongoose_unit_test_io mongoose_unit_test_graph mongoose_
 
 set ( CMAKE_CXX_OUTPUT_EXTENSION_REPLACE 1 ) # Necessary for gcov - prevents file.cpp.gcda instead of file.gcda
 
-# if ( NOT NSTATIC )
+# if ( BUILD_STATIC_LIBS )
 #   add_custom_command ( TARGET Mongoose_static
 #           POST_BUILD
 #           COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:Mongoose_static> ${PROJECT_SOURCE_DIR}/Lib
@@ -540,16 +532,19 @@ add_custom_target(userguide
 
 include ( CMakePackageConfigHelpers )
 
-install ( TARGETS Mongoose
-    EXPORT MongooseTargets
-    LIBRARY DESTINATION ${SUITESPARSE_LIBDIR}
-    ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
-    RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
-    PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
-if ( NOT NSTATIC )
+if ( BUILD_SHARED_LIBS )
+    install ( TARGETS Mongoose
+        EXPORT MongooseTargets
+        LIBRARY DESTINATION ${SUITESPARSE_LIBDIR}
+        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
+        RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
+        PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+endif ( )
+if ( BUILD_STATIC_LIBS )
     install ( TARGETS Mongoose_static
         EXPORT MongooseTargets
-        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR} )
+        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
+        PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
 endif ( )
 install ( TARGETS mongoose_exe
     RUNTIME DESTINATION ${SUITESPARSE_BINDIR} )

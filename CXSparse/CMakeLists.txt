@@ -103,34 +103,35 @@ else ( )
     file ( GLOB CXSPARSE_SOURCES "Source/*.c" )
 endif ( )
 
-add_library ( CXSparse SHARED ${CXSPARSE_SOURCES} )
+if ( BUILD_SHARED_LIBS )
+    add_library ( CXSparse SHARED ${CXSPARSE_SOURCES} )
 
-set_target_properties ( CXSparse PROPERTIES
-    VERSION ${CXSPARSE_VERSION_MAJOR}.${CXSPARSE_VERSION_MINOR}.${CXSPARSE_VERSION_SUB}
-    C_STANDARD 11
-    C_STANDARD_REQUIRED ON
-    OUTPUT_NAME cxsparse
-    SOVERSION ${CXSPARSE_VERSION_MAJOR}
-    PUBLIC_HEADER "Include/cs.h"
-    WINDOWS_EXPORT_ALL_SYMBOLS ON )
+    set_target_properties ( CXSparse PROPERTIES
+        VERSION ${CXSPARSE_VERSION_MAJOR}.${CXSPARSE_VERSION_MINOR}.${CXSPARSE_VERSION_SUB}
+        C_STANDARD 11
+        C_STANDARD_REQUIRED ON
+        OUTPUT_NAME cxsparse
+        SOVERSION ${CXSPARSE_VERSION_MAJOR}
+        PUBLIC_HEADER "Include/cs.h"
+        WINDOWS_EXPORT_ALL_SYMBOLS ON )
 
-target_include_directories ( CXSparse
-    INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
-              $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
+    target_include_directories ( CXSparse
+        INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
+                  $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
+endif ( )
 
 #-------------------------------------------------------------------------------
 # static cxsparse library properties
 #-------------------------------------------------------------------------------
 
-if ( NOT NSTATIC )
+if ( BUILD_STATIC_LIBS )
     add_library ( CXSparse_static STATIC ${CXSPARSE_SOURCES} )
 
     set_target_properties ( CXSparse_static PROPERTIES
-        VERSION ${CXSPARSE_VERSION_MAJOR}.${CXSPARSE_VERSION_MINOR}.${CXSPARSE_VERSION_SUB}
         OUTPUT_NAME cxsparse
         C_STANDARD 11
         C_STANDARD_REQUIRED ON
-        SOVERSION ${CXSPARSE_VERSION_MAJOR} )
+        PUBLIC_HEADER "Include/cs.h" )
 
     if ( MSVC )
         set_target_properties ( CXSparse_static PROPERTIES
@@ -140,17 +141,18 @@ if ( NOT NSTATIC )
     target_include_directories ( CXSparse_static
         INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
                   $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
-
 endif ( )
 
 #-------------------------------------------------------------------------------
 # add the library dependencies
 #-------------------------------------------------------------------------------
 
-target_link_libraries ( CXSparse PRIVATE SuiteSparse::SuiteSparseConfig )
-target_include_directories ( CXSparse PUBLIC
-    "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
-if ( NOT NSTATIC )
+if ( BUILD_SHARED_LIBS )
+    target_link_libraries ( CXSparse PRIVATE SuiteSparse::SuiteSparseConfig )
+    target_include_directories ( CXSparse PUBLIC
+        "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
+endif ( )
+if ( BUILD_STATIC_LIBS )
     if ( TARGET SuiteSparse::SuiteSparseConfig_static )
         target_link_libraries ( CXSparse_static PUBLIC SuiteSparse::SuiteSparseConfig_static )
     else ( )
@@ -160,8 +162,10 @@ endif ( )
 
 # libm:
 if ( NOT WIN32 )
-    target_link_libraries ( CXSparse PRIVATE m )
-    if ( NOT NSTATIC )
+    if ( BUILD_SHARED_LIBS )
+        target_link_libraries ( CXSparse PRIVATE m )
+    endif ( )
+    if ( BUILD_STATIC_LIBS )
         set ( CXSPARSE_STATIC_LIBS "${CXSPARSE_STATIC_LIBS} -lm" )
         target_link_libraries ( CXSparse_static PUBLIC m )
     endif ( )
@@ -173,16 +177,19 @@ endif ( )
 
 include ( CMakePackageConfigHelpers )
 
-install ( TARGETS CXSparse
-    EXPORT CXSparseTargets
-    LIBRARY DESTINATION ${SUITESPARSE_LIBDIR}
-    ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
-    RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
-    PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
-if ( NOT NSTATIC )
+if ( BUILD_SHARED_LIBS )
+    install ( TARGETS CXSparse
+        EXPORT CXSparseTargets
+        LIBRARY DESTINATION ${SUITESPARSE_LIBDIR}
+        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
+        RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
+        PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+endif ( )
+if ( BUILD_STATIC_LIBS )
     install ( TARGETS CXSparse_static
         EXPORT CXSparseTargets
-        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR} )
+        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
+        PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
 endif ( )
 
 # create (temporary) export target file during build
@@ -290,26 +297,50 @@ if ( DEMO )
     endif ( )
 
     # Libraries required for Demo programs
-    target_link_libraries ( cs_demo1 PUBLIC CXSparse )
-    target_link_libraries ( cs_demo2 PUBLIC CXSparse )
-    target_link_libraries ( cs_demo3 PUBLIC CXSparse )
+    if ( BUILD_SHARED_LIBS )
+        target_link_libraries ( cs_demo1 PUBLIC CXSparse )
+        target_link_libraries ( cs_demo2 PUBLIC CXSparse )
+        target_link_libraries ( cs_demo3 PUBLIC CXSparse )
 
-    target_link_libraries ( cs_di_demo1 PUBLIC CXSparse )
-    target_link_libraries ( cs_di_demo2 PUBLIC CXSparse )
-    target_link_libraries ( cs_di_demo3 PUBLIC CXSparse )
+        target_link_libraries ( cs_di_demo1 PUBLIC CXSparse )
+        target_link_libraries ( cs_di_demo2 PUBLIC CXSparse )
+        target_link_libraries ( cs_di_demo3 PUBLIC CXSparse )
 
-    target_link_libraries ( cs_dl_demo1 PUBLIC CXSparse )
-    target_link_libraries ( cs_dl_demo2 PUBLIC CXSparse )
-    target_link_libraries ( cs_dl_demo3 PUBLIC CXSparse )
+        target_link_libraries ( cs_dl_demo1 PUBLIC CXSparse )
+        target_link_libraries ( cs_dl_demo2 PUBLIC CXSparse )
+        target_link_libraries ( cs_dl_demo3 PUBLIC CXSparse )
+    else ( )
+        target_link_libraries ( cs_demo1 PUBLIC CXSparse_static )
+        target_link_libraries ( cs_demo2 PUBLIC CXSparse_static )
+        target_link_libraries ( cs_demo3 PUBLIC CXSparse_static )
+
+        target_link_libraries ( cs_di_demo1 PUBLIC CXSparse_static )
+        target_link_libraries ( cs_di_demo2 PUBLIC CXSparse_static )
+        target_link_libraries ( cs_di_demo3 PUBLIC CXSparse_static )
+
+        target_link_libraries ( cs_dl_demo1 PUBLIC CXSparse_static )
+        target_link_libraries ( cs_dl_demo2 PUBLIC CXSparse_static )
+        target_link_libraries ( cs_dl_demo3 PUBLIC CXSparse_static )
+    endif ( )
 
     if ( NOT NCOMPLEX )
-        target_link_libraries ( cs_ci_demo1 PUBLIC CXSparse )
-        target_link_libraries ( cs_ci_demo2 PUBLIC CXSparse )
-        target_link_libraries ( cs_ci_demo3 PUBLIC CXSparse )
+        if ( BUILD_SHARED_LIBS )
+            target_link_libraries ( cs_ci_demo1 PUBLIC CXSparse )
+            target_link_libraries ( cs_ci_demo2 PUBLIC CXSparse )
+            target_link_libraries ( cs_ci_demo3 PUBLIC CXSparse )
 
-        target_link_libraries ( cs_cl_demo1 PUBLIC CXSparse )
-        target_link_libraries ( cs_cl_demo2 PUBLIC CXSparse )
-        target_link_libraries ( cs_cl_demo3 PUBLIC CXSparse )
+            target_link_libraries ( cs_cl_demo1 PUBLIC CXSparse )
+            target_link_libraries ( cs_cl_demo2 PUBLIC CXSparse )
+            target_link_libraries ( cs_cl_demo3 PUBLIC CXSparse )
+        else ( )
+            target_link_libraries ( cs_ci_demo1 PUBLIC CXSparse_static )
+            target_link_libraries ( cs_ci_demo2 PUBLIC CXSparse_static )
+            target_link_libraries ( cs_ci_demo3 PUBLIC CXSparse_static )
+
+            target_link_libraries ( cs_cl_demo1 PUBLIC CXSparse_static )
+            target_link_libraries ( cs_cl_demo2 PUBLIC CXSparse_static )
+            target_link_libraries ( cs_cl_demo3 PUBLIC CXSparse_static )
+        endif ( )
 
         if ( NOT WIN32 )
             target_link_libraries ( cs_ci_demo1 PUBLIC m )
@@ -321,8 +352,13 @@ if ( DEMO )
             target_link_libraries ( cs_cl_demo3 PUBLIC m )
         endif ( )
 
-        target_link_libraries ( cs_idemo PUBLIC CXSparse )
-        target_link_libraries ( cs_ldemo PUBLIC CXSparse )
+        if ( BUILD_SHARED_LIBS )
+            target_link_libraries ( cs_idemo PUBLIC CXSparse )
+            target_link_libraries ( cs_ldemo PUBLIC CXSparse )
+        else ( )
+            target_link_libraries ( cs_idemo PUBLIC CXSparse_static )
+            target_link_libraries ( cs_ldemo PUBLIC CXSparse_static )
+        endif ( )
     endif ( )
 
 else ( )

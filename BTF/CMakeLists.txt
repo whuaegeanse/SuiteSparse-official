@@ -70,34 +70,35 @@ include_directories ( Source Include )
 
 file ( GLOB BTF_SOURCES "Source/*.c" )
 
-add_library ( BTF SHARED ${BTF_SOURCES} )
+if ( BUILD_SHARED_LIBS )
+    add_library ( BTF SHARED ${BTF_SOURCES} )
 
-set_target_properties ( BTF PROPERTIES
-    VERSION ${BTF_VERSION_MAJOR}.${BTF_VERSION_MINOR}.${BTF_VERSION_SUB}
-    C_STANDARD 11
-    C_STANDARD_REQUIRED ON
-    OUTPUT_NAME btf
-    SOVERSION ${BTF_VERSION_MAJOR}
-    PUBLIC_HEADER "Include/btf.h" 
-    WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    set_target_properties ( BTF PROPERTIES
+        VERSION ${BTF_VERSION_MAJOR}.${BTF_VERSION_MINOR}.${BTF_VERSION_SUB}
+        C_STANDARD 11
+        C_STANDARD_REQUIRED ON
+        OUTPUT_NAME btf
+        SOVERSION ${BTF_VERSION_MAJOR}
+        PUBLIC_HEADER "Include/btf.h"
+        WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-target_include_directories ( BTF
-    INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
-              $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
+    target_include_directories ( BTF
+        INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
+                  $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
+endif ( )
 
 #-------------------------------------------------------------------------------
 # static btf library properties
 #-------------------------------------------------------------------------------
 
-if ( NOT NSTATIC )
+if ( BUILD_STATIC_LIBS )
     add_library ( BTF_static STATIC ${BTF_SOURCES} )
 
     set_target_properties ( BTF_static PROPERTIES
-        VERSION ${BTF_VERSION_MAJOR}.${BTF_VERSION_MINOR}.${BTF_VERSION_SUB}
         C_STANDARD 11
         C_STANDARD_REQUIRED ON
         OUTPUT_NAME btf
-        SOVERSION ${BTF_VERSION_MAJOR} )
+        PUBLIC_HEADER "Include/btf.h" )
 
     if ( MSVC )
         set_target_properties ( BTF_static PROPERTIES
@@ -107,7 +108,6 @@ if ( NOT NSTATIC )
     target_include_directories ( BTF_static
         INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
                   $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
-
 endif ( )
 
 #-------------------------------------------------------------------------------
@@ -115,17 +115,21 @@ endif ( )
 #-------------------------------------------------------------------------------
 
 # SuiteSparseConfig:
-target_include_directories ( BTF PUBLIC
-    "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
-if ( NOT NSTATIC )
+if ( BUILD_SHARED_LIBS )
+    target_include_directories ( BTF PUBLIC
+        "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
+endif ( )
+if ( BUILD_STATIC_LIBS )
     target_include_directories ( BTF_static PUBLIC
         "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
 endif ( )
 
 # libm:
 if ( NOT WIN32 )
-    target_link_libraries ( BTF PRIVATE m )
-    if ( NOT NSTATIC )
+    if ( BUILD_SHARED_LIBS )
+        target_link_libraries ( BTF PRIVATE m )
+    endif ( )
+    if ( BUILD_STATIC_LIBS )
         set ( BTF_STATIC_LIBS "${BTF_STATIC_LIBS} -lm" )
         target_link_libraries ( BTF_static PUBLIC m )
     endif ( )
@@ -137,16 +141,19 @@ endif ( )
 
 include ( CMakePackageConfigHelpers )
 
-install ( TARGETS BTF
-    EXPORT BTFTargets
-    LIBRARY DESTINATION ${SUITESPARSE_LIBDIR}
-    ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
-    RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
-    PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
-if ( NOT NSTATIC )
+if ( BUILD_SHARED_LIBS )
+    install ( TARGETS BTF
+        EXPORT BTFTargets
+        LIBRARY DESTINATION ${SUITESPARSE_LIBDIR}
+        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
+        RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
+        PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+endif ( )
+if ( BUILD_STATIC_LIBS )
     install ( TARGETS BTF_static
         EXPORT BTFTargets
-        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR} )
+        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
+        PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
 endif ( )
 
 # create (temporary) export target file during build
