@@ -45,10 +45,10 @@ include ( SuiteSparsePolicy )
 option ( DEMO "ON: Build the demo programs.  OFF (default): do not build the demo programs." OFF )
 
 if ( NOT SUITESPARSE_ROOT_CMAKELISTS )
-    find_package ( SuiteSparse_config 7.3.1
+    find_package ( SuiteSparse_config 7.4.0
         PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-        find_package ( SuiteSparse_config 7.3.1 REQUIRED )
+        find_package ( SuiteSparse_config 7.4.0 REQUIRED )
     endif ( )
 
     if ( DEMO )
