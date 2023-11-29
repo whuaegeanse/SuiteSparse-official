@@ -25,7 +25,7 @@ project ( spqr_cuda
     LANGUAGES CXX )
 message ( STATUS "C++ flags for CUDA:  ${CMAKE_CXX_FLAGS}" )
 
-file ( GLOB SPQR_CUDA_SOURCES "spqrgpu_*.cpp" )
+file ( GLOB SPQR_CUDA_SOURCES "spqrgpu_*.cpp" "../Source/spqr_cholmod_wrappers.cpp" )
 
 if ( BUILD_SHARED_LIBS )
     add_library ( SPQR_CUDA SHARED ${SPQR_CUDA_SOURCES} )
@@ -68,7 +68,8 @@ if ( BUILD_SHARED_LIBS )
     set_target_properties ( SPQR_CUDA PROPERTIES CUDA_SEPARABLE_COMPILATION ON )
     target_compile_definitions ( SPQR_CUDA PRIVATE "SUITESPARSE_CUDA" )
 
-    target_link_libraries ( SPQR_CUDA PRIVATE SuiteSparse::CHOLMOD )
+    target_link_libraries ( SPQR_CUDA PRIVATE SuiteSparse::SuiteSparseConfig 
+        SuiteSparse::CHOLMOD_CUDA SuiteSparse::CHOLMOD GPURuntime GPUQREngine )
 
     target_link_libraries ( SPQR_CUDA PRIVATE CUDA::nvrtc CUDA::cudart_static
         CUDA::nvToolsExt CUDA::cublas )
@@ -105,7 +106,7 @@ if ( BUILD_STATIC_LIBS )
     endif ( )
 
     target_link_libraries ( SPQR_CUDA_static PUBLIC CUDA::nvrtc CUDA::cudart_static
-    CUDA::nvToolsExt CUDA::cublas GPUQREngine_static GPURuntime_static )
+    CUDA::nvToolsExt CUDA::cublas GPURuntime_static GPUQREngine_static )
 endif ( )
 
 #-------------------------------------------------------------------------------
