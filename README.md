@@ -2,24 +2,60 @@
 SuiteSparse:  A Suite of Sparse matrix packages at http://suitesparse.com
 -----------------------------------------------------------------------------
 
-Oct 31, 2023, SuiteSparse VERSION 7.3.1
+Nov 30, 2023, SuiteSparse VERSION 7.4.0
 
 SuiteSparse is a set of sparse-matrix-related packages written or co-authored
 by Tim Davis, available at https://github.com/DrTimothyAldenDavis/SuiteSparse .
 
 Primary author of SuiteSparse (codes and algorithms, excl. METIS): Tim Davis
 
-Code co-authors, in alphabetical order (not including METIS):
-    Patrick Amestoy, David Bateman, Jinhao Chen, Yanqing Chen, Iain Duff,
-    Les Foster, William Hager, Scott Kolodziej, Chris Lourenco, Stefan
-    Larimore, Erick Moreno-Centeno, Ekanathan Palamadai, Sivasankaran
-    Rajamanickam, Sanjay Ranka, Wissam Sid-Lakhdar, Nuri Yeralan.
+Code co-authors, in alphabetical order (not including METIS or LAGraph):
+    Patrick Amestoy, Mohsen Aznaveh, David Bateman, Jinhao Chen, Yanqing Chen,
+    Iain Duff, Joe Eaton, Les Foster, William Hager, Raye Kimmerer, Scott
+    Kolodziej, Chris Lourenco, Stefan Larimore, Lorena Mejia Domenzain, Erick
+    Moreno-Centeno, Markus Mützel, Corey Nolel, Ekanathan Palamadai,
+    Sivasankaran Rajamanickam, Sanjay Ranka, Wissam Sid-Lakhdar, Nuri Yeralan.
+
+LAGraph has been developed by the highest number of developers of any of
+the packages in SuiteSparse and deserves its own list.  The list also
+appears in LAGraph/Contibutors.txt:
+
+    Janos B. Antal,    Budapest University of Technology and Economics, Hungary
+    Mohsen Aznaveh,    Texas A&M University
+    David A. Bader     New Jersey Institute of Technology
+    Aydin Buluc,       Lawrence Berkeley National Lab
+    Jinhao Chen,       Texas A&M University
+    Tim Davis,         Texas A&M University
+    Florentin Dorre,   Technische Univeritat Dresden, Neo4j
+    Marton Elekes,     Budapest University of Technology and Economics, Hungary
+    Balint Hegyi,      Budapest University of Technology and Economics, Hungary
+    Tanner Hoke,       Texas A&M University
+    James Kitchen,     Anaconda
+    Scott Kolodziej,   Texas A&M University
+    Pranav Konduri,    Texas A&M University
+    Roi Lipman,        Redis Labs (now FalkorDB)
+    Tze Meng Low,      Carnegie Mellon University
+    Tim Mattson,       Intel
+    Scott McMillan,    Carnegie Mellon University
+    Markus Muetzel,
+    Michel Pelletier,  Graphegon
+    Gabor Szarnyas,    CWI Amsterdam, The Netherlands
+    Erik Welch,        Anaconda, NVIDIA
+    Carl Yang,         University of California at Davis, Waymo
+    Yongzhe Zhang,     SOKENDAI, Japan
 
 METIS is authored by George Karypis.
 
 Additional algorithm designers: Esmond Ng and John Gilbert.
 
 Refer to each package for license, copyright, and author information.
+
+-----------------------------------------------------------------------------
+Documenation
+-----------------------------------------------------------------------------
+
+Refer to each package for the documentation on each package, typically in
+the Doc subfolder (exceptions: the SuiteSparse_config and Example packages).
 
 -----------------------------------------------------------------------------
 SuiteSparse branches
@@ -90,6 +126,8 @@ papers in ACM TOMS, for each package.
         the language of sparse linear algebra, ACM Trans on Mathematical
         Software, vol 45, no 4, Dec. 2019, Article No 44.
         https://doi.org/10.1145/3322125.
+
+    * for LAGraph:
 
     * for CSparse/CXSParse:
 
@@ -294,17 +332,6 @@ SuiteSparse Packages
 
 Packages in SuiteSparse, and files in this directory:
 
-    GraphBLAS   graph algorithms in the language of linear algebra.
-                https://graphblas.org
-                author: Tim Davis
-
-    SPEX        solves sparse linear systems in exact arithmetic.
-                Requires the GNU GMP and MPRF libraries.
-                This will be soon replaced by a more general package, SPEX v3
-                that includes this method (exact sparse LU) and others (sparse
-                exact Cholesky, and sparse exact update/downdate).  The API
-                of v3 will be changing significantly.
-
     AMD         approximate minimum degree ordering.  This is the built-in AMD
                 function in MATLAB.
                 authors: Tim Davis, Patrick Amestoy, Iain Duff
@@ -356,6 +383,12 @@ Packages in SuiteSparse, and files in this directory:
                 of CSparse.  Any code that links against CSparse should
                 also be able to link against CXSparse instead.
                 author: Tim Davis, David Bateman
+
+    Example     a simple package that
+
+    GraphBLAS   graph algorithms in the language of linear algebra.
+                https://graphblas.org
+                authors: Tim Davis, Joe Eaton, Corey Nolet
 
     include     'make install' places user-visible include files for each
                 package here, after 'make local'
@@ -453,10 +486,22 @@ Packages in SuiteSparse, and files in this directory:
                 license provided by George Karypis.  SuiteSparse cannot use
                 an unmodified copy METIS.
 
+    ParU        a parallel unsymmetric pattern multifrontal method.
+                authors: Mohsen Aznaveh and Tim Davis
+
     RBio        read/write sparse matrices in Rutherford/Boeing format
                 author: Tim Davis
 
     README.txt  this file
+
+    SPEX        solves sparse linear systems in exact arithmetic.
+                Requires the GNU GMP and MPRF libraries.
+                This will be soon replaced by a more general package, SPEX v3
+                that includes this method (exact sparse LU) and others (sparse
+                exact Cholesky, and sparse exact update/downdate).  The API
+                of v3 will be changing significantly.
+                authors: Chris Lourenco, Jinhao Chen, Erick Moreno-Centeno,
+                Lorena Lorena Mejia Domenzain, and Tim Davis.
 
     SPQR        sparse QR factorization.  This the built-in qr and x=A\b in
                 MATLAB.  Also called SuiteSparseQR.
@@ -644,11 +689,12 @@ Compilation options
 
 You can set specific options for CMake with the command (for example):
 
-    cmake -DNPARTITION=ON -DNSTATIC=ON -DCMAKE_BUILD_TYPE=Debug ..
+    cmake -DNPARTITION=ON -DBUILD_STATIC_LIBS=OFF -DCMAKE_BUILD_TYPE=Debug ..
 
 That command will compile all of SuiteSparse except for CHOLMOD/Partition
 Module (because of `-DNPARTITION=ON`).  Debug mode will be used (the build
-type).  The static libraries will not be built (since `-DNSTATIC=ON` is set).
+type).  The static libraries will not be built (since `-DBUILD_STATIC_LIBS=OFF`
+is set).
 
 * `SUITESPARSE_ENABLE_PROJECTS`:
 
@@ -679,11 +725,16 @@ type).  The static libraries will not be built (since `-DNSTATIC=ON` is set).
     sudo cmake --install .
 ```
 
-* `NSTATIC`:
+* `BUILD_SHARED_LIBS`:
 
-  If `ON`, static libraries are not built.
-  Default: `OFF`, except for GraphBLAS, which takes a long time to compile so
-  the default for GraphBLAS is `ON`.
+  If `ON`, shared libraries are built.
+  Default: `ON`.
+
+* `BUILD_STATIC_LIBS`:
+
+  If `ON`, static libraries are built.
+  Default: `ON`, except for GraphBLAS, which takes a long time to compile so
+  the default for GraphBLAS is `OFF` unless `BUILD_SHARED_LIBS` is `OFF`.
 
 * `SUITESPARSE_CUDA_ARCHITECTURES`:
 
@@ -808,8 +859,11 @@ all options default to `OFF`:
 Acknowledgements
 -----------------------------------------------------------------------------
 
-I would like to thank François Bissey, Sebastien Villemot, Erik Welch, Jim
-Kitchen, Markus Mützel, and Fabian Wein for their valuable feedback on the
+Markus Mützel contributed the most recent update of the SuiteSparse build
+system for all SuiteSparse packages, extensively porting it and modernizing it.
+
+I would also like to thank François Bissey, Sebastien Villemot, Erik Welch, Jim
+Kitchen, and Fabian Wein for their valuable feedback on the
 SuiteSparse build system and how it works with various Linux / Python distros
 and other package managers.  If you are a maintainer of a SuiteSparse packaging
 for a Linux distro, conda-forge, R, spack, brew, vcpkg, etc, please feel free

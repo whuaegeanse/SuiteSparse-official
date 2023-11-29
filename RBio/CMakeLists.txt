@@ -43,10 +43,10 @@ include ( SuiteSparsePolicy )
 #-------------------------------------------------------------------------------
 
 if ( NOT SUITESPARSE_ROOT_CMAKELISTS )
-    find_package ( SuiteSparse_config 7.3.1
+    find_package ( SuiteSparse_config 7.4.0
         PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-        find_package ( SuiteSparse_config 7.3.1 REQUIRED )
+        find_package ( SuiteSparse_config 7.4.0 REQUIRED )
     endif ( )
 endif ( )
 
@@ -70,34 +70,35 @@ include_directories ( Source Include )
 
 file ( GLOB RBIO_SOURCES "Source/*.c" )
 
-add_library ( RBio SHARED ${RBIO_SOURCES} )
+if ( BUILD_SHARED_LIBS )
+    add_library ( RBio SHARED ${RBIO_SOURCES} )
 
-set_target_properties ( RBio PROPERTIES
-    VERSION ${RBIO_VERSION_MAJOR}.${RBIO_VERSION_MINOR}.${RBIO_VERSION_SUB}
-    C_STANDARD 11
-    C_STANDARD_REQUIRED ON
-    OUTPUT_NAME rbio
-    SOVERSION ${RBIO_VERSION_MAJOR}
-    PUBLIC_HEADER "Include/RBio.h"
-    WINDOWS_EXPORT_ALL_SYMBOLS ON )
+    set_target_properties ( RBio PROPERTIES
+        VERSION ${RBIO_VERSION_MAJOR}.${RBIO_VERSION_MINOR}.${RBIO_VERSION_SUB}
+        C_STANDARD 11
+        C_STANDARD_REQUIRED ON
+        OUTPUT_NAME rbio
+        SOVERSION ${RBIO_VERSION_MAJOR}
+        PUBLIC_HEADER "Include/RBio.h"
+        WINDOWS_EXPORT_ALL_SYMBOLS ON )
 
-target_include_directories ( RBio 
-    INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
-              $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
+    target_include_directories ( RBio 
+        INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
+                  $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
+endif ( )
 
 #-------------------------------------------------------------------------------
 # static rbio library properties
 #-------------------------------------------------------------------------------
 
-if ( NOT NSTATIC )
+if ( BUILD_STATIC_LIBS )
     add_library ( RBio_static STATIC ${RBIO_SOURCES} )
 
     set_target_properties ( RBio_static PROPERTIES
-        VERSION ${RBIO_VERSION_MAJOR}.${RBIO_VERSION_MINOR}.${RBIO_VERSION_SUB}
         C_STANDARD 11
         C_STANDARD_REQUIRED ON
         OUTPUT_NAME rbio
-        SOVERSION ${RBIO_VERSION_MAJOR} )
+        PUBLIC_HEADER "Include/RBio.h" )
 
     if ( MSVC )
         set_target_properties ( RBio_static PROPERTIES
@@ -107,7 +108,6 @@ if ( NOT NSTATIC )
     target_include_directories ( RBio_static 
         INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
                   $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
-
 endif ( )
 
 #-------------------------------------------------------------------------------
@@ -115,10 +115,12 @@ endif ( )
 #-------------------------------------------------------------------------------
 
 # SuiteSparseConfig:
-target_link_libraries ( RBio PRIVATE SuiteSparse::SuiteSparseConfig )
-target_include_directories ( RBio PUBLIC
-    "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
-if ( NOT NSTATIC )
+if ( BUILD_SHARED_LIBS )
+    target_link_libraries ( RBio PRIVATE SuiteSparse::SuiteSparseConfig )
+    target_include_directories ( RBio PUBLIC
+        "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
+endif ( )
+if ( BUILD_STATIC_LIBS )
     if ( TARGET SuiteSparse::SuiteSparseConfig_static )
         target_link_libraries ( RBio_static PUBLIC SuiteSparse::SuiteSparseConfig_static )
     else ( )
@@ -128,8 +130,10 @@ endif ( )
 
 # libm:
 if ( NOT WIN32 )
-    target_link_libraries ( RBio PRIVATE m )
-    if ( NOT NSTATIC )
+    if ( BUILD_SHARED_LIBS )
+        target_link_libraries ( RBio PRIVATE m )
+    endif ( )
+    if ( BUILD_STATIC_LIBS )
         set ( RBIO_STATIC_LIBS "${RBIO_STATIC_LIBS} -lm" )
         target_link_libraries ( RBio_static PUBLIC m )
     endif ( )
@@ -141,16 +145,19 @@ endif ( )
 
 include ( CMakePackageConfigHelpers )
 
-install ( TARGETS RBio
-    EXPORT RBioTargets
-    LIBRARY DESTINATION ${SUITESPARSE_LIBDIR}
-    ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
-    RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
-    PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
-if ( NOT NSTATIC )
+if ( BUILD_SHARED_LIBS )
+    install ( TARGETS RBio
+        EXPORT RBioTargets
+        LIBRARY DESTINATION ${SUITESPARSE_LIBDIR}
+        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
+        RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
+        PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+endif ( )
+if ( BUILD_STATIC_LIBS )
     install ( TARGETS RBio_static
         EXPORT RBioTargets
-        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR} )
+        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
+        PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
 endif ( )
 
 # create (temporary) export target file during build
@@ -235,7 +242,11 @@ if ( DEMO )
     add_executable ( RBdemo "Demo/RBdemo.c" )
 
     # Libraries required for Demo programs
-    target_link_libraries ( RBdemo PUBLIC RBio SuiteSparse::SuiteSparseConfig )
+    if ( BUILD_SHARED_LIBS )
+        target_link_libraries ( RBdemo PUBLIC RBio SuiteSparse::SuiteSparseConfig )
+    else ( )
+        target_link_libraries ( RBdemo PUBLIC RBio_static SuiteSparse::SuiteSparseConfig )
+    endif ( )
 
 else ( )
 

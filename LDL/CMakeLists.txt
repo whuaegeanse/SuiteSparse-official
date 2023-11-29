@@ -45,10 +45,10 @@ include ( SuiteSparsePolicy )
 option ( DEMO "ON: Build the demo programs.  OFF (default): do not build the demo programs." OFF )
 
 if ( NOT SUITESPARSE_ROOT_CMAKELISTS )
-    find_package ( SuiteSparse_config 7.3.1
+    find_package ( SuiteSparse_config 7.4.0
         PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-        find_package ( SuiteSparse_config 7.3.1 REQUIRED )
+        find_package ( SuiteSparse_config 7.4.0 REQUIRED )
     endif ( )
 
     if ( DEMO )
@@ -83,34 +83,35 @@ include_directories ( Source Include )
 
 file ( GLOB LDL_SOURCES "Source/*.c" )
 
-add_library ( LDL SHARED ${LDL_SOURCES} )
+if ( BUILD_SHARED_LIBS )
+    add_library ( LDL SHARED ${LDL_SOURCES} )
 
-set_target_properties ( LDL PROPERTIES
-    VERSION ${LDL_VERSION_MAJOR}.${LDL_VERSION_MINOR}.${LDL_VERSION_SUB}
-    C_STANDARD 11
-    C_STANDARD_REQUIRED ON
-    OUTPUT_NAME ldl
-    SOVERSION ${LDL_VERSION_MAJOR}
-    PUBLIC_HEADER "Include/ldl.h"
-    WINDOWS_EXPORT_ALL_SYMBOLS ON )
+    set_target_properties ( LDL PROPERTIES
+        VERSION ${LDL_VERSION_MAJOR}.${LDL_VERSION_MINOR}.${LDL_VERSION_SUB}
+        C_STANDARD 11
+        C_STANDARD_REQUIRED ON
+        OUTPUT_NAME ldl
+        SOVERSION ${LDL_VERSION_MAJOR}
+        PUBLIC_HEADER "Include/ldl.h"
+        WINDOWS_EXPORT_ALL_SYMBOLS ON )
 
-target_include_directories ( LDL 
-    INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
-              $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
+    target_include_directories ( LDL 
+        INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
+                  $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
+endif ( )
 
 #-------------------------------------------------------------------------------
 # static ldl library properties
 #-------------------------------------------------------------------------------
 
-if ( NOT NSTATIC )
+if ( BUILD_STATIC_LIBS )
     add_library ( LDL_static STATIC ${LDL_SOURCES} )
 
     set_target_properties ( LDL_static PROPERTIES
-        VERSION ${LDL_VERSION_MAJOR}.${LDL_VERSION_MINOR}.${LDL_VERSION_SUB}
         C_STANDARD 11
         C_STANDARD_REQUIRED ON
         OUTPUT_NAME ldl
-        SOVERSION ${LDL_VERSION_MAJOR} )
+        PUBLIC_HEADER "Include/ldl.h" )
 
     if ( MSVC )
         set_target_properties ( LDL_static PROPERTIES
@@ -120,7 +121,6 @@ if ( NOT NSTATIC )
     target_include_directories ( LDL_static 
         INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
                   $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
-
 endif ( )
 
 #-------------------------------------------------------------------------------
@@ -129,17 +129,21 @@ endif ( )
 
 # libm:
 if ( NOT WIN32 )
-    target_link_libraries ( LDL PRIVATE m )
-    if ( NOT NSTATIC )
+    if ( BUILD_SHARED_LIBS )
+        target_link_libraries ( LDL PRIVATE m )
+    endif ( )
+    if ( BUILD_STATIC_LIBS )
         set ( LDL_STATIC_LIBS "${LDL_STATIC_LIBS} -lm" )
         target_link_libraries ( LDL_static PUBLIC m )
     endif ( )
 endif ( )
 
-target_include_directories ( LDL PUBLIC
-    "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
+if ( BUILD_SHARED_LIBS )
+    target_include_directories ( LDL PUBLIC
+        "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
+endif ( )
 
-if ( NOT NSTATIC )
+if ( BUILD_STATIC_LIBS )
     target_include_directories ( LDL_static PUBLIC
         "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>" )
 endif ( )
@@ -149,16 +153,19 @@ endif ( )
 
 include ( CMakePackageConfigHelpers )
 
-install ( TARGETS LDL
-    EXPORT LDLTargets
-    LIBRARY DESTINATION ${SUITESPARSE_LIBDIR}
-    ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
-    RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
-    PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
-if ( NOT NSTATIC )
+if ( BUILD_SHARED_LIBS )
+    install ( TARGETS LDL
+        EXPORT LDLTargets
+        LIBRARY DESTINATION ${SUITESPARSE_LIBDIR}
+        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
+        RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
+        PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+endif ( )
+if ( BUILD_STATIC_LIBS )
     install ( TARGETS LDL_static
         EXPORT LDLTargets
-        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR} )
+        ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
+        PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
 endif ( )
 
 # create (temporary) export target file during build
@@ -245,17 +252,32 @@ if ( DEMO )
     add_executable ( ldllmain       "Demo/ldllmain.c" )
 
     # Libraries required for Demo programs
-    target_link_libraries ( ldlsimple   PUBLIC LDL SuiteSparse::SuiteSparseConfig )
-    target_link_libraries ( ldllsimple  PUBLIC LDL )
-    target_link_libraries ( ldlmain     PUBLIC LDL )
-    target_link_libraries ( ldllmain    PUBLIC LDL )
+    if ( BUILD_SHARED_LIBS )
+        target_link_libraries ( ldlsimple   PUBLIC LDL )
+        target_link_libraries ( ldllsimple  PUBLIC LDL )
+        target_link_libraries ( ldlmain     PUBLIC LDL )
+        target_link_libraries ( ldllmain    PUBLIC LDL )
+    else ( )
+        target_link_libraries ( ldlsimple   PUBLIC LDL_static )
+        target_link_libraries ( ldllsimple  PUBLIC LDL_static )
+        target_link_libraries ( ldlmain     PUBLIC LDL_static )
+        target_link_libraries ( ldllmain    PUBLIC LDL_static )
+    endif ( )
+    target_link_libraries ( ldlsimple PUBLIC SuiteSparse::SuiteSparseConfig )
 
     if ( AMD_FOUND )
         message ( STATUS "AMD found for ldlamd and ldllamd" )
         add_executable ( ldlamd     "Demo/ldlamd.c" )
         add_executable ( ldllamd    "Demo/ldllamd.c" )
-        target_link_libraries ( ldlamd  PUBLIC LDL SuiteSparse::AMD )
-        target_link_libraries ( ldllamd PUBLIC LDL SuiteSparse::AMD )
+        if ( BUILD_SHARED_LIBS )
+            target_link_libraries ( ldlamd PUBLIC LDL )
+            target_link_libraries ( ldllamd PUBLIC LDL )
+        else ( )
+            target_link_libraries ( ldlamd PUBLIC LDL_static )
+            target_link_libraries ( ldllamd PUBLIC LDL_static )
+        endif ( )
+        target_link_libraries ( ldlamd PUBLIC SuiteSparse::AMD )
+        target_link_libraries ( ldllamd PUBLIC SuiteSparse::AMD )
     endif ( )
 
 else ( )
