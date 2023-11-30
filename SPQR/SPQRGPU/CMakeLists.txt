@@ -69,7 +69,7 @@ if ( BUILD_SHARED_LIBS )
     target_compile_definitions ( SPQR_CUDA PRIVATE "SUITESPARSE_CUDA" )
 
     target_link_libraries ( SPQR_CUDA PRIVATE SuiteSparse::SuiteSparseConfig 
-        SuiteSparse::CHOLMOD_CUDA SuiteSparse::CHOLMOD GPURuntime GPUQREngine )
+        SuiteSparse::CHOLMOD GPURuntime GPUQREngine )
 
     target_link_libraries ( SPQR_CUDA PRIVATE CUDA::nvrtc CUDA::cudart_static
         CUDA::nvtx3 CUDA::cublas )
@@ -91,12 +91,6 @@ if ( BUILD_STATIC_LIBS )
         target_link_libraries ( SPQR_CUDA_static PUBLIC SuiteSparse::SuiteSparseConfig_static )
     else ( )
         target_link_libraries ( SPQR_CUDA_static PUBLIC SuiteSparse::SuiteSparseConfig )
-    endif ( )
-
-    if ( TARGET SuiteSparse::CHOLMOD_CUDA_static )
-        target_link_libraries ( SPQR_CUDA_static PUBLIC SuiteSparse::CHOLMOD_CUDA_static )
-    else ( )
-        target_link_libraries ( SPQR_CUDA_static PUBLIC SuiteSparse::CHOLMOD_CUDA )
     endif ( )
 
     if ( TARGET SuiteSparse::CHOLMOD_static )

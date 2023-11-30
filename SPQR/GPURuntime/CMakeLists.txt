@@ -117,9 +117,9 @@ if ( BUILD_STATIC_LIBS )
         CUDA::nvrtc CUDA::cudart_static CUDA::nvtx3 CUDA::cublas )
 
     if ( TARGET SuiteSparse::SuiteSparseConfig_static )
-        target_link_libraries ( CHOLMOD_CUDA_static PUBLIC SuiteSparse::SuiteSparseConfig_static )
+        target_link_libraries ( GPURuntime_static PUBLIC SuiteSparse::SuiteSparseConfig_static )
     else ( )
-        target_link_libraries ( CHOLMOD_CUDA_static PUBLIC SuiteSparse::SuiteSparseConfig )
+        target_link_libraries ( GPURuntime_static PUBLIC SuiteSparse::SuiteSparseConfig )
     endif ( )
 
     target_compile_definitions ( GPURuntime_static PRIVATE "SUITESPARSE_CUDA" )

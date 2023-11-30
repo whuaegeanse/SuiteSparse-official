@@ -92,7 +92,7 @@ Thanks for packaging SuiteSparse!  Here are some suggestions:
     * CUDA acceleration:  CHOLMOD and SPQR can benefit from their CUDA
         kernels.  If you do not have CUDA or do not want to include it in
         your distro, this version of SuiteSparse skips the building of
-        the CHOLMOD_CUDA and SPQR_CUDA libraries, and does not link
+        the SPQR_CUDA libraries, and does not link
         against the GPUQREngine and SuiteSparse_GPURuntime libraries.
         The latter can be excluded from your distro (the "make" command
         will build them, but they will be empty).
