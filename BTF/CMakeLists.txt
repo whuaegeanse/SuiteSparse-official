@@ -12,10 +12,10 @@
 
 cmake_minimum_required ( VERSION 3.20 )
 
-set ( BTF_DATE "Sept 18, 2023" )
+set ( BTF_DATE "Dec 30, 2023" )
 set ( BTF_VERSION_MAJOR 2 CACHE STRING "" FORCE )
-set ( BTF_VERSION_MINOR 2 CACHE STRING "" FORCE )
-set ( BTF_VERSION_SUB   1 CACHE STRING "" FORCE )
+set ( BTF_VERSION_MINOR 3 CACHE STRING "" FORCE )
+set ( BTF_VERSION_SUB   0 CACHE STRING "" FORCE )
 
 message ( STATUS "Building BTF version: v"
     ${BTF_VERSION_MAJOR}.

@@ -12,7 +12,7 @@
 # cmake 3.22 is required to find the BLAS/LAPACK
 cmake_minimum_required ( VERSION 3.22 )
 
-set ( CHOLMOD_DATE "Nov 30, 2023" )
+set ( CHOLMOD_DATE "Dec 30, 2023" )
 set ( CHOLMOD_VERSION_MAJOR 5 CACHE STRING "" FORCE )
 set ( CHOLMOD_VERSION_MINOR 1 CACHE STRING "" FORCE )
 set ( CHOLMOD_VERSION_SUB   0 CACHE STRING "" FORCE )
@@ -82,16 +82,16 @@ if ( NOT SUITESPARSE_ROOT_CMAKELISTS )
         find_package ( SuiteSparse_config 7.4.0 REQUIRED )
     endif ( )
 
-    find_package ( AMD 3.2.2
+    find_package ( AMD 3.3.0
         PATHS ${CMAKE_SOURCE_DIR}/../AMD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::AMD )
-        find_package ( AMD 3.2.2 REQUIRED )
+        find_package ( AMD 3.3.0 REQUIRED )
     endif ( )
 
-    find_package ( COLAMD 3.2.1
+    find_package ( COLAMD 3.3.0
         PATHS ${CMAKE_SOURCE_DIR}/../COLAMD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::COLAMD )
-        find_package ( COLAMD 3.2.1 REQUIRED )
+        find_package ( COLAMD 3.3.0 REQUIRED )
     endif ( )
 endif ( )
 
@@ -195,16 +195,16 @@ endif ( )
 
     if ( NOT NCAMD AND NOT SUITESPARSE_ROOT_CMAKELISTS )
         # find CAMD and CCOLAMD
-        find_package ( CAMD 3.2.2
+        find_package ( CAMD 3.3.0
             PATHS ${CMAKE_SOURCE_DIR}/../CAMD/build NO_DEFAULT_PATH )
         if ( NOT TARGET SuiteSparse::CAMD )
-            find_package ( CAMD 3.2.2 )
+            find_package ( CAMD 3.3.0 )
         endif ( )
 
-        find_package ( CCOLAMD 3.2.1
+        find_package ( CCOLAMD 3.3.0
             PATHS ${CMAKE_SOURCE_DIR}/../CCOLAMD/build NO_DEFAULT_PATH )
         if ( NOT TARGET SuiteSparse::CCOLAMD )
-            find_package ( CCOLAMD 3.2.1 )
+            find_package ( CCOLAMD 3.3.0 )
         endif ( )
 
         if ( NOT CAMD_FOUND OR NOT CCOLAMD_FOUND )
@@ -504,13 +504,13 @@ if ( SUITESPARSE_CUDA )
     endif ( )
     if ( BUILD_SHARED_LIBS )
         target_link_libraries ( CHOLMOD PRIVATE CUDA::nvrtc CUDA::cudart_static
-            CUDA::nvToolsExt CUDA::cublas )
+            CUDA::nvtx3 CUDA::cublas )
         target_include_directories ( CHOLMOD INTERFACE
             $<TARGET_PROPERTY:CUDA::cublas,INTERFACE_INCLUDE_DIRECTORIES> )
     endif ( )
     if ( BUILD_STATIC_LIBS )
         target_link_libraries ( CHOLMOD_static PUBLIC CUDA::nvrtc CUDA::cudart_static
-            CUDA::nvToolsExt CUDA::cublas )
+            CUDA::nvtx3 CUDA::cublas )
     endif ( )
 
     set ( old_CMAKE_EXTRA_INCLUDE_FILES CMAKE_EXTRA_INCLUDE_FILES )
@@ -804,7 +804,7 @@ add_test ( NAME CHOLMOD_int64_single_supernodal
 if ( WIN32 AND BUILD_SHARED_LIBS )
     # Set PATH to pick up the necessary libraries for all tests
 
-    set ( CHOLMOD_CTEST_NAMES 
+    set ( CHOLMOD_CTEST_NAMES
         CHOLMOD_int32_double_bcsstk01 CHOLMOD_int64_double_bcsstk01 CHOLMOD_int32_single_bcsstk01 CHOLMOD_int64_single_bcsstk01
         CHOLMOD_int32_double_lp_afiro CHOLMOD_int64_double_lp_afiro CHOLMOD_int32_single_lp_afiro CHOLMOD_int64_single_lp_afiro
         CHOLMOD_int32_double_can24 CHOLMOD_int64_double_can24 CHOLMOD_int32_single_can24 CHOLMOD_int64_single_can24

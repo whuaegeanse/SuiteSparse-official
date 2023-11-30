@@ -2,7 +2,7 @@
 SuiteSparse:  A Suite of Sparse matrix packages at http://suitesparse.com
 -----------------------------------------------------------------------------
 
-Nov 30, 2023, SuiteSparse VERSION 7.4.0
+Dec 30, 2023, SuiteSparse VERSION 7.4.0
 
 SuiteSparse is a set of sparse-matrix-related packages written or co-authored
 by Tim Davis, available at https://github.com/DrTimothyAldenDavis/SuiteSparse .
@@ -487,6 +487,7 @@ Packages in SuiteSparse, and files in this directory:
                 an unmodified copy METIS.
 
     ParU        a parallel unsymmetric pattern multifrontal method.
+                Currently a pre-release.
                 authors: Mohsen Aznaveh and Tim Davis
 
     RBio        read/write sparse matrices in Rutherford/Boeing format
@@ -505,21 +506,15 @@ Packages in SuiteSparse, and files in this directory:
 
     SPQR        sparse QR factorization.  This the built-in qr and x=A\b in
                 MATLAB.  Also called SuiteSparseQR.
+                Includes two GPU libraries: SPQR/GPUQREngine and
+                SPQR/SuiteSparse_GPURuntime.
                 author of the CPU code: Tim Davis
                 author of GPU modules: Tim Davis, Nuri Yeralan,
                     Wissam Sid-Lakhdar, Sanjay Ranka
 
-    GPUQREngine: GPU support package for SPQR
-                Not needed if CUDA is not enabled.
-                authors: Tim Davis, Nuri Yeralan, Sanjay Ranka,
-                    Wissam Sid-Lakhdar
-
     SuiteSparse_config    configuration file for all the above packages.
                 CSparse and MATLAB_Tools do not use SuiteSparse_config.
                 author: Tim Davis
-
-    SuiteSparse_GPURuntime      GPU support package for SPQR and CHOLMOD
-                Not needed if CUDA is not enabled.
 
     SuiteSparse_install.m       install SuiteSparse for MATLAB
     SuiteSparse_paths.m         set paths for SuiteSparse MATLAB mexFunctions
@@ -724,6 +719,23 @@ is set).
     cmake -DCMAKE_INSTALL_PREFIX=/stuff ..
     sudo cmake --install .
 ```
+
+* `SUITESPARSE_PKGFILEDIR`:
+
+  Directory where CMake Config and pkg-config files will be installed.  By
+  default, CMake Config files will be installed in the subfolder `cmake` of the
+  directory where the (static) libraries will be installed (e.g., `lib`).  The
+  `.pc` files for pkg-config will be installed in the subfolder `pkgconfig` of
+  the directory where the (static) libraries will be installed.
+
+  This option allows to install them at a location different from the (static)
+  libraries.  This allows to install multiple configurations of the SuiteSparse
+  libraries at the same time (e.g., by also setting a different
+  `CMAKE_RELEASE_POSTFIX` and `CMAKE_INSTALL_LIBDIR` for each of them).  To pick
+  up the respective configuration in downstream projects, set, e.g.,
+  `CMAKE_PREFIX_PATH` (for CMake) or `PKG_CONFIG_PATH` (for build systems using
+  pkg-config) to the path containing the respective CMake Config files or
+  pkg-config files.
 
 * `BUILD_SHARED_LIBS`:
 
