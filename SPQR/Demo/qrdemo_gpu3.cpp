@@ -63,7 +63,7 @@ int main (int argc, char **argv)
     m = A->nrow ;
     n = A->ncol ;
 
-    long ordering = (argc < 3 ? SPQR_ORDERING_DEFAULT : atoi(argv[2]));
+    int ordering = (argc < 3 ? SPQR_ORDERING_DEFAULT : atoi(argv[2]));
 
     printf ("Matrix %6ld-by-%-6ld nnz: %6ld\n",
         m, n, cholmod_l_nnz (A, cc)) ;

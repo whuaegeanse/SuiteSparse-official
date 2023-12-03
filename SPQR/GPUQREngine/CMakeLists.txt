@@ -21,7 +21,7 @@ message ( STATUS "Building SPQR/GPUQRENGINE version: v"
 # define the project
 #-------------------------------------------------------------------------------
 
-project ( gpuqrengine
+project ( gpuqrengine 
     VERSION "${SPQR_VERSION_MAJOR}.${SPQR_VERSION_MINOR}.${SPQR_VERSION_SUB}"
     LANGUAGES CXX CUDA )
 
@@ -90,9 +90,10 @@ if ( BUILD_SHARED_LIBS )
         WINDOWS_EXPORT_ALL_SYMBOLS ON )
 
     target_include_directories ( GPUQREngine PRIVATE
-        ${GPUQRENGINE_INCLUDES}
-        "$<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>"
-        "$<TARGET_PROPERTY:GPURuntime,INTERFACE_INCLUDE_DIRECTORIES>" )
+        ${GPUQRENGINE_INCLUDES} )
+
+    target_link_libraries ( GPUQREngine PRIVATE
+        GPURuntime SuiteSparse::SuiteSparseConfig )
 
     set_target_properties ( GPUQREngine PROPERTIES
         POSITION_INDEPENDENT_CODE ON
@@ -100,7 +101,7 @@ if ( BUILD_SHARED_LIBS )
         CUDA_RESOLVE_DEVICE_SYMBOLS ON
         CUDA_RUNTIME_LIBRARY Static )
     target_link_libraries ( GPUQREngine PRIVATE
-        CUDA::nvrtc CUDA::cudart_static CUDA::nvtx3 CUDA::cublas
+        CUDA::nvrtc CUDA::cudart_static CUDA::cublas
         SuiteSparse::SuiteSparseConfig GPURuntime )
     target_compile_definitions ( GPUQREngine PRIVATE "SUITESPARSE_CUDA" )
 
@@ -129,17 +130,23 @@ if ( BUILD_STATIC_LIBS )
 
     target_include_directories ( GPUQREngine_static PRIVATE
         ${CUDAToolkit_INCLUDE_DIRS}
-        ${GPUQRENGINE_INCLUDES}
-        $<TARGET_PROPERTY:SuiteSparse::SuiteSparseConfig,INTERFACE_INCLUDE_DIRECTORIES>
-        $<TARGET_PROPERTY:GPURuntime_static,INTERFACE_INCLUDE_DIRECTORIES> )
+        ${GPUQRENGINE_INCLUDES} )
+
+    target_link_libraries ( GPUQREngine_static PRIVATE GPURuntime_static )
+
+    if ( TARGET SuiteSparse::SuiteSparseConfig_static )
+        target_link_libraries ( GPUQREngine_static PRIVATE SuiteSparse::SuiteSparseConfig_static )
+    else ( )
+        target_link_libraries ( GPUQREngine_static PRIVATE SuiteSparse::SuiteSparseConfig )
+    endif ( )
 
     set_target_properties ( GPUQREngine_static PROPERTIES
         POSITION_INDEPENDENT_CODE ON
         CUDA_SEPARABLE_COMPILATION ON
         CUDA_RESOLVE_DEVICE_SYMBOLS ON
         CUDA_RUNTIME_LIBRARY Static )
-    target_link_libraries ( GPUQREngine_static PUBLIC
-        CUDA::nvrtc CUDA::cudart_static CUDA::nvtx3 GPURuntime_static )
+    target_link_libraries ( GPUQREngine_static PRIVATE
+        CUDA::nvrtc CUDA::cudart_static GPURuntime_static )
 
     if ( TARGET SuiteSparse::SuiteSparseConfig_static )
         target_link_libraries ( GPUQREngine_static PUBLIC SuiteSparse::SuiteSparseConfig_static )

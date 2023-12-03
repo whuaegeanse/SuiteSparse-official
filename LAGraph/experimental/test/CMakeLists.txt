@@ -67,7 +67,7 @@ if ( BUILD_STATIC_LIBS )
             OUTPUT_NAME lagraphxtest_static )
     endif ( )
 
-    target_link_libraries ( lagraphxtest_static PUBLIC LAGraph_static lagraphtest_static GraphBLAS::GraphBLAS )
+    target_link_libraries ( lagraphxtest_static PRIVATE LAGraph_static lagraphtest_static GraphBLAS::GraphBLAS )
 endif ( )
 
 #-------------------------------------------------------------------------------
@@ -79,7 +79,7 @@ if ( OPENMP_C_FOUND )
         target_link_libraries ( lagraphxtest PRIVATE OpenMP::OpenMP_C )
     endif ( )
     if ( BUILD_STATIC_LIBS )
-        target_link_libraries ( lagraphxtest_static PUBLIC OpenMP::OpenMP_C )
+        target_link_libraries ( lagraphxtest_static PRIVATE OpenMP::OpenMP_C )
     endif ( )
 endif ( )
 
@@ -110,10 +110,10 @@ foreach( testsourcefile ${TEST_SOURCES} )
     if (WIN32)
         if ( BUILD_SHARED_LIBS )
             set_tests_properties ( ${ctestname} PROPERTIES
-                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:SuiteSparse::GraphBLAS>;PATH=path_list_prepend:$<TARGET_FILE_DIR:lagraphxtest>" )
+                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:GraphBLAS::GraphBLAS>;PATH=path_list_prepend:$<TARGET_FILE_DIR:lagraphxtest>" )
         else ( )
             set_tests_properties ( ${ctestname} PROPERTIES
-                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:SuiteSparse::GraphBLAS>" )
+                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:GraphBLAS::GraphBLAS>" )
         endif ( )
     endif ( )
 endforeach( testsourcefile ${TEST_SOURCES} )
