@@ -44,7 +44,7 @@ endif ( )
 string ( REPLACE "\"" "\\\"" GB_C_FLAGS ${GB_C_FLAGS} )
 
 # construct the -I list for OpenMP
-if ( OPENMP_FOUND )
+if ( OpenMP_C_FOUND )
     set ( GB_OMP_INC_DIRS ${OpenMP_C_INCLUDE_DIRS} )
     set ( GB_OMP_INC ${OpenMP_C_INCLUDE_DIRS} )
     list ( TRANSFORM GB_OMP_INC PREPEND " -I" )
@@ -54,37 +54,47 @@ else ( )
 endif ( )
 
 # construct the library list
-if ( MINGW )
+if ( APPLE )
+    set ( default_jit_enable_relocate OFF )
+else ( )
+    set ( default_jit_enable_relocate ON )
+endif ( )
 
-# This might be something like:
-#   /usr/lib/libgomp.so;/usr/lib/libpthread.a;m
-# convert to -l flags to avoid relocation issues, i.e.: "-lgomp -lpthread -lm"
-set ( GB_C_LIBRARIES "" )
-foreach ( _lib ${GB_CMAKE_LIBRARIES} )
-    string ( FIND ${_lib} "." _pos REVERSE )
-    if ( ${_pos} EQUAL "-1" )
-        set ( GB_C_LIBRARIES "${GB_C_LIBRARIES} -l${_lib}" )
-        continue ()
-    endif ( )
-    set ( _kinds "SHARED" "STATIC" )
-    if ( WIN32 )
-        list ( PREPEND _kinds "IMPORT" )
-    endif ( )
-    foreach ( _kind IN LISTS _kinds )
-        set ( _regex ".*\\/(lib)?([^\\.]*)(${CMAKE_${_kind}_LIBRARY_SUFFIX})" )
-        if ( ${_lib} MATCHES ${_regex} )
-            string ( REGEX REPLACE ${_regex} "\\2" _libname ${_lib} )
-            if ( NOT "${_libname}" STREQUAL "" )
-                set ( GB_C_LIBRARIES "${GB_C_LIBRARIES} -l${_libname}" )
-                break ()
-            endif ( )
+option ( GRAPHBLAS_JIT_ENABLE_RELOCATE
+    "ON: Enable relocation of libraries for JIT. OFF: Keep libraries with full path for JIT."
+    default_jit_enable_relocate )
+
+if ( GRAPHBLAS_JIT_ENABLE_RELOCATE )
+
+    # This might be something like:
+    #   /usr/lib/libgomp.so;/usr/lib/libpthread.a;m
+    # convert to -l flags to avoid relocation issues, i.e.: "-lgomp -lpthread -lm"
+    set ( GB_C_LIBRARIES "" )
+    foreach ( _lib ${GB_CMAKE_LIBRARIES} )
+        string ( FIND ${_lib} "." _pos REVERSE )
+        if ( ${_pos} EQUAL "-1" )
+            set ( GB_C_LIBRARIES "${GB_C_LIBRARIES} -l${_lib}" )
+            continue ()
         endif ( )
+        set ( _kinds "SHARED" "STATIC" )
+        if ( WIN32 )
+            list ( PREPEND _kinds "IMPORT" )
+        endif ( )
+        foreach ( _kind IN LISTS _kinds )
+            set ( _regex ".*\\/(lib)?([^\\.]*)(${CMAKE_${_kind}_LIBRARY_SUFFIX})" )
+            if ( ${_lib} MATCHES ${_regex} )
+                string ( REGEX REPLACE ${_regex} "\\2" _libname ${_lib} )
+                if ( NOT "${_libname}" STREQUAL "" )
+                    set ( GB_C_LIBRARIES "${GB_C_LIBRARIES} -l${_libname}" )
+                    break ()
+                endif ( )
+            endif ( )
+        endforeach ( )
     endforeach ( )
-endforeach ( )
 
 else ( )
 
-    # original method (before MINGW changes:
+    # keep full paths to libraries
     string ( REPLACE "." "\\." LIBSUFFIX1 ${GB_LIB_SUFFIX} )
     string ( REPLACE "." "\\." LIBSUFFIX2 ${CMAKE_STATIC_LIBRARY_SUFFIX} )
     set ( GB_C_LIBRARIES "" )

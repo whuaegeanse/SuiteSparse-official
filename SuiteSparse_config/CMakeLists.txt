@@ -97,6 +97,10 @@ if ( BUILD_SHARED_LIBS )
         PUBLIC_HEADER "SuiteSparse_config.h"
         WINDOWS_EXPORT_ALL_SYMBOLS ON )
 
+    if ( ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.25" )
+        set_target_properties ( SuiteSparseConfig PROPERTIES EXPORT_NO_SYSTEM ON )
+    endif ( )
+
     target_include_directories ( SuiteSparseConfig
         INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
                   $<INSTALL_INTERFACE:${SUITESPARSE_INCLUDEDIR}> )
@@ -118,6 +122,10 @@ if ( BUILD_STATIC_LIBS )
     if ( MSVC )
         set_target_properties ( SuiteSparseConfig_static PROPERTIES
             OUTPUT_NAME suitesparseconfig_static )
+    endif ( )
+
+    if ( ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.25" )
+        set_target_properties ( SuiteSparseConfig_static PROPERTIES EXPORT_NO_SYSTEM ON )
     endif ( )
 
     target_include_directories ( SuiteSparseConfig_static
@@ -146,11 +154,13 @@ if ( OpenMP_C_FOUND )
     message ( STATUS "OpenMP C flags:          ${OpenMP_C_FLAGS} ")
     if ( BUILD_SHARED_LIBS )
         target_link_libraries ( SuiteSparseConfig PRIVATE OpenMP::OpenMP_C )
-        target_include_directories ( SuiteSparseConfig PUBLIC
+        target_include_directories ( SuiteSparseConfig SYSTEM AFTER INTERFACE
             "$<TARGET_PROPERTY:OpenMP::OpenMP_C,INTERFACE_INCLUDE_DIRECTORIES>" )
     endif ( )
     if ( BUILD_STATIC_LIBS )
-        target_link_libraries ( SuiteSparseConfig_static PUBLIC OpenMP::OpenMP_C )
+        target_link_libraries ( SuiteSparseConfig_static PRIVATE OpenMP::OpenMP_C )
+        target_include_directories ( SuiteSparseConfig_static SYSTEM AFTER INTERFACE
+            "$<TARGET_PROPERTY:OpenMP::OpenMP_C,INTERFACE_INCLUDE_DIRECTORIES>" )
     endif ( )
 endif ( )
 

@@ -62,19 +62,39 @@ in your CMakeLists.txt file.  See also SuiteSparse/Example/CMakeLists.txt:
 # changes to this will likely be required.
 
 
-## New versions of SuiteSparse GraphBLAS (8.0.3 and newer) ##
+## New versions of SuiteSparse GraphBLAS (8.2.0 and newer) ##
+
+message ( STATUS "Looking for SuiteSparse GraphBLAS" )
 
 find_package ( GraphBLAS ${GraphBLAS_FIND_VERSION} CONFIG
     PATHS ${CMAKE_BINARY_DIR} ${PROJECT_SOURCE_DIR}/../GraphBLAS/build NO_DEFAULT_PATH )
+set ( _lagraph_gb_common_tree ON )
 if ( NOT TARGET SuiteSparse::GraphBLAS )
     find_package ( GraphBLAS ${GraphBLAS_FIND_VERSION} CONFIG )
+    set ( _lagraph_gb_common_tree OFF )
 endif ( )
 
 if ( GraphBLAS_FOUND )
     if ( TARGET SuiteSparse::GraphBLAS )
         # It's not possible to create an alias of an alias.
+        message ( STATUS "Found SuiteSparse::GraphBLAS" )
         get_property ( _graphblas_aliased TARGET SuiteSparse::GraphBLAS
             PROPERTY ALIASED_TARGET )
+        if ( GRAPHBLAS_VERSION LESS "8.3.0" AND _lagraph_gb_common_tree )
+            # workaround for incorrect INTERFACE_INCLUDE_DIRECTORIES of
+            # SuiteSparse:GraphBLAS 8.2.x before installation
+            # (did not have "/Include")
+            get_property ( _inc TARGET SuiteSparse::GraphBLAS PROPERTY
+                INTERFACE_INCLUDE_DIRECTORIES )
+            if ( "${_graphblas_aliased}" STREQUAL "" )
+                target_include_directories ( SuiteSparse::GraphBLAS INTERFACE
+                    ${_inc}/Include )
+            else ( )
+                target_include_directories ( ${_graphblas_aliased} INTERFACE
+                    ${_inc}/Include )
+            endif ( )
+            message ( STATUS "additional include: ${_inc}/Include" )
+        endif ( )
         if ( "${_graphblas_aliased}" STREQUAL "" )
             add_library ( GraphBLAS::GraphBLAS ALIAS SuiteSparse::GraphBLAS )
         else ( )
@@ -82,9 +102,25 @@ if ( GraphBLAS_FOUND )
         endif ( )
     endif ( )
     if ( TARGET SuiteSparse::GraphBLAS_static )
+        message ( STATUS "Found SuiteSparse::GraphBLAS_static" )
         # It's not possible to create an alias of an alias.
         get_property ( _graphblas_aliased TARGET SuiteSparse::GraphBLAS_static
             PROPERTY ALIASED_TARGET )
+        if ( GRAPHBLAS_VERSION LESS "8.3.0" AND _lagraph_gb_common_tree )
+            # workaround for incorrect INTERFACE_INCLUDE_DIRECTORIES of
+            # SuiteSparse:GraphBLAS 8.2.x before installation
+            # (did not have "/Include")
+            get_property ( _inc TARGET SuiteSparse::GraphBLAS_static PROPERTY
+                INTERFACE_INCLUDE_DIRECTORIES )
+            if ( "${_graphblas_aliased}" STREQUAL "" )
+                target_include_directories ( SuiteSparse::GraphBLAS_static INTERFACE
+                    ${_inc}/Include )
+            else ( )
+                target_include_directories ( ${_graphblas_aliased} INTERFACE
+                    ${_inc}/Include )
+            endif ( )
+            message ( STATUS "additional include: ${_inc}/Include" )
+        endif ( )
         if ( "${_graphblas_aliased}" STREQUAL "" )
             add_library ( GraphBLAS::GraphBLAS_static ALIAS SuiteSparse::GraphBLAS_static )
         else ( )
@@ -95,7 +131,10 @@ if ( GraphBLAS_FOUND )
 endif ( )
 
 
-## Older versions of SuiteSparse GraphBLAS (or different vendor?) ##
+## Older versions of SuiteSparse GraphBLAS (8.0 or older)
+## or vanilla GraphBLAS libraries
+
+message ( STATUS "Looking for vanilla GraphBLAS (or older SuiteSparse)" )
 
 # "Include" for SuiteSparse:GraphBLAS
 find_path ( GRAPHBLAS_INCLUDE_DIR
@@ -215,15 +254,18 @@ else ( )
 endif ( )
 
 # Create target from information found
+
 if ( GRAPHBLAS_LIBRARY )
+    message ( STATUS "Create target GraphBLAS::GraphBLAS" )
     add_library ( GraphBLAS::GraphBLAS UNKNOWN IMPORTED )
     set_target_properties ( GraphBLAS::GraphBLAS PROPERTIES
         IMPORTED_LOCATION "${GRAPHBLAS_LIBRARY}"
-        IMPORTED_INCLUDE_DIRECTORIES "${GRAPHBLAS_INCLUDE_DIR}" )
+        INTERFACE_INCLUDE_DIRECTORIES "${GRAPHBLAS_INCLUDE_DIR}" )
 endif ( )
 if ( GRAPHBLAS_STATIC )
+    message ( STATUS "Create target GraphBLAS::GraphBLAS_static" )
     add_library ( GraphBLAS::GraphBLAS_static UNKNOWN IMPORTED )
     set_target_properties ( GraphBLAS::GraphBLAS_static PROPERTIES
         IMPORTED_LOCATION "${GRAPHBLAS_STATIC}"
-        IMPORTED_INCLUDE_DIRECTORIES "${GRAPHBLAS_INCLUDE_DIR}" )
+        INTERFACE_INCLUDE_DIRECTORIES "${GRAPHBLAS_INCLUDE_DIR}" )
 endif ( )
