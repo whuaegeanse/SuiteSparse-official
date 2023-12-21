@@ -9,7 +9,7 @@
 # get the version
 #-------------------------------------------------------------------------------
 
-cmake_minimum_required ( VERSION 3.20 )
+cmake_minimum_required ( VERSION 3.22 )
 
 set ( COLAMD_DATE "Dec 30, 2023" )
 set ( COLAMD_VERSION_MAJOR 3 CACHE STRING "" FORCE )
@@ -219,11 +219,20 @@ if ( NOT MSVC )
   else ( )
       set ( includedir "\${prefix}/${SUITESPARSE_INCLUDEDIR}")
   endif ( )
+    if ( BUILD_SHARED_LIBS )
+        set ( SUITESPARSE_LIB_BASE_NAME $<TARGET_FILE_BASE_NAME:COLAMD> )
+    else ( )
+        set ( SUITESPARSE_LIB_BASE_NAME $<TARGET_FILE_BASE_NAME:COLAMD_static> )
+    endif ( )
   configure_file (
       Config/COLAMD.pc.in
-      COLAMD.pc
+      COLAMD.pc.out
       @ONLY
       NEWLINE_STYLE LF )
+    file ( GENERATE
+        OUTPUT COLAMD.pc
+        INPUT ${CMAKE_CURRENT_BINARY_DIR}/COLAMD.pc.out
+        NEWLINE_STYLE LF )
   install ( FILES
       ${CMAKE_CURRENT_BINARY_DIR}/COLAMD.pc
       DESTINATION ${SUITESPARSE_PKGFILEDIR}/pkgconfig )
@@ -233,8 +242,7 @@ endif ( )
 # Demo library and programs
 #-------------------------------------------------------------------------------
 
-option ( DEMO "ON: Build the demo programs.  OFF (default): do not build the demo programs." off )
-if ( DEMO )
+if ( SUITESPARSE_DEMOS )
 
     #---------------------------------------------------------------------------
     # demo library

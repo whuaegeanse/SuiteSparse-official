@@ -8,7 +8,7 @@
 # See the section below, "help with building this Example ..." for how to tell
 # this Example library where to find SuiteSparse.
 
-cmake_minimum_required ( VERSION 3.20 )
+cmake_minimum_required ( VERSION 3.22 )
 
 #-------------------------------------------------------------------------------
 # help with building this Example package and finding SuiteSparse 
@@ -67,11 +67,6 @@ message ( STATUS "Building MY library version: v"
 # policies
 #-------------------------------------------------------------------------------
 
-cmake_policy ( SET CMP0042 NEW )    # enable MACOSX_RPATH by default
-cmake_policy ( SET CMP0048 NEW )    # VERSION variable policy
-cmake_policy ( SET CMP0054 NEW )    # if ( expression ) handling policy
-cmake_policy ( SET CMP0104 NEW )    # initialize CUDA architectures
-
 if ( WIN32 )
     set ( CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS true )
 endif ( )
@@ -102,12 +97,12 @@ find_package ( CCOLAMD 3.3.0 REQUIRED )
 find_package ( CHOLMOD 5.1.0 REQUIRED )
 find_package ( COLAMD 3.3.0 REQUIRED )
 find_package ( CXSparse 4.3.0 REQUIRED )
-find_package ( GraphBLAS 8.3.0 )
+find_package ( GraphBLAS 8.3.1 )
 find_package ( KLU 2.3.0 REQUIRED )
 find_package ( KLU_CHOLMOD 2.3.0 REQUIRED )
 find_package ( LDL 3.3.0 REQUIRED )
 find_package ( LAGraph 1.1.0 )
-find_package ( Mongoose 3.3.0 REQUIRED )
+find_package ( SuiteSparse_Mongoose 3.3.0 REQUIRED )
 find_package ( ParU 0.1.0 REQUIRED )
 find_package ( RBio 4.3.0 REQUIRED )
 find_package ( SPEX 2.3.0 REQUIRED )    # requires GMP and MPFR

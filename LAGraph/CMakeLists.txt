@@ -36,10 +36,8 @@
 # get the version
 #-------------------------------------------------------------------------------
 
-cmake_minimum_required ( VERSION 3.20 )
+cmake_minimum_required ( VERSION 3.20 ) # LAGraph can be built stand-alone
 
-cmake_policy ( SET CMP0042 NEW )
-cmake_policy ( SET CMP0048 NEW )
 set ( CMAKE_MACOSX_RPATH TRUE )
 
 # version of LAGraph
@@ -68,8 +66,6 @@ set ( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
 include ( SuiteSparsePolicy )
 
 enable_language ( C )
-
-option ( NOPENMP "ON: do not use OpenMP.  OFF (default): use OpenMP" OFF )
 
 # configure LAGraph.h with the LAGraph date and version
 configure_file (
@@ -159,17 +155,19 @@ endif ( )
 # determine what user threading model to use
 #-------------------------------------------------------------------------------
 
+option ( SUITESPARSE_USE_OPENMP "ON (default): Use OpenMP if available.  OFF: Do not use OpenMP" ON )
+option ( LAGRAPH_USE_OPENMP "ON: Use OpenMP in LAGraph if available.  OFF: Do not use OpenMP.  (Default: SUITESPARSE_USE_OPENMP)" ${SUITESPARSE_USE_OPENMP} )
 if ( COVERAGE )
     message ( STATUS "OpenMP disabled for test coverage" )
 else ( )
-    if ( NOPENMP )
-        set ( OpenMP_C_FOUND OFF )
-    else ( )
-        find_package ( OpenMP )
+    if ( LAGRAPH_USE_OPENMP )
+        find_package ( OpenMP GLOBAL )
         if ( OpenMP_C_FOUND AND BUILD_STATIC_LIBS )
             list ( APPEND LAGRAPH_STATIC_LIBS ${OpenMP_C_LIBRARIES} )
         endif ( )
         find_package ( Threads )
+    else ( )
+        set ( OpenMP_C_FOUND OFF )
     endif ( )
 endif ( )
 
@@ -267,7 +265,7 @@ message ( STATUS "CMAKE C flags: " ${CMAKE_C_FLAGS} )
 # enable testing and add subdirectories
 #-------------------------------------------------------------------------------
 
-enable_testing ( )
+include ( CTest )
 
 add_subdirectory ( src )
 add_subdirectory ( experimental )
@@ -341,7 +339,6 @@ if ( NOT MSVC )
         if ( NOT WIN32 )
             list ( APPEND LAGRAPH_STATIC_LIBS "m" )
         endif ( )
-        list ( APPEND LAGRAPH_STATIC_LIBS ${GRAPHBLAS_LIBRARY} )
     endif ( )
     # This might be something like:
     #   /usr/lib/libgomp.so;/usr/lib/libpthread.a;m
@@ -369,6 +366,9 @@ if ( NOT MSVC )
             endif ( )
         endforeach ( )
     endforeach ( )
+    if ( BUILD_STATIC_LIBS )
+        set ( LAGRAPH_STATIC_LIBS "-l$<TARGET_FILE_BASE_NAME:GraphBLAS::GraphBLAS> ${LAGRAPH_STATIC_LIBS}" )
+    endif ( )
 
     set ( prefix "${CMAKE_INSTALL_PREFIX}" )
     set ( exec_prefix "\${prefix}" )
@@ -384,10 +384,19 @@ if ( NOT MSVC )
     else ( )
         set ( includedir "\${prefix}/${SUITESPARSE_INCLUDEDIR}")
     endif ( )
+    if ( BUILD_SHARED_LIBS )
+        set ( SUITESPARSE_LIB_BASE_NAME $<TARGET_FILE_BASE_NAME:LAGraph> )
+    else ( )
+        set ( SUITESPARSE_LIB_BASE_NAME $<TARGET_FILE_BASE_NAME:LAGraph_static> )
+    endif ( )
     configure_file (
         config/LAGraph.pc.in
-        LAGraph.pc
+        LAGraph.pc.out
         @ONLY
+        NEWLINE_STYLE LF )
+    file ( GENERATE
+        OUTPUT LAGraph.pc
+        INPUT ${CMAKE_CURRENT_BINARY_DIR}/LAGraph.pc.out
         NEWLINE_STYLE LF )
     install ( FILES
         ${CMAKE_CURRENT_BINARY_DIR}/LAGraph.pc
