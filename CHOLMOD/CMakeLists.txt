@@ -38,20 +38,22 @@ set ( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     ${PROJECT_SOURCE_DIR}/cmake_modules
     ${PROJECT_SOURCE_DIR}/../SuiteSparse_config/cmake_modules )
 
-option ( SUITESPARSE_USE_CUDA "ON (default): enable CUDA acceleration for SuiteSparse, OFF: do not use CUDA" ON )
-option ( CHOLMOD_USE_CUDA "ON (default): enable CUDA acceleration for CHOLMOD, OFF: do not use CUDA" ON )
-option ( CHOLMOD_GPL "ON (default): enable GPL-licensed modules, OFF: do not use any CHOLMOD GPL-licensed modules" ON )
+include ( SuiteSparsePolicy )
 
+option ( CHOLMOD_USE_CUDA "ON (default): enable CUDA acceleration for CHOLMOD, OFF: do not use CUDA" ${SUITESPARSE_USE_CUDA} )
+if ( NOT SUITESPARSE_USE_CUDA )
+    set ( CHOLMOD_USE_CUDA "OFF" CACHE STRING "" FORCE )
+endif ( )
+
+option ( CHOLMOD_GPL "ON (default): enable GPL-licensed modules, OFF: do not use any CHOLMOD GPL-licensed modules" ON )
 if ( NOT CHOLMOD_GPL )
     # CHOLMOD_GPL: if OFF, do not include any GPL-licensed module
     set ( CHOLMOD_MATRIXOPS OFF )
     set ( CHOLMOD_MODIFY OFF )
     set ( CHOLMOD_SUPERNODAL OFF )
-    set ( CHOLMOD_USE_CUDA OFF )
+    set ( CHOLMOD_USE_CUDA "OFF" CACHE STRING "" FORCE ) # OK: disabled by user-setting of CHOLMOD_GPL
     add_compile_definitions ( NGPL )
 endif ( )
-
-include ( SuiteSparsePolicy )
 
 include ( CheckTypeSize )
 check_type_size ( "ssize_t" SSIZE_T )
@@ -59,6 +61,10 @@ if ( NOT HAVE_SSIZE_T )
     # #include <sys/types.h> and ssize_t not defined (typically on Windows)
     add_compile_definitions ( NO_SSIZE_T )
 endif ( )
+
+#-------------------------------------------------------------------------------
+# find CUDA
+#-------------------------------------------------------------------------------
 
 if ( SUITESPARSE_HAS_CUDA AND CHOLMOD_USE_CUDA )
     # CHOLMOD with CUDA
@@ -68,18 +74,41 @@ else ( )
     set ( CHOLMOD_HAS_CUDA OFF )
 endif ( )
 
+# check for strict usage
+if ( SUITESPARSE_USE_STRICT AND CHOLMOD_USE_CUDA AND NOT CHOLMOD_HAS_CUDA )
+    message ( FATAL_ERROR "CUDA required for CHOLMOD but not found" )
+endif ( )
+
 #-------------------------------------------------------------------------------
-# find library dependencies
+# find OpenMP
 #-------------------------------------------------------------------------------
 
-option ( SUITESPARSE_USE_OPENMP "ON (default): Use OpenMP if available.  OFF: Do not use OpenMP" ON )
 option ( CHOLMOD_USE_OPENMP "ON: Use OpenMP in CHOLMOD if available.  OFF: Do not use OpenMP.  (Default: SUITESPARSE_USE_OPENMP)" ${SUITESPARSE_USE_OPENMP} )
+if ( NOT SUITESPARSE_USE_OPENMP )
+    set ( CHOLMOD_USE_OPENMP "OFF" CACHE STRING "" FORCE )
+endif ( )
 if ( CHOLMOD_USE_OPENMP )
     find_package ( OpenMP GLOBAL )
 else ( )
     # OpenMP has been disabled
     set ( OpenMP_C_FOUND OFF )
 endif ( )
+
+if ( OpenMP_C_FOUND )
+    set ( CHOLMOD_HAS_OPENMP ON )
+else ( )
+    set ( CHOLMOD_HAS_OPENMP OFF )
+endif ( )
+message ( STATUS "CHOLMOD has OpenMP: ${CHOLMOD_HAS_OPENMP}" )
+
+# check for strict usage
+if ( SUITESPARSE_USE_STRICT AND CHOLMOD_USE_OPENMP AND NOT CHOLMOD_HAS_OPENMP )
+    message ( FATAL_ERROR "OpenMP required for CHOLMOD but not found" )
+endif ( )
+
+#-------------------------------------------------------------------------------
+# find other library dependencies
+#-------------------------------------------------------------------------------
 
 if ( NOT SUITESPARSE_ROOT_CMAKELISTS )
     find_package ( SuiteSparse_config 7.4.0
@@ -423,7 +452,7 @@ if ( CHOLMOD_CAMD )
 endif ( )
 
 # OpenMP:
-if ( OpenMP_C_FOUND )
+if ( CHOLMOD_HAS_OPENMP )
     message ( STATUS "OpenMP C libraries:      ${OpenMP_C_LIBRARIES}" )
     message ( STATUS "OpenMP C include:        ${OpenMP_C_INCLUDE_DIRS}" )
     message ( STATUS "OpenMP C flags:          ${OpenMP_C_FLAGS}" )
@@ -664,7 +693,7 @@ if ( SUITESPARSE_DEMOS )
     add_executable ( cholmod_si_simple "Demo/cholmod_si_simple.c" )
     add_executable ( cholmod_sl_simple "Demo/cholmod_sl_simple.c" )
 
-    if ( SUITESPARSE_USE_FORTRAN )
+    if ( SUITESPARSE_HAS_FORTRAN )
         add_executable ( readhb     "Demo/readhb.f" )
         add_executable ( readhb2    "Demo/readhb2.f" )
         add_executable ( reade      "Demo/reade.f" )

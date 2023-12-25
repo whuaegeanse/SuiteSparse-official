@@ -779,11 +779,13 @@ has a different integer size, you must override the definition with `-DBLAS64`
 (to assert the use of 64-bit integers in the BLAS) or `-DBLAS32`, (to assert
 the use of 32-bit integers in the BLAS).
 
+The size of the BLAS integer has nothing to do with `sizeof(void *)`.
+
 When distributed in a binary form (such as a Debian, Ubuntu, Spack, or Brew
 package), SuiteSparse should probably be compiled to expect a 32-bit BLAS,
 since this is the most common case.  The default is to use a 32-bit BLAS, but
 this can be changed by setting the cmake variable
-`SUITESPARSE_ALLOW_64BIT_BLAS` to `ON`.
+`SUITESPARSE_USE_64BIT_BLAS` to `ON`.
 
 By default, SuiteSparse hunts for a suitable BLAS library.  To enforce a
 particular BLAS library use either:
@@ -792,11 +794,12 @@ particular BLAS library use either:
     cd Package ; cmake -DBLA_VENDOR=OpenBLAS .. make
 
 To use the default (hunt for a BLAS), do not set `BLA_VENDOR`, or set it to
-ANY.  In this case, if `SUITESPARSE_ALLOW_64BIT_BLAS` is set, preference is
+`ANY`.  In this case, if `SUITESPARSE_USE_64BIT_BLAS` is ON, preference is
 given to a 64-bit BLAS, but a 32-bit BLAS library will be used if no 64-bit
-library is found.
+library is found.  However, if both `SUITESPARSE_USE_64BIT_BLAS` and
+`SUITESPARSE_USE_STRICT` are ON, then only a 64-bit BLAS is considered.
 
-When selecting a particular BLAS library, the `SUITESPARSE_ALLOW_64BIT_BLAS`
+When selecting a particular BLAS library, the `SUITESPARSE_USE_64BIT_BLAS`
 setting is strictly followed.  If set to true, only a 64-bit BLAS library will
 be used.  If false (the default), only a 32-bit BLAS library will be used.  If
 no such BLAS is found, the build will fail.
@@ -878,28 +881,29 @@ in the current version of OpenBLAS.  See
 
 You may also need to add SuiteSparse/lib to your path.  If your copy of
 SuiteSparse is in /home/me/SuiteSparse, for example, then add this to your
-~/.bashrc file:
+`~/.bashrc` file:
+
 ```
-    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/me/SuiteSparse/lib
-    export LD_LIBRARY_PATH
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/me/SuiteSparse/lib
+export LD_LIBRARY_PATH
 ```
 
 For the Mac, use this instead:
 ```
-    DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:/home/me/SuiteSparse/lib
-    export DYLD_LIBRARY_PATH
+DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:/home/me/SuiteSparse/lib
+export DYLD_LIBRARY_PATH
 ```
 
 Default install location of files is below, where PACKAGE is one of the
 packages in SuiteSparse:
 
-    * CMAKE_INSTALL_PREFIX/include/suitesparse/: include files
-    * CMAKE_INSTALL_PREFIX/lib/: compiled libraries
-    * CMAKE_INSTALL_PREFIX/lib/cmake/SuiteSparse/: *.cmake scripts
+    * `CMAKE_INSTALL_PREFIX/include/suitesparse/`: include files
+    * `CMAKE_INSTALL_PREFIX/lib/`: compiled libraries
+    * `CMAKE_INSTALL_PREFIX/lib/cmake/SuiteSparse/`: `*.cmake` scripts
         for all of SuiteSparse
-    * CMAKE_INSTALL_PREFIX/lib/cmake/PACKAGE/: *Config.cmake scripts for a
+    * `CMAKE_INSTALL_PREFIX/lib/cmake/PACKAGE/`: `*Config.cmake` scripts for a
         specific package
-    * CMAKE_INSTALL_PREFIX/lib/pkgconfig/PACKAGE.pc: *.pc scripts for
+    * `CMAKE_INSTALL_PREFIX/lib/pkgconfig/PACKAGE.pc`: `.pc` scripts for
         a specific package pkgconfig
 
 -----------------------------------------------------------------------------
@@ -967,10 +971,26 @@ build type).  The static libraries will not be built (since
 
   Default: `Release`, use `Debug` for debugging.
 
+* `SUITESPARSE_USE_STRICT`:
+
+  SuiteSparse has many user-definable settings of the form `SUITESPARSE_USE_*`
+  or `(package)_USE_*` for some particular package.  In general, these settings
+  are not strict.  For example, if `SUITESPARSE_USE_OPENMP` is `ON` then OpenMP
+  is preferred, but SuiteSparse can be used without OpenMP so no error is
+  generated if OpenMP is not found.  However, if `SUITESPARSE_USE_STRICT` is
+  `ON` then all `*_USE_*` settings are treated strictly and an error occurs
+  if any are set to `ON` but the corresponding package or setting is not
+  available.  The `*_USE_SYSTEM_*` settings are always treated as strict.
+  Default: `OFF`.
+
 * `SUITESPARSE_USE_CUDA`:
 
-  If set to `ON`, CUDA is enabled for all of SuiteSparse.  Default: `ON`.
-  Ignored for MSVC (CUDA acceleration is disabled on Windows with MSVC).
+  If set to `ON`, CUDA is enabled for all of SuiteSparse.  Default: `ON`,
+
+  CUDA on Windows with MSVC appears to be working with this release, but it
+  should be consider as a prototype and may not be fully functional.  I have
+  limited resources for testing CUDA on Windows.  If you encounter issues,
+  disable CUDA and post this as an issue on github.
 
 * `CHOLMOD_USE_CUDA`:
 
@@ -1040,7 +1060,7 @@ build type).  The static libraries will not be built (since
   See:
   https://cmake.org/cmake/help/latest/module/FindBLAS.html#blas-lapack-vendors
 
-* `SUITESPARSE_ALLOW_64BIT_BLAS`:
+* `SUITESPARSE_USE_64BIT_BLAS`:
 
   If `ON`, look for a 64-bit BLAS.  If `OFF`: 32-bit only.  Default: `OFF`.
 

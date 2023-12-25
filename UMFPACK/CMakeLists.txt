@@ -60,6 +60,10 @@ endif ( )
 
 include ( SuiteSparseBLAS )     # requires cmake 3.22
 
+#-------------------------------------------------------------------------------
+# find CHOLMOD
+#-------------------------------------------------------------------------------
+
 option ( UMFPACK_USE_CHOLMOD "ON (default): use CHOLMOD in UMFPACK.  OFF: do not use CHOLMOD in UMFPACK" ON )
 
 if ( SUITESPARSE_ROOT_CMAKELISTS )
@@ -89,6 +93,11 @@ if ( UMFPACK_HAS_CHOLMOD )
     message ( STATUS "Using CHOLMOD for addtional pre-ordering options" )
 else ( )
     message ( STATUS "CHOLMOD not found or not requested" )
+endif ( )
+
+# check for strict usage
+if ( SUITESPARSE_USE_STRICT AND UMFPACK_USE_CHOLMOD AND NOT UMFPACK_HAS_CHOLMOD )
+    message ( FATAL_ERROR "CHOLMOD required for UMFPACK but not found" )
 endif ( )
 
 #-------------------------------------------------------------------------------
@@ -384,7 +393,7 @@ if ( SUITESPARSE_DEMOS )
     add_executable ( umfpack_zi_demo "Demo/umfpack_zi_demo.c" )
     add_executable ( umfpack_zl_demo "Demo/umfpack_zl_demo.c" )
 
-    if ( SUITESPARSE_USE_FORTRAN )
+    if ( SUITESPARSE_HAS_FORTRAN )
         # Fortran demos
         add_executable ( umf4            "Demo/umf4.c" )
         add_executable ( umfreadhb       "Demo/readhb.f" )
@@ -419,7 +428,7 @@ if ( SUITESPARSE_DEMOS )
     endif ( )
     target_link_libraries ( umfpack_simple PUBLIC SuiteSparse::SuiteSparseConfig )
 
-    if ( SUITESPARSE_USE_FORTRAN )
+    if ( SUITESPARSE_HAS_FORTRAN )
         # Fortran demos
         if ( BUILD_SHARED_LIBS )
             target_link_libraries ( umf4 PUBLIC UMFPACK )

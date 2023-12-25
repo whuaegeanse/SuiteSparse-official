@@ -43,11 +43,11 @@ library:
 
 # install only in SuiteSparse/lib and SuiteSparse/include
 local:
-	( cd build && cmake $(CMAKE_OPTIONS) -USUITESPARSE_PKGFILEDIR -DLOCAL_INSTALL=1 .. && cmake --build . --config Release -j${JOBS} )
+	( cd build && cmake $(CMAKE_OPTIONS) -USUITESPARSE_PKGFILEDIR -DSUITESPARSE_LOCAL_INSTALL=1 .. && cmake --build . --config Release -j${JOBS} )
 
 # install only in /usr/local (default)
 global:
-	( cd build && cmake $(CMAKE_OPTIONS) -USUITESPARSE_PKGFILEDIR -DLOCAL_INSTALL=0 .. && cmake --build . --config Release -j${JOBS} )
+	( cd build && cmake $(CMAKE_OPTIONS) -USUITESPARSE_PKGFILEDIR -DSUITESPARSE_LOCAL_INSTALL=0 .. && cmake --build . --config Release -j${JOBS} )
 
 # enable CUDA (this is the default, if CUDA is available)
 cuda:
@@ -117,6 +117,9 @@ test: library
 
 cov:
 	( cd Tcov && $(MAKE) )
+
+gpu: library
+	( cd Demo && ./gpu.sh )
 
 # just compile after running cmake; do not run cmake again
 remake:

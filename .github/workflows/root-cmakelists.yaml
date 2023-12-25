@@ -47,7 +47,8 @@ jobs:
             cuda-pkgs: "nvidia-cuda-dev nvidia-cuda-toolkit"
             cuda-cmake-flags:
               -DSUITESPARSE_USE_CUDA=ON
-              -DCUDAToolkit_INCLUDE_DIR="/usr/include"
+              -DSUITESPARSE_USE_STRICT=ON
+              -DCUDAToolkit_INCLUDE_DIRS="/usr/include"
               -DCMAKE_CUDA_COMPILER_LAUNCHER="ccache"
           - compiler: gcc
             compiler-pkgs: "g++ gcc"
@@ -58,7 +59,8 @@ jobs:
             cuda-pkgs: "nvidia-cuda-dev nvidia-cuda-toolkit"
             cuda-cmake-flags:
               -DSUITESPARSE_USE_CUDA=ON
-              -DCUDAToolkit_INCLUDE_DIR="/usr/include"
+              -DSUITESPARSE_USE_STRICT=ON
+              -DCUDAToolkit_INCLUDE_DIRS="/usr/include"
               -DCMAKE_CUDA_COMPILER_LAUNCHER="ccache"
             link: static
             link-cmake-flags:
@@ -70,6 +72,9 @@ jobs:
       CXX: ${{ matrix.cxx }}
 
     steps:
+      - name: get CPU information
+        run: lscpu
+
       - name: checkout repository
         uses: actions/checkout@v3
 
@@ -229,11 +234,6 @@ jobs:
         include:
           - openmp: without
             openmp-cmake-flags: "-DSUITESPARSE_USE_OPENMP=OFF"
-#         - openmp: with
-#           cuda: with
-#           cuda-cmake-flags:
-#             -DSUITESPARSE_USE_CUDA=ON
-#             -DCMAKE_CUDA_COMPILER_LAUNCHER="ccache"
 
     env:
       CHERE_INVOKING: 1

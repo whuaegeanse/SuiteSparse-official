@@ -51,6 +51,10 @@ jobs:
     name: alpine (${{ matrix.arch }})
 
     steps:
+      - name: get CPU information (host)
+        shell: bash
+        run: lscpu
+
       - name: checkout repository
         uses: actions/checkout@v3
         # shell: bash
@@ -70,6 +74,10 @@ jobs:
             mpfr-dev
             lapack-dev
             valgrind
+            util-linux-misc
+
+      - name: get CPU information (emulated)
+        run: lscpu
 
       - name: prepare ccache
         # create key with human readable timestamp
@@ -176,9 +184,9 @@ jobs:
           echo "::endgroup::"
           printf "::group::\033[0;32m==>\033[0m Executing example\n"
           printf "\033[1;35m  C binary with shared libraries\033[0m\n"
-          LD_LIBRARY_PATH=${GITHUB_WORKSPACE}/lib ./my_demo
+          ./my_demo
           printf "\033[1;35m  C++ binary with shared libraries\033[0m\n"
-          LD_LIBRARY_PATH=${GITHUB_WORKSPACE}/lib ./my_cxx_demo
+          ./my_cxx_demo
           printf "\033[1;35m  C binary with statically linked libraries\033[0m\n"
           ./my_demo_static
           printf "\033[1;35m  C++ binary with statically linked libraries\033[0m\n"

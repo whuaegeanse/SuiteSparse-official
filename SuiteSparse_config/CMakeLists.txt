@@ -45,7 +45,7 @@ set ( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
 
 include ( SuiteSparsePolicy )
 
-if ( SUITESPARSE_USE_FORTRAN )
+if ( SUITESPARSE_HAS_FORTRAN )
     include ( FortranCInterface )
 else ( )
     # No Fortran compiler available or enabled, configuration is not automatic.
@@ -54,17 +54,49 @@ else ( )
 endif ( )
 
 #-------------------------------------------------------------------------------
-# find library dependencies
+# CUDA warning on Windows with MSVC
 #-------------------------------------------------------------------------------
 
-option ( SUITESPARSE_USE_OPENMP "ON (default): Use OpenMP if available.  OFF: Do not use OpenMP" ON )
-if ( SUITESPARSE_USE_OPENMP )
+if ( SUITESPARSE_HAS_CUDA AND MSVC )
+    message ( WARNING "NOTE: CUDA on MSVC has only recently been revised.  It appears to be functional but has not been as rigorously tested as I would like (I have limited resources for testing CUDA on Windows).  If you encounter issues, set the cmake option SUITESPARSE_USE_CUDA to OFF and post an issue on github." )
+endif ( )
+
+#-------------------------------------------------------------------------------
+# find OpenMP
+#-------------------------------------------------------------------------------
+
+option ( SUITESPARSE_CONFIG_USE_OPENMP "ON: Use OpenMP in SuiteSparse_config if available.  OFF: Do not use OpenMP.  (Default: SUITESPARSE_USE_OPENMP)" ${SUITESPARSE_USE_OPENMP} )
+if ( NOT SUITESPARSE_USE_OPENMP )
+    set ( SUITESPARSE_CONFIG_USE_OPENMP "OFF" CACHE STRING "" FORCE )
+endif ( )
+if ( SUITESPARSE_CONFIG_USE_OPENMP OR SUITESPARSE_USE_OPENMP )
     find_package ( OpenMP GLOBAL )
 else ( )
     # OpenMP has been disabled
-    message ( STATUS "OpenMP disabled" )
     set ( OpenMP_C_FOUND OFF )
 endif ( )
+
+if ( OpenMP_C_FOUND )
+    set ( SUITESPARSE_HAS_OPENMP ON )
+    set ( SUITESPARSE_CONFIG_HAS_OPENMP ON )
+else ( )
+    set ( SUITESPARSE_HAS_OPENMP OFF )
+    set ( SUITESPARSE_CONFIG_HAS_OPENMP OFF )
+endif ( )
+message ( STATUS "SuiteSparse has OpenMP:        ${SUITESPARSE_HAS_OPENMP}" )
+message ( STATUS "SuiteSparse_config has OpenMP: ${SUITESPARSE_CONFIG_HAS_OPENMP}" )
+
+# check for strict usage
+if ( SUITESPARSE_USE_STRICT AND SUITESPARSE_USE_OPENMP AND NOT SUITESPARSE_HAS_OPENMP )
+    message ( FATAL_ERROR "OpenMP required for SuiteSparse but not found" )
+endif ( )
+if ( SUITESPARSE_USE_STRICT AND SUITESPARSE_CONFIG_USE_OPENMP AND NOT SUITESPARSE_CONFIG_HAS_OPENMP )
+    message ( FATAL_ERROR "OpenMP required for SuiteSparse_config but not found" )
+endif ( )
+
+#-------------------------------------------------------------------------------
+# find the BLAS
+#-------------------------------------------------------------------------------
 
 include ( SuiteSparseBLAS )
 
@@ -149,7 +181,7 @@ if ( NOT WIN32 )
 endif ( )
 
 # OpenMP:
-if ( OpenMP_C_FOUND )
+if ( SUITESPARSE_CONFIG_USE_OPENMP )
     message ( STATUS "OpenMP C libraries:      ${OpenMP_C_LIBRARIES} ")
     message ( STATUS "OpenMP C include:        ${OpenMP_C_INCLUDE_DIRS} ")
     message ( STATUS "OpenMP C flags:          ${OpenMP_C_FLAGS} ")
