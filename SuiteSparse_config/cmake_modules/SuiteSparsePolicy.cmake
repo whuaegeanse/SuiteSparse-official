@@ -116,7 +116,6 @@ if ( BLAS_UNDERSCORE )
     add_compile_definitions ( BLAS_UNDERSCORE )
 endif( BLAS_UNDERSCORE )
 
-set ( CMAKE_MACOSX_RPATH TRUE )
 enable_language ( C )
 include ( GNUInstallDirs )
 
