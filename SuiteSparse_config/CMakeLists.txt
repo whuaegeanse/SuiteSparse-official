@@ -15,7 +15,7 @@
 cmake_minimum_required ( VERSION 3.22 )
 
 # version of both SuiteSparse and SuiteSparse_config
-set ( SUITESPARSE_DATE "Feb XX, 2024" ) # FIXME for 7.7.0
+set ( SUITESPARSE_DATE "Mar 22, 2024" )
 set ( SUITESPARSE_VERSION_MAJOR 7 )
 set ( SUITESPARSE_VERSION_MINOR 7 )
 set ( SUITESPARSE_VERSION_SUB   0 )
@@ -45,17 +45,12 @@ set ( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
 
 include ( SuiteSparsePolicy )
 
-if ( ( NOT SUITESPARSE_HAS_FORTRAN ) OR SUITESPARSE_BLAS_UNDERSCORE OR SUITESPARSE_BLAS_NO_UNDERSCORE )
-    # No Fortran compiler available or enabled, or either of the
-    # SUITESPARSE_BLAS_UNDERSCORE or SUITESPARSE_BLAS_NO_UNDERSCORE are set ON:
-    # configuration is not automatic.
+if ( SUITESPARSE_HAS_FORTRAN )
+    include ( FortranCInterface )
+else ( )
+    # No Fortran compiler available or enabled, configuration is not automatic.
     set ( FortranCInterface_GLOBAL_MACRO  ${SUITESPARSE_C_TO_FORTRAN} )
     set ( FortranCInterface_GLOBAL__MACRO ${SUITESPARSE_C_TO_FORTRAN} )
-else ( )
-    # A Fortran compiler is available and enabled, and both
-    # SUITESPARSE_BLAS_UNDERSCORE and SUITESPARSE_BLAS_NO_UNDERSCORE are set to
-    # their default values (OFF): configure the BLAS automatically.
-    include ( FortranCInterface )
 endif ( )
 
 message ( STATUS "C to Fortran calling protocol: ")

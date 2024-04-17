@@ -3,7 +3,7 @@
 #-------------------------------------------------------------------------------
 
 # SPEX: (c) 2019-2024, Christopher Lourenco, Jinhao Chen,
-# Lorena Mejia Domenzain, Timothy A. Davis, and Erick Moreno-Centeno.
+# Lorena Mejia Domenzain, Erick Moreno-Centeno, and Timothy A. Davis.
 # All Rights Reserved.
 # SPDX-License-Identifier: GPL-2.0-or-later or LGPL-3.0-or-later
 
@@ -59,10 +59,10 @@ demos:
 	./build/spex_demo_lu_extended       f ExampleMats/10teams.mat.txt   ExampleMats/10teams.rhs.txt
 	./build/spex_demo_lu_doub           f ExampleMats/10teams.mat.txt   ExampleMats/10teams.rhs.txt
 	./build/spex_demo_backslash         f ExampleMats/10teams.mat.txt   ExampleMats/10teams.rhs.txt
-	./build/spex_demo_backslash         f ExampleMats/Trefethen_500.mat.txt ExampleMats/Trefethen_500.rhs.txt
-	./build/spex_demo_cholesky_simple   f ExampleMats/494_bus.mat.txt        ExampleMats/494_bus.rhs.txt
-	./build/spex_demo_cholesky_extended f ExampleMats/494_bus.mat.txt        ExampleMats/494_bus.rhs.txt
+	./build/spex_demo_cholesky_simple   f ExampleMats/494_bus.mat.txt   ExampleMats/494_bus.rhs.txt
+	./build/spex_demo_cholesky_extended f ExampleMats/494_bus.mat.txt   ExampleMats/494_bus.rhs.txt
 	./build/spex_demo_threaded          f ExampleMats/10teams.mat.txt   ExampleMats/10teams.rhs.txt
+	./build/spex_demo_backslash         f ExampleMats/Trefethen_500.mat.txt ExampleMats/Trefethen_500.rhs.txt
 
 cov:
 	( cd Tcov && $(MAKE) )

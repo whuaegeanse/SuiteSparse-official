@@ -3,7 +3,8 @@
 #-------------------------------------------------------------------------------
 
 # SPEX: (c) 2019-2024, Chris Lourenco (US Naval Academy), Jinhao Chen,
-# Erick Moreno-Centeno, Timothy A. Davis, Texas A&M.  All Rights Reserved.
+# Lorena Mejia Domenzain, Erick Moreno-Centeno, and Timothy A. Davis, Texas A&M.
+# All Rights Reserved.
 # SPDX-License-Identifier: GPL-2.0-or-later or LGPL-3.0-or-later
 
 #-------------------------------------------------------------------------------
@@ -12,7 +13,7 @@
 
 cmake_minimum_required ( VERSION 3.22 )
 
-set ( SPEX_DATE "Feb XX, 2024" ) # FIXME for 7.7.0
+set ( SPEX_DATE "Mar 22, 2024" )
 set ( SPEX_VERSION_MAJOR 3 CACHE STRING "" FORCE )
 set ( SPEX_VERSION_MINOR 1 CACHE STRING "" FORCE )
 set ( SPEX_VERSION_SUB   0 CACHE STRING "" FORCE )
@@ -39,6 +40,34 @@ set ( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     ${PROJECT_SOURCE_DIR}/../SuiteSparse_config/cmake_modules )
 
 include ( SuiteSparsePolicy )
+
+#-------------------------------------------------------------------------------
+# find OpenMP
+#-------------------------------------------------------------------------------
+
+option ( SPEX_USE_OPENMP "ON: Use OpenMP in SPEX if available.  OFF: Do not use OpenMP.  (Default: SUITESPARSE_USE_OPENMP)" ${SUITESPARSE_USE_OPENMP} )
+if ( SPEX_USE_OPENMP )
+    if ( CMAKE_VERSION VERSION_LESS 3.24 )
+        find_package ( OpenMP COMPONENTS C )
+    else ( )
+        find_package ( OpenMP COMPONENTS C GLOBAL )
+    endif ( )
+else ( )
+    # OpenMP has been disabled
+    set ( OpenMP_C_FOUND OFF )
+endif ( )
+
+if ( SPEX_USE_OPENMP AND OpenMP_C_FOUND )
+    set ( SPEX_HAS_OPENMP ON )
+else ( )
+    set ( SPEX_HAS_OPENMP OFF )
+endif ( )
+message ( STATUS "SPEX has OpenMP: ${SPEX_HAS_OPENMP}" )
+
+# check for strict usage
+if ( SUITESPARSE_USE_STRICT AND SPEX_USE_OPENMP AND NOT SPEX_HAS_OPENMP )
+    message ( FATAL_ERROR "OpenMP required for SPEX but not found" )
+endif ( )
 
 #-------------------------------------------------------------------------------
 # find library dependencies
@@ -208,6 +237,25 @@ if ( BUILD_STATIC_LIBS )
     target_include_directories ( SPEX_static SYSTEM AFTER PUBLIC ${GMP_INCLUDE_DIR} )
 endif ( )
 
+# OpenMP:
+if ( SPEX_HAS_OPENMP )
+    message ( STATUS "OpenMP C libraries:      ${OpenMP_C_LIBRARIES}" )
+    message ( STATUS "OpenMP C include:        ${OpenMP_C_INCLUDE_DIRS}" )
+    message ( STATUS "OpenMP C flags:          ${OpenMP_C_FLAGS}" )
+    if ( BUILD_SHARED_LIBS )
+        target_link_libraries ( SPEX PRIVATE OpenMP::OpenMP_C )
+    endif ( )
+    if ( BUILD_STATIC_LIBS )
+        target_link_libraries ( SPEX_static PRIVATE OpenMP::OpenMP_C )
+        list ( APPEND SPEX_STATIC_LIBS ${OpenMP_C_LIBRARIES} )
+    endif ( )
+else ( )
+    # use threadprivate variables for SPEX instead of globals, so multiple user
+    # threads can call SPEX in parallel on different matrices.  Otherwise, SPEX
+    # is not thread-safe (see SPEX_Utilities/Source/SPEX_gmp.c).
+    include ( SuiteSparse__thread )
+endif ( )
+
 # libm:
 include ( CheckSymbolExists )
 check_symbol_exists ( fmax "math.h" NO_LIBM )
@@ -276,6 +324,23 @@ install ( FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/FindGMP.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/FindMPFR.cmake
     DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/SPEX )
+
+#-------------------------------------------------------------------------------
+# configure MATLAB
+#-------------------------------------------------------------------------------
+
+cmake_path ( IS_ABSOLUTE SUITESPARSE_LIBDIR SUITESPARSE_LIBDIR_IS_ABSOLUTE )
+if (SUITESPARSE_LIBDIR_IS_ABSOLUTE)
+    set ( matlab_libdir "${SUITESPARSE_LIBDIR}")
+else ( )
+    set ( matlab_libdir "${CMAKE_INSTALL_PREFIX}/${SUITESPARSE_LIBDIR}")
+endif ( )
+cmake_path ( IS_ABSOLUTE SUITESPARSE_INCLUDEDIR SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE )
+if (SUITESPARSE_INCLUDEDIR_IS_ABSOLUTE)
+    set ( matlab_includedir "${SUITESPARSE_INCLUDEDIR}")
+else ( )
+    set ( matlab_includedir "${CMAKE_INSTALL_PREFIX}/${SUITESPARSE_INCLUDEDIR}")
+endif ( )
 
 #-------------------------------------------------------------------------------
 # create pkg-config file
@@ -423,6 +488,15 @@ if ( SUITESPARSE_DEMOS )
         target_link_libraries ( spex_demo_lu_simple1        PUBLIC SPEX_static SuiteSparse::AMD_static SuiteSparse::COLAMD_static )
         target_link_libraries ( spex_demo_lu_simple2        PUBLIC SPEX_static SuiteSparse::AMD_static SuiteSparse::COLAMD_static )
         target_link_libraries ( spex_demo_threaded          PUBLIC SPEX_static SuiteSparse::AMD_static SuiteSparse::COLAMD_static )
+    endif ( )
+
+    if ( SPEX_USE_OPENMP )
+        if ( BUILD_SHARED_LIBS )
+            target_link_libraries ( spex_demo_threaded PUBLIC OpenMP::OpenMP_C )
+        endif ( )
+        if ( BUILD_STATIC_LIBS )
+            target_link_libraries ( spex_demo_threaded PUBLIC OpenMP::OpenMP_C )
+        endif ( )
     endif ( )
 
 else ( )
