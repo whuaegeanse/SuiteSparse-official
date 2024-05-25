@@ -408,10 +408,16 @@ if ( NOT MSVC )
 endif ( )
 
 #-------------------------------------------------------------------------------
-# python interface
+# Python interface
 #-------------------------------------------------------------------------------
 
-if ( BUILD_SHARED_LIBS )
+# The Python interface is built by default.  It can be disabled with
+# SPEX_USE_PYTHON (for just SPEX) or SUITESPARSE_USE_PYTHON (for all of
+# SuiteSparse).  Currently, only SPEX has a Python interface in SuiteSparse.
+
+option ( SPEX_USE_PYTHON "ON (default): build Python interface for SPEX.  OFF: do not build Python interface for SPEX" ${SUITESPARSE_USE_PYTHON} )
+
+if ( BUILD_SHARED_LIBS AND SPEX_USE_PYTHON)
 
     file ( GLOB SPEX_PYTHON_SOURCES "Python/SPEXpy/Source/*.c" )
     add_library ( spexpython SHARED ${SPEX_PYTHON_SOURCES} )
@@ -490,7 +496,7 @@ if ( SUITESPARSE_DEMOS )
         target_link_libraries ( spex_demo_threaded          PUBLIC SPEX_static SuiteSparse::AMD_static SuiteSparse::COLAMD_static )
     endif ( )
 
-    if ( SPEX_USE_OPENMP )
+    if ( SPEX_HAS_OPENMP )
         if ( BUILD_SHARED_LIBS )
             target_link_libraries ( spex_demo_threaded PUBLIC OpenMP::OpenMP_C )
         endif ( )

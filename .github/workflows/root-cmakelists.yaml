@@ -384,7 +384,7 @@ jobs:
 
           msystem: UCRT64
 
-      - uses: Jimver/cuda-toolkit@v0.2.14
+      - uses: Jimver/cuda-toolkit@v0.2.15
         name: install CUDA toolkit
         if: matrix.cuda == 'with'
         id: cuda-toolkit
@@ -467,7 +467,6 @@ jobs:
                 -DCMAKE_CXX_COMPILER_LAUNCHER="ccache" \
                 -DCMAKE_Fortran_COMPILER_LAUNCHER="ccache" \
                 -DSUITESPARSE_USE_FORTRAN=OFF \
-                -DBLA_VENDOR="All" \
                 -DPython_EXECUTABLE="C:/msys64/ucrt64/bin/python.exe" \
                 -DSUITESPARSE_DEMOS=OFF \
                 -DBUILD_TESTING=OFF \
