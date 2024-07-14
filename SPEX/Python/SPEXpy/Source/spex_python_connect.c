@@ -109,7 +109,7 @@ SPEX_info spex_python
 
     //--------------------------------------------------------------------------
     // solve Ax=b
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     switch(algorithm)
     {
         case 1:
@@ -121,13 +121,16 @@ SPEX_info spex_python
         case 3:
             SPEX_CHECK( SPEX_cholesky_backslash(&x, SPEX_MPQ, A, b, option));
             break;
+        case 4:
+            SPEX_CHECK( SPEX_ldl_backslash(&x, SPEX_MPQ, A, b, option));
+            break;
         default:
             return SPEX_INCORRECT_INPUT;
     }
 
     //--------------------------------------------------------------------------
     // Return output as desired type
-    //-----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     if(charOut)
     {
         //solution as string
@@ -140,12 +143,12 @@ SPEX_info spex_python
                 printf("error converting x to string");
             }
             //check string size
-            int sizeStr;
-            sizeStr=strlen(s);
+            size_t sizeStr;
+            sizeStr = strlen(s);
             //allocate sol_char[i]
-            sol_void[i] = (void*) malloc (sizeStr*sizeof(char));
+            sol_void[i] = malloc (sizeStr + 1);  // +1 for NULL terminator
             //copy s into sol_char[i]
-            strcpy(sol_void[i],s);
+            strcpy(sol_void[i], s);
         }
     }
     else
