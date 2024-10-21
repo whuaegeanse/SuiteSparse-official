@@ -14,8 +14,8 @@
 
 // SuiteSparse include files for C/C++:
 #include "SuiteSparse_config.h"
-#if !defined (SUITESPARSE__VERSION) || SUITESPARSE__VERSION < SUITESPARSE__VERCODE(7,8,0)
-#error "This library requires SuiteSparse_config 7.8.0 or later"
+#if !defined (SUITESPARSE__VERSION) || SUITESPARSE__VERSION < SUITESPARSE__VERCODE(7,8,3)
+#error "This library requires SuiteSparse_config 7.8.3 or later"
 #endif
 
 #include "amd.h"
@@ -56,21 +56,21 @@
 #if ! defined (NO_GRAPHBLAS)
     #include "GraphBLAS.h"
     #if !defined ( GxB_SUITESPARSE_GRAPHBLAS ) || \
-        GxB_IMPLEMENTATION < GxB_VERSION (9,3,0)
-    #error "This library requires SuiteSparse:GraphBLAS 9.3.0 or later"
+        GxB_IMPLEMENTATION < GxB_VERSION (9,3,1)
+    #error "This library requires SuiteSparse:GraphBLAS 9.3.1 or later"
     #endif
 #endif
 
 #if ! defined (NO_LAGRAPH)
     #include "LAGraph.h"
-    #if SUITESPARSE__VERCODE(LAGRAPH_VERSION_MAJOR,LAGRAPH_VERSION_MINOR,LAGRAPH_VERSION_UPDATE) < SUITESPARSE__VERCODE(1,1,3)
-    #error "This library requires LAGraph 1.1.3 or later"
+    #if SUITESPARSE__VERCODE(LAGRAPH_VERSION_MAJOR,LAGRAPH_VERSION_MINOR,LAGRAPH_VERSION_UPDATE) < SUITESPARSE__VERCODE(1,1,4)
+    #error "This library requires LAGraph 1.1.4 or later"
     #endif
 #endif
 
 #include "klu.h"
-#if !defined (KLU__VERSION) || KLU__VERSION < SUITESPARSE__VERCODE(2,3,4)
-#error "This library requires KLU 2.3.4 or later"
+#if !defined (KLU__VERSION) || KLU__VERSION < SUITESPARSE__VERCODE(2,3,5)
+#error "This library requires KLU 2.3.5 or later"
 #endif
 
 #include "ldl.h"
@@ -79,13 +79,13 @@
 #endif
 
 #include "RBio.h"
-#if !defined (RBIO__VERSION) || RBIO__VERSION < SUITESPARSE__VERCODE(4,3,3)
-#error "This library requires RBio 4.3.3 or later"
+#if !defined (RBIO__VERSION) || RBIO__VERSION < SUITESPARSE__VERCODE(4,3,4)
+#error "This library requires RBio 4.3.4 or later"
 #endif
 
 #include "SPEX.h"
-#if !defined (SPEX__VERSION) || SPEX__VERSION < SUITESPARSE__VERCODE(3,2,0)
-#error "This library requires SPEX 3.2.0 or later"
+#if !defined (SPEX__VERSION) || SPEX__VERSION < SUITESPARSE__VERCODE(3,2,1)
+#error "This library requires SPEX 3.2.1 or later"
 #endif
 
 #include "SuiteSparseQR_C.h"
@@ -94,8 +94,8 @@
 #endif
 
 #include "umfpack.h"
-#if !defined (UMFPACK__VERSION) || UMFPACK__VERSION < SUITESPARSE__VERCODE(6,3,4)
-#error "This library requires UMFPACK 6.3.4 or later"
+#if !defined (UMFPACK__VERSION) || UMFPACK__VERSION < SUITESPARSE__VERCODE(6,3,5)
+#error "This library requires UMFPACK 6.3.5 or later"
 #endif
 
 // SuiteSparse include files for C++:
