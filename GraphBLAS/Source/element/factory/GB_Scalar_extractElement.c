@@ -2,12 +2,10 @@
 // GB_Scalar_extractElement_template: x = S
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
-
-// JIT: not needed.
 
 // Extract the value of single scalar, x = S, typecasting from the
 // type of S to the type of x, as needed.
@@ -30,7 +28,8 @@ GrB_Info GB_EXTRACT_ELEMENT     // extract a single entry from S
     // check inputs
     //--------------------------------------------------------------------------
 
-    GB_RETURN_IF_NULL_OR_FAULTY (S) ;
+    GrB_Info info ;
+    GB_RETURN_IF_NULL_OR_INVALID (S) ;
     GB_RETURN_IF_NULL (x) ;
 
     // delete any lingering zombies, assemble any pending tuples, and unjumble
@@ -38,8 +37,7 @@ GrB_Info GB_EXTRACT_ELEMENT     // extract a single entry from S
     { 
         // extract scalar with pending tuples or zombies.  It cannot be
         // actually jumbled, but S->jumbled might true anyway.
-        GrB_Info info ;
-        GB_WHERE1 (GB_WHERE_STRING) ;
+        GB_WHERE_1 (S, GB_WHERE_STRING) ;
         GB_BURBLE_START ("GrB_Scalar_extractElement") ;
         GB_OK (GB_wait ((GrB_Matrix) S, "s", Werk)) ;
         GB_BURBLE_END ;
@@ -48,14 +46,15 @@ GrB_Info GB_EXTRACT_ELEMENT     // extract a single entry from S
     ASSERT (!GB_ANY_PENDING_WORK (S)) ;
 
     // GB_XCODE and S must be compatible
-    GB_Type_code scode = S->type->code ;
-    if (!GB_code_compatible (GB_XCODE, scode))
+    GB_Type_code scalar_code = S->type->code ;
+    if (!GB_code_compatible (GB_XCODE, scalar_code))
     { 
         return (GrB_DOMAIN_MISMATCH) ;
     }
 
+    GB_Ap_DECLARE (Sp, const) ; GB_Ap_PTR (Sp, S) ;
     if (GB_nnz ((GrB_Matrix) S) == 0            // empty
-        || (S->p != NULL && S->p [1] == 0)      // sparse/hyper with no entry
+        || (Sp != NULL && GB_IGET (Sp, 1) == 0) // sparse/hyper with no entry
         || (S->b != NULL && S->b [0] == 0))     // bitmap with no entry
     { 
         // quick return
@@ -67,7 +66,7 @@ GrB_Info GB_EXTRACT_ELEMENT     // extract a single entry from S
     //--------------------------------------------------------------------------
 
     #if !defined ( GB_UDT_EXTRACT )
-    if (GB_XCODE == scode)
+    if (GB_XCODE == scalar_code)
     { 
         // copy S into x, no typecasting, for built-in types only.
         GB_XTYPE *restrict Sx = ((GB_XTYPE *) (S->x)) ;
@@ -77,7 +76,7 @@ GrB_Info GB_EXTRACT_ELEMENT     // extract a single entry from S
     #endif
     { 
         // typecast S into x
-        GB_cast_scalar (x, GB_XCODE, S->x, scode, S->type->size) ;
+        GB_cast_scalar (x, GB_XCODE, S->x, scalar_code, S->type->size) ;
     }
     #pragma omp flush
     return (GrB_SUCCESS) ;

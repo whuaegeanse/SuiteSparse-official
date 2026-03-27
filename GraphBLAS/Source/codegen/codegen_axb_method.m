@@ -3,7 +3,7 @@ function codegen_axb_method (addop, multop, update, addfunc, mult, ztype, xytype
 %
 % codegen_axb_method (addop, multop, update, addfunc, mult, ztype, xytype, identity, terminal)
 
-% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 % SPDX-License-Identifier: Apache-2.0
 
 if (nargin >= 5 && isempty (mult))
@@ -298,6 +298,7 @@ if (is_plus_times_fp)
     % enable the avx-based methods.  only two semirings (plus_times_fp32 and
     % plus_times_fp64) are accelerated with AVX2 or AVX512f instructions.  More
     % semirings will be accelerated in the future.
+    % This flag is also used to trigger the RISC-V RVV1.0 vectorization
     fprintf (f, 'm4_define(`if_semiring_has_avx'', `0'')\n') ;
     fprintf (f, 'm4_define(`GB_semiring_has_avx'', `#define GB_SEMIRING_HAS_AVX_IMPLEMENTATION 1'')\n') ;
 else
@@ -825,7 +826,9 @@ end
 if (is_any_pair)
     % never disable the any_pair_iso semiring
     fprintf (f, 'm4_define(`GB_disable'', `#define GB_DISABLE 0'')\n') ;
+    fprintf (f, 'm4_define(`GB_type_enabled'', `#define GB_TYPE_ENABLED 1'')\n');
 else
+    codegen_type_enabled (f, fname) ;
     disable  = sprintf ('defined(GxB_NO_%s)', upper (addop)) ;
     if (~isequal (addop, multop))
         disable = [disable (sprintf (' || defined(GxB_NO_%s)', upper (multop)))] ;

@@ -2,7 +2,7 @@
 // GB_AxB_saxpy5_meta.c: C+=A*B when C is full
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -138,6 +138,14 @@
                     {
                         // x86_64 with AVX2
                         GB_AxB_saxpy5_unrolled_avx2 (C, A, B,
+                            ntasks, nthreads, B_slice) ;
+                        return (GrB_SUCCESS) ;
+                    }
+                    #endif
+                    #if GB_COMPILER_SUPPORTS_RVV1
+                    if (GB_Global_cpu_features_rvv_1_0 ( ))
+                    {
+                        GB_AxB_saxpy5_unrolled_rvv (C, A, B,
                             ntasks, nthreads, B_slice) ;
                         return (GrB_SUCCESS) ;
                     }

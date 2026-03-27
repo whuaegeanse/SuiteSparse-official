@@ -51,10 +51,11 @@ template <typename Int> inline void spqr_private_larft (char direct, char storev
     Complex *V, Int ldv, Complex *Tau, Complex *T, Int ldt,
     cholmod_common *cc)
 {
-    SUITESPARSE_LAPACK_zlarft (&direct, &storev, n, k, V, ldv, Tau, T, ldt,
-        cc->blas_ok) ;
+    SUITESPARSE_COMPLEX_DOUBLE *v = (SUITESPARSE_COMPLEX_DOUBLE *) V ;
+    SUITESPARSE_COMPLEX_DOUBLE *tau = (SUITESPARSE_COMPLEX_DOUBLE *) Tau ;
+    SUITESPARSE_COMPLEX_DOUBLE *t = (SUITESPARSE_COMPLEX_DOUBLE *) T ;
+    SUITESPARSE_LAPACK_zlarft (&direct, &storev, n, k, v, ldv, tau, t, ldt, cc->blas_ok) ;
 }
-
 
 template <typename Int> inline void spqr_private_larfb (char side, char trans, char direct, char storev,
     Int m, Int n, Int k, double *V, Int ldv, double *T,
@@ -65,17 +66,18 @@ template <typename Int> inline void spqr_private_larfb (char side, char trans, c
         V, ldv, T, ldt, C, ldc, Work, ldwork, cc->blas_ok) ;
 }
 
-
 template <typename Int> inline void spqr_private_larfb (char side, char trans, char direct, char storev,
     Int m, Int n, Int k, Complex *V, Int ldv, Complex *T,
     Int ldt, Complex *C, Int ldc, Complex *Work, Int ldwork,
     cholmod_common *cc)
 {
     char tr = (trans == 'T') ? 'C' : 'N' ;      // change T to C
-    SUITESPARSE_LAPACK_zlarfb (&side, &tr, &direct, &storev, m, n, k,
-        V, ldv, T, ldt, C, ldc, Work, ldwork, cc->blas_ok) ;
+    SUITESPARSE_COMPLEX_DOUBLE *v = (SUITESPARSE_COMPLEX_DOUBLE *) V ;
+    SUITESPARSE_COMPLEX_DOUBLE *t = (SUITESPARSE_COMPLEX_DOUBLE *) T ;
+    SUITESPARSE_COMPLEX_DOUBLE *c = (SUITESPARSE_COMPLEX_DOUBLE *) C ;
+    SUITESPARSE_COMPLEX_DOUBLE *w = (SUITESPARSE_COMPLEX_DOUBLE *) Work ;
+    SUITESPARSE_LAPACK_zlarfb (&side, &tr, &direct, &storev, m, n, k, v, ldv, t, ldt, c, ldc, w, ldwork, cc->blas_ok) ;
 }
-
 
 // =============================================================================
 

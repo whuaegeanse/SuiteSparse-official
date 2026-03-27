@@ -2,7 +2,7 @@
 // GB_macrofy_reduce: construct all macros for a reduction to scalar
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -25,17 +25,17 @@ void GB_macrofy_reduce      // construct all macros for GrB_reduce to scalar
     //--------------------------------------------------------------------------
 
     // monoid
-//  int cheese      = GB_RSHIFT (rcode, 27, 1) ;
-    int red_ecode   = GB_RSHIFT (rcode, 22, 5) ;
-    int id_ecode    = GB_RSHIFT (rcode, 17, 5) ;
-    int term_ecode  = GB_RSHIFT (rcode, 12, 5) ;
-//  bool is_term    = (term_ecode < 30) ;
+//  int cheese      = GB_RSHIFT (rcode, 16, 1) ;
+//  int red_code    = GB_RSHIFT (rcode, 12, 4) ;
 
     // type of the monoid
     int zcode       = GB_RSHIFT (rcode, 8, 4) ;
 
     // type of A
     int acode       = GB_RSHIFT (rcode, 4, 4) ;
+
+    // Ai: 32/64 bit
+    bool Ai_is_32   = GB_RSHIFT (rcode, 3, 1) ;
 
     // zombies
     int azombies    = GB_RSHIFT (rcode, 2, 1) ;
@@ -54,7 +54,8 @@ void GB_macrofy_reduce      // construct all macros for GrB_reduce to scalar
     // construct the typedefs
     //--------------------------------------------------------------------------
 
-    GB_macrofy_typedefs (fp, NULL, atype, NULL, NULL, NULL, monoid->op->ztype) ;
+    GB_macrofy_typedefs (fp, NULL, atype, NULL, NULL, NULL, monoid->op->ztype,
+        NULL) ;
 
     //--------------------------------------------------------------------------
     // construct the monoid macros
@@ -62,8 +63,7 @@ void GB_macrofy_reduce      // construct all macros for GrB_reduce to scalar
 
     fprintf (fp, "\n// monoid:\n") ;
     GB_macrofy_type (fp, "Z", "_", monoid->op->ztype->name) ;
-    GB_macrofy_monoid (fp, red_ecode, id_ecode, term_ecode, false, monoid,
-        false, NULL, NULL) ;
+    GB_macrofy_monoid (fp, false, monoid, false, NULL, NULL) ;
 
     fprintf (fp, "#define GB_GETA_AND_UPDATE(z,Ax,p)") ;
     if (atype == monoid->op->ztype)
@@ -93,8 +93,12 @@ void GB_macrofy_reduce      // construct all macros for GrB_reduce to scalar
     // monoid operator.  No JIT kernel is ever required to reduce an iso matrix
     // to a scalar, even for user-defined types and monoids.
 
+    bool Ap_is_32 = false ; // OK: may be 32-bit but A->p is not accessed
+    bool Aj_is_32 = false ; // OK: may be 32-bit but A->h is not accessed
+
     GB_macrofy_input (fp, "a", "A", "A", true, monoid->op->ztype,
-        atype, asparsity, acode, false, azombies) ;
+        atype, asparsity, acode, /* A_iso: */ false, azombies,
+        Ap_is_32, Aj_is_32, Ai_is_32) ;
 
     //--------------------------------------------------------------------------
     // reduction method
@@ -106,9 +110,9 @@ void GB_macrofy_reduce      // construct all macros for GrB_reduce to scalar
 
     GB_Opcode opcode = monoid->op->opcode ;
 
-    if (opcode == GB_ANY_binop_code)
+    if (opcode == GB_ANY_binop_code || azombies)
     { 
-        // ANY monoid: do not use panel reduction method
+        // ANY monoid, or zombies: do not use panel reduction method
         panel = 1 ;
     }
     else if (zcode == GB_BOOL_code)

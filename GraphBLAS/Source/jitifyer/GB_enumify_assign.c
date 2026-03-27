@@ -2,7 +2,7 @@
 // GB_enumify_assign: enumerate a GrB_assign problem
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -15,49 +15,9 @@
 // GB_bitmap_assign or GB_subassigner to do the actual work, or related methods
 // that do not need a JIT (GB_*assign_zombie, in particular).
 
-// GB_bitmap_assign and GB_subassigner will not call the JIT directly.
-// Instead, they call one of the many assign/subassign kernels, each of which
-// will have a JIT variant (39 of them):
-//
-//      GB_subassign_01
-//      GB_subassign_02
-//      GB_subassign_03
-//      GB_subassign_04
-//      GB_subassign_05
-//      GB_subassign_05d
-//      GB_subassign_06d
-//      GB_subassign_06n
-//      GB_subassign_06s_and_14
-//      GB_subassign_07
-//      GB_subassign_08n
-//      GB_subassign_08s_and_16
-//      GB_subassign_09
-//      GB_subassign_10_and_18
-//      GB_subassign_11
-//      GB_subassign_12_and_20
-//      GB_subassign_13
-//      GB_subassign_15
-//      GB_subassign_17
-//      GB_subassign_19
-//      GB_subassign_22
-//      GB_subassign_23
-//      GB_subassign_25
-//      GB_bitmap_assign_M_accum
-//      GB_bitmap_assign_M_accum_whole
-//      GB_bitmap_assign_M_noaccum
-//      GB_bitmap_assign_M_noaccum_whole
-//      GB_bitmap_assign_fullM_accum
-//      GB_bitmap_assign_fullM_accum_whole
-//      GB_bitmap_assign_fullM_noaccum
-//      GB_bitmap_assign_fullM_noaccum_whole
-//      GB_bitmap_assign_noM_accum
-//      GB_bitmap_assign_noM_accum_whole
-//      GB_bitmap_assign_noM_noaccum
-//      GB_bitmap_assign_noM_noaccum_whole
-//      GB_bitmap_assign_notM_accum
-//      GB_bitmap_assign_notM_accum_whole
-//      GB_bitmap_assign_notM_noaccum
-//      GB_bitmap_assign_notM_noaccum_whole
+// GB_bitmap_assign and GB_subassigner do not call the JIT directly.  Instead,
+// they call one of the many assign/subassign kernels, each of which has a JIT
+// variant.
 
 #include "GB.h"
 #include "jitifyer/GB_stringify.h"
@@ -65,23 +25,27 @@
 void GB_enumify_assign      // enumerate a GrB_assign problem
 (
     // output:
-    uint64_t *scode,        // unique encoding of the entire operation
+    uint64_t *method_code,  // unique encoding of the entire operation
     // input:
     // C matrix:
     GrB_Matrix C,
     bool C_replace,
     // index types:
+    bool I_is_32,           // if true, I is 32-bits; else 64
+    bool J_is_32,           // if true, J is 32-bits; else 64
     int Ikind,              // 0: all (no I), 1: range, 2: stride, 3: list
     int Jkind,              // ditto
     // M matrix:
     GrB_Matrix M,           // may be NULL
-    bool Mask_struct,       // mask is structural
     bool Mask_comp,         // mask is complemented
+    bool Mask_struct,       // mask is structural
     // operator:
     GrB_BinaryOp accum,     // the accum operator (may be NULL)
     // A matrix or scalar
     GrB_Matrix A,           // NULL for scalar assignment
     GrB_Type scalar_type,
+    // S matrix:
+    GrB_Matrix S,           // may be NULL, or of type GrB_UINT32 or GrB_UINT64
     int assign_kind         // 0: assign, 1: subassign, 2: row, 3: col
 )
 {
@@ -93,14 +57,17 @@ void GB_enumify_assign      // enumerate a GrB_assign problem
     GrB_Type ctype = C->type ;
     GrB_Type mtype = (M == NULL) ? NULL : M->type ;
     GrB_Type atype = (A == NULL) ? scalar_type : A->type ;
+    GrB_Type stype = (S == NULL) ? GrB_UINT64 : S->type ;
     ASSERT (atype != NULL) ;
+    ASSERT (stype == GrB_UINT32 || stype == GrB_UINT64) ;
 
     //--------------------------------------------------------------------------
-    // get the types of X, Y, and Z
+    // enumify the accum operator, if present, and get the types of x,y,z
     //--------------------------------------------------------------------------
 
     GB_Opcode accum_opcode ;
     GB_Type_code xcode, ycode, zcode ;
+    int accum_code ;
 
     if (accum == NULL)
     { 
@@ -109,6 +76,8 @@ void GB_enumify_assign      // enumerate a GrB_assign problem
         xcode = 0 ;
         ycode = 0 ;
         zcode = 0 ;
+        // accum_code is 63 if no accum is present
+        accum_code = 0x3F ;
     }
     else
     { 
@@ -116,38 +85,14 @@ void GB_enumify_assign      // enumerate a GrB_assign problem
         xcode = accum->xtype->code ;
         ycode = accum->ytype->code ;
         zcode = accum->ztype->code ;
+        if (xcode == GB_BOOL_code)  // && (ycode == GB_BOOL_code)
+        { 
+            // rename the operator
+            accum_opcode = GB_boolean_rename (accum_opcode) ;
+        }
+        // accum_code is 0 to 52 if accum is present
+        accum_code = (accum_opcode - GB_USER_binop_code) & 0x3F ;
     }
-
-    //--------------------------------------------------------------------------
-    // rename redundant boolean operators
-    //--------------------------------------------------------------------------
-
-    // consider z = op(x,y) where both x and y are boolean:
-    // DIV becomes FIRST
-    // RDIV becomes SECOND
-    // MIN and TIMES become LAND
-    // MAX and PLUS become LOR
-    // NE, ISNE, RMINUS, and MINUS become LXOR
-    // ISEQ becomes EQ
-    // ISGT becomes GT
-    // ISLT becomes LT
-    // ISGE becomes GE
-    // ISLE becomes LE
-
-    if (xcode == GB_BOOL_code)  // && (ycode == GB_BOOL_code)
-    { 
-        // rename the operator
-        accum_opcode = GB_boolean_rename (accum_opcode) ;
-    }
-
-    //--------------------------------------------------------------------------
-    // enumify the accum operator, if present
-    //--------------------------------------------------------------------------
-
-    // accum_ecode is 255 if no accum is present
-
-    int accum_ecode ;
-    GB_enumify_binop (&accum_ecode, accum_opcode, xcode, false) ;
 
     //--------------------------------------------------------------------------
     // enumify the types
@@ -176,31 +121,91 @@ void GB_enumify_assign      // enumerate a GrB_assign problem
     int C_sparsity = GB_sparsity (C) ;
     int M_sparsity = (M == NULL) ? 0 : GB_sparsity (M) ;
     int A_sparsity = (A == NULL) ? 0 : GB_sparsity (A) ;
+    int S_sparsity = (S == NULL) ? 0 : GB_sparsity (S) ;
+    int S_present  = (S != NULL) ? 1 : 0 ;
 
-    int csparsity, msparsity, asparsity ;
+    int csparsity, msparsity, asparsity, ssparsity ;
     GB_enumify_sparsity (&csparsity, C_sparsity) ;
     GB_enumify_sparsity (&msparsity, M_sparsity) ;
     GB_enumify_sparsity (&asparsity, A_sparsity) ;
+    GB_enumify_sparsity (&ssparsity, S_sparsity) ;
 
     int C_repl = (C_replace) ? 1 : 0 ;
 
+    int i_is_32 = (I_is_32) ? 1 : 0 ;
+    int j_is_32 = (J_is_32) ? 1 : 0 ;
+
+    int cp_is_32 = (C->p_is_32) ? 1 : 0 ;
+    int cj_is_32 = (C->j_is_32) ? 1 : 0 ;
+    int ci_is_32 = (C->i_is_32) ? 1 : 0 ;
+
+    int mp_is_32 = (M != NULL && M->p_is_32) ? 1 : 0 ;
+    int mj_is_32 = (M != NULL && M->j_is_32) ? 1 : 0 ;
+    int mi_is_32 = (M != NULL && M->i_is_32) ? 1 : 0 ;
+
+    int ap_is_32 = (A != NULL && A->p_is_32) ? 1 : 0 ;
+    int aj_is_32 = (A != NULL && A->j_is_32) ? 1 : 0 ;
+    int ai_is_32 = (A != NULL && A->i_is_32) ? 1 : 0 ;
+
+    int sp_is_32 = (S != NULL && S->p_is_32) ? 1 : 0 ;
+    int sj_is_32 = (S != NULL && S->j_is_32) ? 1 : 0 ;
+    int si_is_32 = (S != NULL && S->i_is_32) ? 1 : 0 ;
+    int sx_is_32 = (stype == GrB_UINT32) ? 1 : 0 ;
+
     //--------------------------------------------------------------------------
-    // construct the assign scode
+    // special cases
     //--------------------------------------------------------------------------
 
-    // total scode bits: 47 (12 hex digits)
+    #if 0
+    // not enough bits to store this information...
+    int M_is_A = GB_all_aliased (M, A) ;
+    int C_is_M = GB_all_aliased (C, M) ;
+    int C_is_A = GB_all_aliased (C, A) ;
+    #endif
 
-    (*scode) =
+    //--------------------------------------------------------------------------
+    // construct the assign method_code
+    //--------------------------------------------------------------------------
+
+    // total method_code bits: 63 (16 hex digits): 1 bit to sparse
+
+    (*method_code) =
                                                // range        bits
 
-                // assign_kind, Ikind, and Jkind (2 hex digits)
-                GB_LSHIFT (C_repl     , 46) |  // 0 to 1       1
-                GB_LSHIFT (assign_kind, 44) |  // 0 to 3       2
+                // S, C, M, A, I, J integer types (4 hex digits)
+                GB_LSHIFT (sp_is_32   , 62) |  // 0 to 1       1
+                GB_LSHIFT (sj_is_32   , 61) |  // 0 to 1       1
+                GB_LSHIFT (si_is_32   , 60) |  // 0 to 1       1
+                GB_LSHIFT (sx_is_32   , 59) |  // 0 to 1       1
+
+                GB_LSHIFT (cp_is_32   , 58) |  // 0 to 1       1
+                GB_LSHIFT (cj_is_32   , 57) |  // 0 to 1       1
+                GB_LSHIFT (ci_is_32   , 56) |  // 0 to 1       1
+
+                GB_LSHIFT (mp_is_32   , 55) |  // 0 to 1       1
+                GB_LSHIFT (mj_is_32   , 54) |  // 0 to 1       1
+                GB_LSHIFT (mi_is_32   , 53) |  // 0 to 1       1
+
+                GB_LSHIFT (ap_is_32   , 52) |  // 0 to 1       1
+                GB_LSHIFT (aj_is_32   , 51) |  // 0 to 1       1
+                GB_LSHIFT (ai_is_32   , 50) |  // 0 to 1       1
+
+                GB_LSHIFT (i_is_32    , 49) |  // 0 to 1       1
+                GB_LSHIFT (j_is_32    , 48) |  // 0 to 1       1
+
+                // C_replace, S present, scalar assign, A iso (1 hex digit)
+                GB_LSHIFT (C_repl     , 47) |  // 0 to 1       1
+                GB_LSHIFT (S_present  , 46) |  // 0 to 1       1
+                GB_LSHIFT (s_assign   , 45) |  // 0 to 1       1
+                GB_LSHIFT (A_iso_code , 44) |  // 0 or 1       1
+
+                // Ikind, Jkind (1 hex digit)
                 GB_LSHIFT (Ikind      , 42) |  // 0 to 3       2
                 GB_LSHIFT (Jkind      , 40) |  // 0 to 3       2
 
-                // accum, z = f(x,y) (5 hex digits)
-                GB_LSHIFT (accum_ecode, 32) |  // 0 to 255     8
+                // accum, z = f(x,y) (5 hex digits), and assign_kind
+                GB_LSHIFT (assign_kind, 38) |  // 0 to 3       2
+                GB_LSHIFT (accum_code , 32) |  // 0 to 63      6
                 GB_LSHIFT (zcode      , 28) |  // 0 to 14      4
                 GB_LSHIFT (xcode      , 24) |  // 0 to 14      4
                 GB_LSHIFT (ycode      , 20) |  // 0 to 14      4
@@ -212,13 +217,10 @@ void GB_enumify_assign      // enumerate a GrB_assign problem
                 GB_LSHIFT (ccode      , 12) |  // 0 to 14      4
                 GB_LSHIFT (acode      ,  8) |  // 1 to 14      4
 
-                // sparsity structures of C, M, and A (2 hex digits),
-                // iso status of A and scalar assignment
+                // sparsity structures of C, M, S, and A (2 hex digits),
                 GB_LSHIFT (csparsity  ,  6) |  // 0 to 3       2
                 GB_LSHIFT (msparsity  ,  4) |  // 0 to 3       2
-                GB_LSHIFT (s_assign   ,  3) |  // 0 to 1       1
-                GB_LSHIFT (A_iso_code ,  2) |  // 0 or 1       1
+                GB_LSHIFT (ssparsity  ,  2) |  // 0 to 3       2
                 GB_LSHIFT (asparsity  ,  0) ;  // 0 to 3       2
-
 }
 

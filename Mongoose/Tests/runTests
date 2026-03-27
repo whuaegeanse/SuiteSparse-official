@@ -346,8 +346,8 @@ def checkLocation_tests_dir():
     tests_dir1 = "./tests/"
     tests_dir2 = "../Mongoose/tests/"
     # List of multi-config configurations (e.g., for MSVC)
-    # FIXME: Add more multi-config configurations to list?
-    # FIXME: Instead of blindly looking for existing directories, check which
+    # Fixme: Add more multi-config configurations to list?
+    # Fixme: Instead of blindly looking for existing directories, check which
     #        configuration was selected in ctest flag. E.g., `ctest -C Release`
     config_dirs = ["Release/", "Debug/", ""]
     for config_dir in config_dirs:

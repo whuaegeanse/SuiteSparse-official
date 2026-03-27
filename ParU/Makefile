@@ -2,7 +2,7 @@
 # SuiteSparse/ParU/Makefile
 #-------------------------------------------------------------------------------
 
-# ParU, Copyright (c) 2022-2024, Mohsen Aznaveh and Timothy A. Davis,
+# ParU, Copyright (c) 2022-2025, Mohsen Aznaveh and Timothy A. Davis,
 # All Rights Reserved.
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -55,6 +55,8 @@ demos: library
 	( cd build && ./paru_simplec$(EXEEXT) < ../Matrix/b1_ss.mtx )
 	( cd build && ./paru_simple$(EXEEXT) < ../Matrix/west0067.mtx )
 	( cd build && [ -f paru_democ$(EXEEXT) ] && ./paru_democ$(EXEEXT) < ../Matrix/west0067.mtx || true )
+
+longdemos: demos
 	( cd build && [ -f paru_demo$(EXEEXT) ] && ./paru_demo$(EXEEXT) < ../Matrix/xenon1.mtx || true )
 
 bench: library

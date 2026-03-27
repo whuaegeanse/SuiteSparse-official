@@ -2,7 +2,7 @@
 ///////////////////////////////// ParU_Analyze /////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-// ParU, Copyright (c) 2022-2024, Mohsen Aznaveh and Timothy A. Davis,
+// ParU, Copyright (c) 2022-2025, Mohsen Aznaveh and Timothy A. Davis,
 // All Rights Reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -116,7 +116,7 @@ ParU_Info ParU_Analyze
     DEBUGLEVEL(0);
     PARU_DEFINE_PRLEVEL;
 #ifndef NTIME
-    double start_time = PARU_OPENMP_GET_WTIME;
+    double start_time = PARU_omp_get_wtime ( ) ;
 #endif
 
     ParU_Symbolic Sym;
@@ -560,10 +560,9 @@ ParU_Info ParU_Analyze
 
 #ifndef NDEBUG
     PR = 1;
-    PRLEVEL(-1, ("\n%%\tcs1 = " LD ", rs1 = " LD " n1 = " LD "\n", cs1, rs1, n1));
+    PRLEVEL(1, ("\n%%\tcs1 = " LD ", rs1 = " LD " n1 = " LD "\n", cs1, rs1, n1));
     PRLEVEL(PR, ("From the Symbolic object,\
-                C is of dimension " LD "-by-" LD "\n",
-                 nr, nc));
+                C is of dimension " LD "-by-" LD "\n", nr, nc));
     PRLEVEL(PR, ("   with nz = " LD ", number of fronts = " LD ",\n", anz, nfr));
     PR = 1;
     // PRLEVEL(PR, ("   number of frontal matrix chains = " LD "\n", nchains));
@@ -807,7 +806,7 @@ ParU_Info ParU_Analyze
         int64_t oldParent = Parent[oldf];
         newParent[newf] = oldParent >= 0 ? fmap[oldParent] : -1;
     }
-    PRLEVEL(-1, ("%% newF = " LD " and nf=" LD "\n", newNf, nf));
+    PRLEVEL(1, ("%% newF = " LD " and nf=" LD "\n", newNf, nf));
 
     /* ---------------------------------------------------------------------- */
     /*         Finding the Upper bound of rows and cols                       */
@@ -2032,7 +2031,7 @@ ParU_Info ParU_Analyze
     //--------------------------------------------------------------------------
 
 #ifndef NTIME
-    double time = PARU_OPENMP_GET_WTIME;
+    double time = PARU_omp_get_wtime ( ) ;
     time -= start_time;
     PRLEVEL(1, ("%% mRHS ParU_Analyze %lf seconds\n", time));
 #endif

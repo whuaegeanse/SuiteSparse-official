@@ -2,7 +2,7 @@
 # GraphBLAS/GraphBLAS/CMakeLists.txt:  build GraphBLAS for use in MATLAB
 #-------------------------------------------------------------------------------
 
-# SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+# SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
 # CMakeLists.txt: instructions for cmake to build GraphBLAS for use in MATLAB.
@@ -19,6 +19,13 @@ set ( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     ${CMAKE_SOURCE_DIR}/../cmake_modules )
 
 include ( GraphBLAS_version )
+
+#-------------------------------------------------------------------------------
+# define the project
+#-------------------------------------------------------------------------------
+
+project ( graphblas_matlab
+    VERSION "${GraphBLAS_VERSION_MAJOR}.${GraphBLAS_VERSION_MINOR}.${GraphBLAS_VERSION_SUB}" LANGUAGES C )
 
 #-------------------------------------------------------------------------------
 # SuiteSparse policies
@@ -50,13 +57,6 @@ if ( SUITESPARSE_USE_STRICT AND GRAPHBLAS_USE_CUDA AND NOT GRAPHBLAS_HAS_CUDA )
 endif ( )
 
 include ( GraphBLAS_JIT_paths )
-
-#-------------------------------------------------------------------------------
-# define the project
-#-------------------------------------------------------------------------------
-
-project ( graphblas_matlab
-    VERSION "${GraphBLAS_VERSION_MAJOR}.${GraphBLAS_VERSION_MINOR}.${GraphBLAS_VERSION_SUB}" LANGUAGES C )
 
 #-------------------------------------------------------------------------------
 # find OpenMP
@@ -123,6 +123,28 @@ if ( DEFINED GBAVX512F )
 endif ( )
 
 #-------------------------------------------------------------------------------
+# RISC-V
+#-------------------------------------------------------------------------------
+
+if ( DEFINED GBRISCV64 )
+    if ( GBRISCV64 )
+    # default: this is detected automatically, but can be set here also
+        set ( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -DGBRISCV64=1 " )
+    else ( )
+        set ( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -DGBRISCV64=0 " )
+    endif ( )
+endif ( )
+
+if ( DEFINED GBRVV )
+    if ( GBRVV )
+    # default: this is detected automatically, but can be set here also
+        set ( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -DGBRVV=1 " )
+    else ( )
+        set ( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -DGBRVV=0 " )
+    endif ( )
+endif ( )
+
+#-------------------------------------------------------------------------------
 # determine build type
 #-------------------------------------------------------------------------------
 
@@ -147,6 +169,7 @@ include_directories ( ${PROJECT_SOURCE_DIR}/../ ../Source ../Include Config
     ../xxHash ../lz4 ../zstd ../zstd/zstd_subset ../JITpackage
     rename
     # include all Source/* folders that have include/ or template/ subfolders:
+    ../Source/add
     ../Source/apply
     ../Source/assign
     ../Source/builder
@@ -154,10 +177,17 @@ include_directories ( ${PROJECT_SOURCE_DIR}/../ ../Source ../Include Config
     ../Source/callback
     ../Source/concat
     ../Source/convert
+    ../Source/cumsum
+    ../Source/emult
     ../Source/ewise
+    ../Source/extract
     ../Source/hyper
+    ../Source/ij
     ../Source/jit_kernels
+    ../Source/kronecker
+    ../Source/mask
     ../Source/math
+    ../Source/matrix
     ../Source/memory
     ../Source/monoid
     ../Source/mxm
@@ -168,6 +198,7 @@ include_directories ( ${PROJECT_SOURCE_DIR}/../ ../Source ../Include Config
     ../Source/select
     ../Source/split
     ../Source/slice
+    ../Source/sort
     ../Source/transpose
     ../Source/type
     ../Source/wait

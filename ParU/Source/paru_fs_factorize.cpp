@@ -2,7 +2,7 @@
 //////////////////////////  paru_fs_factorize  /////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-// ParU, Copyright (c) 2022-2024, Mohsen Aznaveh and Timothy A. Davis,
+// ParU, Copyright (c) 2022-2025, Mohsen Aznaveh and Timothy A. Davis,
 // All Rights Reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -59,6 +59,7 @@ bool paru_panel_factorize
     int64_t panel_width = Work->panel_width ;
     double piv_toler    = Work->piv_toler ;
     double diag_toler   = Work->diag_toler ;
+    int prior = BLAS_set_num_threads_local (1) ;
 
     // works like dgetf2f.f in netlib v3.0  here is a link:
     // https://github.com/xianyi/OpenBLAS/blob/develop/reference/dgetf2f.f
@@ -321,7 +322,11 @@ bool paru_panel_factorize
             bool blas_ok = true ;
             SUITESPARSE_BLAS_dger(row_end - 1 - j, j2 - 1 - j, &alpha, X, 1, Y,
                                   m, A, m, blas_ok);
-            if (!blas_ok) return (false);
+            if (!blas_ok)
+            {
+                BLAS_set_num_threads_local (prior) ;
+                return (false);
+            }
 #ifdef COUNT_FLOPS
 #pragma omp atomic update
             Num->flp_cnt_dger += (double)2 * M * N;
@@ -344,6 +349,7 @@ bool paru_panel_factorize
         }
 #endif
     }
+    BLAS_set_num_threads_local (prior) ;
     return (true) ;
 }
 

@@ -2,7 +2,7 @@
 ///////////////////////////////// ParU_LSolve //////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-// ParU, Copyright (c) 2022-2024, Mohsen Aznaveh and Timothy A. Davis,
+// ParU, Copyright (c) 2022-2025, Mohsen Aznaveh and Timothy A. Davis,
 // All Rights Reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -60,9 +60,6 @@ ParU_Info ParU_LSolve
         return (PARU_INVALID) ;
     }
 
-    // get Control
-    BLAS_set_num_threads (paru_nthreads (Control)) ;
-
     DEBUGLEVEL(0);
     PARU_DEFINE_PRLEVEL;
     int64_t nf = Sym->nf;
@@ -77,7 +74,7 @@ ParU_Info ParU_LSolve
     PRLEVEL(PR, (" \n"));
 #endif
 #ifndef NTIME
-    double start_time = PARU_OPENMP_GET_WTIME;
+    double start_time = PARU_omp_get_wtime ( ) ;
 #endif
     int64_t n1 = Sym->n1;   // row+col singletons
     const int64_t *Ps = Num->Ps;  // row permutation S->LU
@@ -127,6 +124,9 @@ ParU_Info ParU_LSolve
         PRLEVEL(1, ("ParU: out of memory lsolve\n"));
         return (PARU_OUT_OF_MEMORY) ;
     }
+
+    // get Control
+    int prior = BLAS_set_num_threads_local (paru_nthreads (Control)) ;
 
     const ParU_Factors *LUs = Num->partial_LUs;
     const int64_t *Super = Sym->Super;
@@ -198,9 +198,9 @@ ParU_Info ParU_LSolve
         }
     }
 #ifndef NTIME
-    double time = PARU_OPENMP_GET_WTIME;
+    double time = PARU_omp_get_wtime ( ) ;
     time -= start_time;
-    PRLEVEL(-1, ("%% lsolve took %1.1lf\n", time));
+    PRLEVEL(1, ("%% lsolve took %1.1lf\n", time));
 #endif
 #ifndef NDEBUG
     PRLEVEL(1, ("%%after lsolve x is:\n%%"));
@@ -211,6 +211,7 @@ ParU_Info ParU_LSolve
     PRLEVEL(1, (" \n"));
 #endif
     PARU_FREE(Num->max_row_count, double, work);
+    BLAS_set_num_threads_local (prior) ;
     return (blas_ok ? PARU_SUCCESS : PARU_TOO_LARGE);
 }
 
@@ -236,9 +237,6 @@ ParU_Info ParU_LSolve
         return (PARU_INVALID) ;
     }
 
-    // get Control
-    BLAS_set_num_threads (paru_nthreads (Control)) ;
-
     DEBUGLEVEL(0);
     PARU_DEFINE_PRLEVEL;
     int64_t m = Sym->m;
@@ -260,7 +258,7 @@ ParU_Info ParU_LSolve
     PRLEVEL(PR, (" \n"));
 #endif
 #ifndef NTIME
-    double start_time = PARU_OPENMP_GET_WTIME;
+    double start_time = PARU_omp_get_wtime ( ) ;
 #endif
 
     int64_t n1 = Sym->n1;   // row+col singletons
@@ -323,6 +321,9 @@ ParU_Info ParU_LSolve
         PRLEVEL(1, ("ParU: out of memory lsolve\n"));
         return (PARU_OUT_OF_MEMORY) ;
     }
+
+    // get Control
+    int prior = BLAS_set_num_threads_local (paru_nthreads (Control)) ;
 
     const ParU_Factors *LUs = Num->partial_LUs;
     const int64_t *Super = Sym->Super;
@@ -400,9 +401,9 @@ ParU_Info ParU_LSolve
         }
     }
 #ifndef NTIME
-    double time = PARU_OPENMP_GET_WTIME;
+    double time = PARU_omp_get_wtime ( ) ;
     time -= start_time;
-    PRLEVEL(-1, ("%% mRHS lsolve took %1.1lfs\n", time));
+    PRLEVEL(1, ("%% mRHS lsolve took %1.1lfs\n", time));
 #endif
 #ifndef NDEBUG
     PRLEVEL(1, ("%% after lsolve X is:\n"));
@@ -418,5 +419,6 @@ ParU_Info ParU_LSolve
     PRLEVEL(1, (" \n"));
 #endif
     PARU_FREE(Num->max_row_count * nrhs, double, work);
+    BLAS_set_num_threads_local (prior) ;
     return (blas_ok ? PARU_SUCCESS : PARU_TOO_LARGE);
 }

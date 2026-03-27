@@ -62,8 +62,8 @@ int main (int argc, char **argv)
     long ordering = (argc < 3 ? SPQR_ORDERING_DEFAULT : atoi(argv[2]));
 
 #if 1
-    printf ("Matrix %6ld-by-%-6ld nnz: %6ld\n",
-        m, n, cholmod_l_nnz (A, cc)) ;
+    printf ("Matrix %6" PRId64 "-by-%-6" PRId64 " nnz: %6" PRId64 "\n",
+        (int64_t) m, (int64_t) n, cholmod_l_nnz (A, cc)) ;
     cholmod_l_print_sparse (A, "A", cc) ;
 #endif
 
@@ -118,7 +118,7 @@ int main (int argc, char **argv)
     }
     printf ("\nnorm(Ax-b): %8.1e\n", rnorm) ;
     printf ("norm(A'(Ax-b))         %8.1e rank: %" PRId64 " of %" PRId64 "\n", 
-        atrnorm, rnk, (m < n) ? m:n) ;
+        atrnorm, (int64_t) rnk, (int64_t) ((m < n) ? m:n)) ;
 
     /* Write an info file. */
     FILE *info = fopen("gpu_results.txt", "w");

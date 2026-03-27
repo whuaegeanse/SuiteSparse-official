@@ -2,7 +2,7 @@
 // SuiteSparse/Example/Source/my.c
 //------------------------------------------------------------------------------
 
-// Copyright (c) 2022-2023, Timothy A. Davis, All Rights Reserved.
+// Copyright (c) 2022-2025, Timothy A. Davis, All Rights Reserved.
 // SPDX-License-Identifier: BSD-3-clause
 
 //------------------------------------------------------------------------------

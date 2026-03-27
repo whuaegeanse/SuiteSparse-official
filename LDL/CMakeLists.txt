@@ -11,10 +11,10 @@
 
 cmake_minimum_required ( VERSION 3.22 )
 
-set ( LDL_DATE "Mar 22, 2024" )
+set ( LDL_DATE "July 25, 2025" )
 set ( LDL_VERSION_MAJOR 3 CACHE STRING "" FORCE )
 set ( LDL_VERSION_MINOR 3 CACHE STRING "" FORCE )
-set ( LDL_VERSION_SUB   2 CACHE STRING "" FORCE )
+set ( LDL_VERSION_SUB   3 CACHE STRING "" FORCE )
 
 message ( STATUS "Building LDL version: v"
     ${LDL_VERSION_MAJOR}.
@@ -44,17 +44,17 @@ include ( SuiteSparsePolicy )
 
 
 if ( NOT SUITESPARSE_ROOT_CMAKELISTS )
-    find_package ( SuiteSparse_config 7.7.0
+    find_package ( SuiteSparse_config 7.11.0
         PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-        find_package ( SuiteSparse_config 7.7.0 REQUIRED )
+        find_package ( SuiteSparse_config 7.11.0 REQUIRED )
     endif ( )
 
     if ( SUITESPARSE_DEMOS )
-        find_package ( AMD 3.3.2
+        find_package ( AMD 3.3.4
             PATHS ${CMAKE_SOURCE_DIR}/../AMD/build NO_DEFAULT_PATH )
         if ( NOT TARGET SuiteSparse::AMD )
-            find_package ( AMD 3.3.2 REQUIRED )
+            find_package ( AMD 3.3.4 REQUIRED )
         endif ( )
     endif ( )
 endif ( )
@@ -168,23 +168,33 @@ if ( BUILD_SHARED_LIBS )
         ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
         RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
         PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+
+    # create (temporary) export target file during build
+    export ( EXPORT LDLTargets
+        NAMESPACE SuiteSparse::
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/LDLTargets.cmake )
+
+    # install export target, config and version files for find_package
+    install ( EXPORT LDLTargets
+        NAMESPACE SuiteSparse::
+        DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/LDL )
 endif ( )
 if ( BUILD_STATIC_LIBS )
     install ( TARGETS LDL_static
-        EXPORT LDLTargets
+        EXPORT LDLTargets_static
         ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
         PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+
+    # create (temporary) export target file during build
+    export ( EXPORT LDLTargets_static
+        NAMESPACE SuiteSparse::
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/LDLTargets_static.cmake )
+
+    # install export target, config and version files for find_package
+    install ( EXPORT LDLTargets_static
+        NAMESPACE SuiteSparse::
+        DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/LDL )
 endif ( )
-
-# create (temporary) export target file during build
-export ( EXPORT LDLTargets
-    NAMESPACE SuiteSparse::
-    FILE ${CMAKE_CURRENT_BINARY_DIR}/LDLTargets.cmake )
-
-# install export target, config and version files for find_package
-install ( EXPORT LDLTargets
-    NAMESPACE SuiteSparse::
-    DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/LDL )
 
 # generate config file to be used in common build tree
 set ( SUITESPARSE_IN_BUILD_TREE ON )

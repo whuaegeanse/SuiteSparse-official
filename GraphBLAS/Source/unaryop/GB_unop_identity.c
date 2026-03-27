@@ -2,18 +2,19 @@
 // GB_unop_identity: return an identity unary operator
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
+// The op does not do any typecasting: ztype == xtype
+
 #include "GB.h"
 #include "unaryop/GB_unop.h"
-#include "include/GB_unused.h"
 
 GB_Operator GB_unop_identity    // return IDENTITY operator, or NULL on error
 (
-    GrB_Type type,              // operator type
+    GrB_Type type,              // operator type (both z and x)
     GrB_UnaryOp op              // header for IDENTITY_UDT operator
 )
 {
@@ -37,13 +38,16 @@ GB_Operator GB_unop_identity    // return IDENTITY operator, or NULL on error
         {
             // construct the IDENTITY_UDT operator.  It will have a NULL
             // function pointer so it cannot be used in a generic kernel.  It
-            // will have a nonzero hash, and will thus not be treated as a a
+            // will have a nonzero hash, and will thus not be treated as a
             // built-in operator in the JIT kernels.  The name of the operator
             // is the name of its type.
             if (op == NULL) return (NULL) ;
             // op = &op_header has been provided by the caller
             op->header_size = 0 ;
-            GrB_Info info = GB_unop_new (op,
+            #ifdef GB_DEBUG
+            GrB_Info info =
+            #endif
+            GB_unop_new (op,
                 NULL,           // op->unop_function is NULL for IDENTITY_UDT
                 type, type,     // type is user-defined
                 type->name,     // name is same as the type

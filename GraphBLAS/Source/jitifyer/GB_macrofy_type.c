@@ -2,7 +2,7 @@
 // GB_macrofy_type: construct macros for a type name
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -14,7 +14,7 @@ void GB_macrofy_type
 (
     FILE *fp,
     // input:
-    const char *what,       // typically X, Y, Z, A, B, or C
+    const char *what,       // typically X, Y, Z, A, B, C, Tx, Sx, etc
     const char *what2,      // typically "_" or "2"
     const char *name        // name of the type
 )

@@ -2,7 +2,7 @@
 # GraphBLAS/GraphBLAS_JIT_paths.cmake:  configure the JIT paths
 #-------------------------------------------------------------------------------
 
-# SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+# SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
 #-------------------------------------------------------------------------------
@@ -37,11 +37,6 @@ endif ( )
 #-------------------------------------------------------------------------------
 # GRAPHBLAS_USE_JIT and GRAPHBLAS_COMPACT options
 #-------------------------------------------------------------------------------
-
-if ( SUITESPARSE_HAS_CUDA AND GRAPHBLAS_USE_CUDA )
-    # FOR NOW: do not compile FactoryKernels when developing the CUDA kernels
-#   set ( GRAPHBLAS_COMPACT on )    # FIXME
-endif ( )
 
 include ( CheckSymbolExists )
 check_symbol_exists ( system "stdlib.h" HAVE_C_SYSTEM )

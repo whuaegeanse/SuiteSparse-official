@@ -2,10 +2,28 @@
 // GB_subassign_25_template: C<M> = A where C is empty and A is dense
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
+
+// Method 25: C(:,:)<M,s> = A ; C is empty, M structural, A bitmap/as-if-full
+
+// M:           present
+// Mask_comp:   false
+// Mask_struct: true
+// C_replace:   effectively false (not relevant since C is empty)
+// accum:       NULL
+// A:           matrix
+// S:           none
+
+// C and M are sparse or hypersparse.  A can have any sparsity structure, even
+// bitmap, but it must either be bitmap, or as-if-full.  M may be jumbled.  If
+// so, C is constructed as jumbled.  C is reconstructed with the same structure
+// as M and can have any sparsity structure on input.  The only constraint on C
+// is nnz(C) is zero on input.
+
+// C is iso if A is iso
 
 // C<M> = A where C starts as empty, M is structural, and A is dense.  The
 // pattern of C is an exact copy of M.  A is full, dense, or bitmap.
@@ -23,14 +41,9 @@
     // get inputs
     //--------------------------------------------------------------------------
 
-    #ifdef GB_JIT_KERNEL
-    #define A_is_bitmap GB_A_IS_BITMAP
-    #define A_iso       GB_A_ISO
-    #else
     const bool A_is_bitmap = GB_IS_BITMAP (A) ;
     const bool A_iso = A->iso ;
-    #endif
-    ASSERT (GB_IS_FULL (A) || A_is_bitmap) ;
+    ASSERT (GB_IS_FULL (A) || GB_A_IS_BITMAP) ;
 
     //--------------------------------------------------------------------------
     // Parallel: slice M into equal-sized chunks
@@ -45,18 +58,18 @@
     // get C, M, and A
     //--------------------------------------------------------------------------
 
-    int64_t *restrict Ci = C->i ;
+    GB_Ci_DECLARE (Ci, ) ; GB_Ci_PTR (Ci, C) ;
 
     ASSERT (GB_IS_SPARSE (M) || GB_IS_HYPERSPARSE (M)) ;
     ASSERT (GB_JUMBLED_OK (M)) ;
-    const int64_t *restrict Mp = M->p ;
-    const int64_t *restrict Mh = M->h ;
-    const int64_t *restrict Mi = M->i ;
+    GB_Mp_DECLARE (Mp, const) ; GB_Mp_PTR (Mp, M) ;
+    GB_Mh_DECLARE (Mh, const) ; GB_Mh_PTR (Mh, M) ;
+    GB_Mi_DECLARE (Mi, const) ; GB_Mi_PTR (Mi, M) ;
     const int64_t Mvlen = M->vlen ;
-
-    const int8_t   *restrict Ab = A->b ;
+    const int8_t *restrict Ab = A->b ;
     const int64_t avlen = A->vlen ;
 
+    bool C_iso = C->iso ;
     ASSERT (C->iso == A->iso) ;
 
     #ifdef GB_ISO_ASSIGN
@@ -66,7 +79,7 @@
     const GB_A_TYPE *restrict Ax = (GB_A_TYPE *) A->x ;
           GB_C_TYPE *restrict Cx = (GB_C_TYPE *) C->x ;
     GB_DECLAREC (cwork) ;
-    if (A_iso)
+    if (GB_A_ISO)
     {
         // get the iso value of A and typecast to C->type
         // cwork = (ctype) Ax [0]
@@ -81,7 +94,7 @@
     // C<M> = A
     //--------------------------------------------------------------------------
 
-    if (A_is_bitmap)
+    if (GB_A_IS_BITMAP)
     {
 
         //----------------------------------------------------------------------
@@ -112,10 +125,9 @@
                 // find the part of M(:,k) to be operated on by this task
                 //--------------------------------------------------------------
 
-                int64_t j = GBH_M (Mh, k) ;
-                GB_GET_PA (pM_start, pM_end, tid, k,
-                    kfirst, klast, pstart_Mslice,
-                    GBP_M (Mp, k, Mvlen), GBP_M (Mp, k+1, Mvlen)) ;
+                int64_t j = GBh_M (Mh, k) ;
+                GB_GET_PA (pM_start, pM_end, tid, k, kfirst, klast,
+                    pstart_Mslice, GB_IGET (Mp, k), GB_IGET (Mp, k+1)) ;
 
                 //--------------------------------------------------------------
                 // C<M(:,j)> = A(:,j)
@@ -126,20 +138,22 @@
                 int64_t pA = j * avlen ;
                 for (int64_t pM = pM_start ; pM < pM_end ; pM++)
                 {
-                    int64_t i = Mi [pM] ;
+                    int64_t i = GB_IGET (Mi, pM) ;
                     int64_t p = pA + i ;
                     if (Ab [p])
                     { 
                         // C(i,j) = A(i,j)
                         #ifndef GB_ISO_ASSIGN
-                        GB_COPY_aij_to_C (Cx, pM, Ax, p, A_iso, cwork) ;
+                        GB_COPY_aij_to_C (Cx, pM, Ax, p, GB_A_ISO, cwork,
+                            GB_C_ISO) ;
                         #endif
                     }
                     else
                     { 
                         // C(i,j) becomes a zombie
                         task_nzombies++ ;
-                        Ci [pM] = GB_FLIP (i) ;
+                        i = GB_ZOMBIE (i) ;
+                        GB_ISET (Ci, pM, i) ;   // Ci [pM] = i
                     }
                 }
             }
@@ -178,10 +192,9 @@
                     // find the part of M(:,k) to be operated on by this task
                     //----------------------------------------------------------
 
-                    int64_t j = GBH_M (Mh, k) ;
-                    GB_GET_PA (pM_start, pM_end, tid, k,
-                        kfirst, klast, pstart_Mslice,
-                        GBP_M (Mp, k, Mvlen), GBP_M (Mp, k+1, Mvlen)) ;
+                    int64_t j = GBh_M (Mh, k) ;
+                    GB_GET_PA (pM_start, pM_end, tid, k, kfirst, klast,
+                        pstart_Mslice, GB_IGET (Mp, k), GB_IGET (Mp, k+1)) ;
 
                     //----------------------------------------------------------
                     // C<M(:,j)> = A(:,j)
@@ -194,8 +207,9 @@
                     for (int64_t pM = pM_start ; pM < pM_end ; pM++)
                     { 
                         // C(i,j) = A(i,j)
-                        int64_t p = pA + GBI_M (Mi, pM, Mvlen) ;
-                        GB_COPY_aij_to_C (Cx, pM, Ax, p, A_iso, cwork) ;
+                        int64_t p = pA + GB_IGET (Mi, pM) ;
+                        GB_COPY_aij_to_C (Cx, pM, Ax, p,
+                            GB_A_ISO, cwork, GB_C_ISO) ;
                     }
                 }
             }

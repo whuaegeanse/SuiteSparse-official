@@ -2,12 +2,10 @@
 // GB_transpose_op: transpose, typecast, and apply an operator to a matrix
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
-
-// JIT: done.
 
 // C = op (A')
 
@@ -39,6 +37,7 @@
 #include "binaryop/GB_binop.h"
 #include "jitifyer/GB_stringify.h"
 #ifndef GBCOMPACT
+#include "GB_control.h"
 #include "FactoryKernels/GB_uop__include.h"
 #include "FactoryKernels/GB_ew__include.h"
 #endif
@@ -52,7 +51,7 @@ GrB_Info GB_transpose_op // transpose, typecast, and apply operator to a matrix
         bool binop_bind1st,             // if true, binop(x,A) else binop(A,y)
     const GrB_Matrix A,                 // input matrix
     // for sparse or hypersparse case:
-    int64_t *restrict *Workspaces,      // Workspaces, size nworkspaces
+    void **Workspaces,                  // Workspaces, size nworkspaces
     const int64_t *restrict A_slice,    // how A is sliced, size nthreads+1
     int nworkspaces,                    // # of workspaces to use
     // for all cases:
@@ -77,6 +76,12 @@ GrB_Info GB_transpose_op // transpose, typecast, and apply operator to a matrix
     // future:: extend this method to handle positional and idxunop operators
     ASSERT (!GB_OPCODE_IS_POSITIONAL (opcode)) ;
     ASSERT (!GB_IS_INDEXUNARYOP_CODE (opcode)) ;
+
+    // for the generic kernels below:
+    bool Cp_is_32 = C->p_is_32 ;
+    #define GB_Cp_IS_32 Cp_is_32
+    #define GB_A_TYPE GB_void
+    #define GB_C_TYPE GB_void
 
     //--------------------------------------------------------------------------
     // transpose the matrix and apply the operator
@@ -189,8 +194,6 @@ GrB_Info GB_transpose_op // transpose, typecast, and apply operator to a matrix
                 fop (Cx +((pC)*zsize), xwork) ;                             \
             }
 
-            #define GB_A_TYPE GB_void
-            #define GB_C_TYPE GB_void
             #include "transpose/template/GB_transpose_template.c"
             info = GrB_SUCCESS ;
         }
@@ -217,35 +220,37 @@ GrB_Info GB_transpose_op // transpose, typecast, and apply operator to a matrix
         size_t xsize = op->xtype->size ;
         size_t ysize = op->ytype->size ;
 
-        GB_Type_code scode = scalar->type->code ;
+        GB_Type_code scalar_code = scalar->type->code ;
         xcode = op->xtype->code ;
         ycode = op->ytype->code ;
 
         // typecast the scalar to the operator input
         size_t ssize_cast ;
-        GB_Type_code scode_cast ;
+        GB_Type_code scalar_code_cast ;
         if (binop_bind1st)
         { 
             ssize_cast = xsize ;
-            scode_cast = xcode ;
+            scalar_code_cast = xcode ;
         }
         else
         { 
             ssize_cast = ysize ;
-            scode_cast = ycode ;
+            scalar_code_cast = ycode ;
         }
         GB_void swork [GB_VLA(ssize_cast)] ;
         GB_void *scalarx = (GB_void *) scalar->x ;
-        if (scode_cast != scode)
+        if (scalar_code_cast != scalar_code)
         { 
             // typecast the scalar to the operator input, in swork
-            GB_cast_function cast_s = GB_cast_factory (scode_cast, scode) ;
+            GB_cast_function cast_s =
+                GB_cast_factory (scalar_code_cast, scalar_code) ;
             cast_s (swork, scalar->x, ssize) ;
             scalarx = swork ;
         }
 
         GB_Type_code acode = Atype->code ;
         GxB_binary_function fop = op->binop_function ;
+        ASSERT (fop != NULL) ;
         GB_cast_function cast_A_to_Y = GB_cast_factory (ycode, acode) ;
         GB_cast_function cast_A_to_X = GB_cast_factory (xcode, acode) ;
 

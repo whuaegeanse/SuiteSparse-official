@@ -1,4 +1,4 @@
-[![Build Status](https://github.com/GraphBLAS/LAGraph/workflows/LAGraph%20CI/badge.svg)](https://github.com/GraphBLAS/LAGraph/actions)
+[![Build Status](https://github.com/GraphBLAS/LAGraph/workflows/LAGraph%20CI%20with%20Builtin%20GraphBLAS/badge.svg)](https://github.com/GraphBLAS/LAGraph/actions)
 [![Documentation Status](https://readthedocs.org/projects/lagraph/badge/?version=latest)](https://lagraph.readthedocs.io/en/latest/?badge=latest)
 
 # LAGraph
@@ -7,10 +7,11 @@ LAGraph is a library plus a test harness for collecting algorithms that
 use GraphBLAS.
 
 See <https://github.com/GraphBLAS/LAGraph> for the source code for LAGraph,
-Documenation is at <https://lagraph.readthedocs.org>.
+Documentation is at <https://lagraph.readthedocs.org>, and also as a PDF
+file in the [LAGraph User Guide (PDF)](./lagraph-readthedocs-io-en-latest.pdf).
 Test coverage results are at <https://graphblas.org/LAGraph>.
 
-Currently, SuiteSparse:GraphBLAS v7.0.0 or later is required.  However, use the
+Currently, SuiteSparse:GraphBLAS v9.0.0 or later is required.  However, use the
 latest stable release of SuiteSparse:GraphBLAS for best results.
 See <https://github.com/DrTimothyAldenDavis/GraphBLAS>
 
@@ -72,7 +73,7 @@ LAGraph contains the following files and folders:
 
     include: contains the LAGraph.h and LAGraphX.h files
         Do not edit include/LAGraph.h, since it is constructed
-        from config/LAGraph.h.in.
+        from Config/LAGraph.h.in.
 
     LICENSE: BSD 2-clause license
 

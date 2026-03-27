@@ -2,15 +2,21 @@
 // GB_AxB__min_times_fp64.c: matrix multiply for a single semiring
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
-#include "GB.h"
 #include "GB_control.h"
+#if defined (GxB_NO_FP64)
+#define GB_TYPE_ENABLED 0
+#else
+#define GB_TYPE_ENABLED 1
+#endif
+
+#if GB_TYPE_ENABLED
+#include "GB.h"
 #include "mxm/GB_AxB_saxpy.h"
-#include "include/GB_unused.h"
 #include "assign/GB_bitmap_assign_methods.h"
 #include "FactoryKernels/GB_AxB__include2.h"
 
@@ -194,8 +200,7 @@ GrB_Info GB (_Asaxpy4B__min_times_fp64)
     const bool use_atomics,
     const int64_t *A_slice,
     const int64_t *H_slice,
-    GB_void *restrict Wcx,
-    int8_t *restrict Wf
+    GB_void *restrict Wcx
 )
 { 
     #if GB_DISABLE
@@ -452,5 +457,9 @@ GrB_Info GB (_Asaxpy3B__min_times_fp64)
         return (GrB_SUCCESS) ;
     }
 
+#endif
+
+#else
+GB_EMPTY_PLACEHOLDER
 #endif
 

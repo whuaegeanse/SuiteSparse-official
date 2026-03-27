@@ -39,17 +39,17 @@
 
 #define CS_VER 4  /* CXSparse Version */
 #define CS_SUBVER 4
-#define CS_SUBSUB 1
-#define CS_DATE "June 20, 2024"        /* CXSparse release date */
+#define CS_SUBSUB 2
+#define CS_DATE "July 25, 2025"        /* CXSparse release date */
 #define CS_COPYRIGHT "Copyright (c) Timothy A. Davis, 2006-2024"
 #define CXSPARSE
 
 #include "SuiteSparse_config.h"
 
-#define CXSPARSE__VERSION SUITESPARSE__VERCODE(4,4,1)
+#define CXSPARSE__VERSION SUITESPARSE__VERCODE(4,4,2)
 #if !defined (SUITESPARSE__VERSION) || \
-    (SUITESPARSE__VERSION < SUITESPARSE__VERCODE(7,8,0))
-#error "CXSparse 4.4.1 requires SuiteSparse_config 7.8.0 or later"
+    (SUITESPARSE__VERSION < SUITESPARSE__VERCODE(7,11,0))
+#error "CXSparse 4.4.2 requires SuiteSparse_config 7.11.0 or later"
 #endif
 
 #define cs_long_t       int64_t

@@ -2,16 +2,17 @@
 // GB_aop:  assign/subassign kernels with accum
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 // C(I,J)<M> += A
 
-#include "GB.h"
 #include "GB_control.h"
-#include "slice/GB_ek_slice.h"
+GB_type_enabled
+#if GB_TYPE_ENABLED
+#include "GB.h"
 #include "FactoryKernels/GB_aop__include.h"
 
 // accum operator
@@ -28,25 +29,25 @@ GB_ctype
 GB_declarec
 GB_copy_aij_to_cwork
 GB_copy_aij_to_c
-GB_copy_scalar_to_c
+GB_copy_cwork_to_c
 GB_ax_mask
 
 // C(i,j) += ywork
-#define GB_ACCUMULATE_scalar(Cx,pC,ywork) \
+#define GB_ACCUMULATE_scalar(Cx,pC,ywork,C_iso) \
     GB_ACCUM_OP (Cx [pC], Cx [pC], ywork)
 
 // C(i,j) += (ytype) A(i,j)
-#define GB_ACCUMULATE_aij(Cx,pC,Ax,pA,A_iso,ywork)      \
-{                                                       \
-    if (A_iso)                                          \
-    {                                                   \
-        GB_ACCUMULATE_scalar (Cx, pC, ywork) ;          \
-    }                                                   \
-    else                                                \
-    {                                                   \
-        /* A and Y have the same type here */           \
-        GB_ACCUMULATE_scalar (Cx, pC, Ax [pA]) ;        \
-    }                                                   \
+#define GB_ACCUMULATE_aij(Cx,pC,Ax,pA,A_iso,ywork,C_iso)    \
+{                                                           \
+    if (A_iso)                                              \
+    {                                                       \
+        GB_ACCUMULATE_scalar (Cx, pC, ywork, C_iso) ;       \
+    }                                                       \
+    else                                                    \
+    {                                                       \
+        /* A and Y have the same type here */               \
+        GB_ACCUMULATE_scalar (Cx, pC, Ax [pA], C_iso) ;     \
+    }                                                       \
 }
 
 // disable this operator and use the generic case if these conditions hold
@@ -57,6 +58,9 @@ GB_disable
 //------------------------------------------------------------------------------
 // C += A, accumulate a sparse matrix into a dense matrix
 //------------------------------------------------------------------------------
+
+#undef  GB_SCALAR_ASSIGN
+#define GB_SCALAR_ASSIGN 0
 
 GrB_Info GB (_subassign_23)
 (
@@ -79,6 +83,9 @@ GrB_Info GB (_subassign_23)
 // C += y, accumulate a scalar into a dense matrix
 //------------------------------------------------------------------------------
 
+#undef  GB_SCALAR_ASSIGN
+#define GB_SCALAR_ASSIGN 1
+
 GrB_Info GB (_subassign_22)
 (
     GrB_Matrix C,
@@ -96,4 +103,8 @@ GrB_Info GB (_subassign_22)
     return (GrB_SUCCESS) ;
     #endif
 }
+
+#else
+GB_EMPTY_PLACEHOLDER
+#endif
 

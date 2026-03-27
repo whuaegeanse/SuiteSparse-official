@@ -2,7 +2,7 @@
 // GB_jitifyer.h: definitions for the CPU and CUDA jitifyer
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -11,6 +11,9 @@
 #define GB_JITIFYER_H
 
 #include "jit_kernels/include/GB_jit_kernel_proto.h"
+
+typedef GB_JIT_KERNEL_USER_OP_PROTO ((*GB_user_op_f)) ;
+typedef GB_JIT_KERNEL_USER_TYPE_PROTO ((*GB_user_type_f)) ;
 
 //------------------------------------------------------------------------------
 // get list of PreJIT kernels: function pointers and names
@@ -32,13 +35,16 @@ typedef enum
 {
     GB_jit_reduce_family    = 1,    // kcode 1
     GB_jit_mxm_family       = 2,    // kcodes 2 to 9
-    GB_jit_ewise_family     = 3,    // kcodes 10 to 24
-    GB_jit_apply_family     = 4,    // kcodes 25 to 33
+    GB_jit_ewise_family     = 3,    // kcodes 10 to 24, 83
+    GB_jit_apply_family     = 4,    // kcodes 25 to 33, 84 to 86
     GB_jit_build_family     = 5,    // kcode 34
     GB_jit_select_family    = 6,    // kcodes 35 to 37
     GB_jit_user_op_family   = 7,    // kcode 38
     GB_jit_user_type_family = 8,    // kcode 39
-    GB_jit_assign_family    = 9,    // kcodes 40 to 44 (future:: to 78)
+    GB_jit_assign_family    = 9,    // kcodes 40 to 78
+    GB_jit_masker_family    = 10,   // kcodes 79 to 80
+    GB_jit_subref_family    = 11,   // kcodes 81 to 82
+    GB_jit_sort_family      = 12,   // kcode 87
 }
 GB_jit_family ;
 
@@ -80,17 +86,21 @@ typedef enum
     GB_JIT_KERNEL_APPLYBIND2    = 22, // GB_apply_op, bind2nd
     GB_JIT_KERNEL_TRANSBIND1    = 23, // GB_transpose_op, bind1st
     GB_JIT_KERNEL_TRANSBIND2    = 24, // GB_transpose_op, bind2nd
+    GB_JIT_KERNEL_KRONER        = 83, // GB_kroner
 
     // apply (unary and idxunary op) methods:
     GB_JIT_KERNEL_APPLYUNOP     = 25, // GB_apply_op, GB_cast_array
     GB_JIT_KERNEL_TRANSUNOP     = 26, // GB_transpose_op, GB_transpose_ix
-    GB_JIT_KERNEL_CONVERTS2B    = 27, // GB_convert_2sb
+    GB_JIT_KERNEL_CONVERT_S2B   = 27, // GB_convert_s2b
     GB_JIT_KERNEL_CONCAT_SPARSE = 28, // GB_concat_sparse
     GB_JIT_KERNEL_CONCAT_FULL   = 29, // GB_concat_full
     GB_JIT_KERNEL_CONCAT_BITMAP = 30, // GB_concat_bitmap
     GB_JIT_KERNEL_SPLIT_SPARSE  = 31, // GB_split_sparse
     GB_JIT_KERNEL_SPLIT_FULL    = 32, // GB_split_full
     GB_JIT_KERNEL_SPLIT_BITMAP  = 33, // GB_split_bitmap
+    GB_JIT_KERNEL_CONVERT_B2S   = 84, // GB_convert_b2s
+    GB_JIT_KERNEL_ISO_EXPAND    = 85, // GB_iso_expand
+    GB_JIT_KERNEL_UNJUMBLE      = 86, // GB_unjumble
 
     // build method:
     GB_JIT_KERNEL_BUILD         = 34, // GB_builder
@@ -110,12 +120,6 @@ typedef enum
     GB_JIT_KERNEL_SUBASSIGN_22  = 42, // GB_subassign_22
     GB_JIT_KERNEL_SUBASSIGN_23  = 43, // GB_subassign_23
     GB_JIT_KERNEL_SUBASSIGN_25  = 44, // GB_subassign_25
-
-    //--------------------------------------------------------------------------
-    // future:: the following kernels have not been implemented yet
-    //--------------------------------------------------------------------------
-
-    // future:: assign/subassign methods: continued
     GB_JIT_KERNEL_SUBASSIGN_01  = 45, // GB_subassign_01
     GB_JIT_KERNEL_SUBASSIGN_02  = 46, // GB_subassign_02
     GB_JIT_KERNEL_SUBASSIGN_03  = 47, // GB_subassign_03
@@ -134,40 +138,33 @@ typedef enum
     GB_JIT_KERNEL_SUBASSIGN_15  = 60, // GB_subassign_15
     GB_JIT_KERNEL_SUBASSIGN_17  = 61, // GB_subassign_17
     GB_JIT_KERNEL_SUBASSIGN_19  = 62, // GB_subassign_19
+    GB_JIT_KERNEL_SUBASSIGN_27  = 88, // GB_subassign_27
+    GB_JIT_KERNEL_BITMAP_ASSIGN_1        = 63, // GB_bitmap_assign_1
+    GB_JIT_KERNEL_BITMAP_ASSIGN_1_WHOLE  = 64, // GB_bitmap_assign_1_whole
+    GB_JIT_KERNEL_BITMAP_ASSIGN_2        = 65, // GB_bitmap_assign_2
+    GB_JIT_KERNEL_BITMAP_ASSIGN_2_WHOLE  = 66, // GB_bitmap_assign_2_whole
+    GB_JIT_KERNEL_BITMAP_ASSIGN_3        = 67, // GB_bitmap_assign_3
+    GB_JIT_KERNEL_BITMAP_ASSIGN_3_WHOLE  = 68, // GB_bitmap_assign_3_whole
+    GB_JIT_KERNEL_BITMAP_ASSIGN_4        = 69, // GB_bitmap_assign_4
+    GB_JIT_KERNEL_BITMAP_ASSIGN_4_WHOLE  = 70, // GB_bitmap_assign_4_whole
+    GB_JIT_KERNEL_BITMAP_ASSIGN_5        = 71, // GB_bitmap_assign_5
+    GB_JIT_KERNEL_BITMAP_ASSIGN_5_WHOLE  = 72, // GB_bitmap_assign_5_whole
+    GB_JIT_KERNEL_BITMAP_ASSIGN_6        = 73, // GB_bitmap_assign_6
+    GB_JIT_KERNEL_BITMAP_ASSIGN_6b_WHOLE = 74, // GB_bitmap_assign_6b_whole
+    GB_JIT_KERNEL_BITMAP_ASSIGN_7        = 75, // GB_bitmap_assign_7
+    GB_JIT_KERNEL_BITMAP_ASSIGN_7_WHOLE  = 76, // GB_bitmap_assign_7_whole
+    GB_JIT_KERNEL_BITMAP_ASSIGN_8        = 77, // GB_bitmap_assign_8
+    GB_JIT_KERNEL_BITMAP_ASSIGN_8_WHOLE  = 78, // GB_bitmap_assign_8_whole
 
-    // future:: bitmap assign/subassign:
-    GB_JIT_KERNEL_ASSIGN_BITMAP_M_ACC           = 63, // GB_bitmap_assign_M_accum
-    GB_JIT_KERNEL_ASSIGN_BITMAP_M_ACC_WHOLE     = 64, // GB_bitmap_assign_M_accum_whole
-    GB_JIT_KERNEL_ASSIGN_BITMAP_M_NOACC         = 65, // GB_bitmap_assign_M_noaccum
-    GB_JIT_KERNEL_ASSIGN_BITMAP_M_NOACC_WHOLE   = 66, // GB_bitmap_assign_M_noaccum_whole
-    GB_JIT_KERNEL_ASSIGN_BITMAP_FM_ACC          = 67, // GB_bitmap_assign_fullM_accum
-    GB_JIT_KERNEL_ASSIGN_BITMAP_FM_ACC_WHOLE    = 68, // GB_bitmap_assign_fullM_accum_whole
-    GB_JIT_KERNEL_ASSIGN_BITMAP_FM_NOACC        = 69, // GB_bitmap_assign_fullM_noaccum
-    GB_JIT_KERNEL_ASSIGN_BITMAP_FM_NOACC_WHOLE  = 70, // GB_bitmap_assign_fullM_noaccum_whole
-    GB_JIT_KERNEL_ASSIGN_BITMAP_NOM_ACC         = 71, // GB_bitmap_assign_noM_accum
-    GB_JIT_KERNEL_ASSIGN_BITMAP_NOM_ACC_WHOLE   = 72, // GB_bitmap_assign_noM_accum_whole
-    GB_JIT_KERNEL_ASSIGN_BITMAP_NOM_NOACC       = 73, // GB_bitmap_assign_noM_noaccum
-    GB_JIT_KERNEL_ASSIGN_BITMAP_NOM_NOACC_WHOLE = 74, // GB_bitmap_assign_noM_noaccum_whole
-    GB_JIT_KERNEL_ASSIGN_BITMAP_NM_ACC          = 75, // GB_bitmap_assign_notM_accum
-    GB_JIT_KERNEL_ASSIGN_BITMAP_NM_ACC_WHOLE    = 76, // GB_bitmap_assign_notM_accum_whole
-    GB_JIT_KERNEL_ASSIGN_BITMAP_NM_NOACC        = 77, // GB_bitmap_assign_notM_noaccum
-    GB_JIT_KERNEL_ASSIGN_BITMAP_NM_NOACC_WHOLE  = 78, // GB_bitmap_assign_notM_noaccum_whole
+    // masker methods:
+    GB_JIT_KERNEL_MASKER_PHASE1 = 79, // GB_masker_phase1
+    GB_JIT_KERNEL_MASKER_PHASE2 = 80, // GB_masker_phase2
 
-    // future:: subref methods:
-    GB_JIT_KERNEL_SUBREF        = 79, // GB_bitmap_subref
-    GB_JIT_KERNEL_SUBREF_PHASE3 = 80, // GB_subref_phase3
+    // subref methods:
+    GB_JIT_KERNEL_SUBREF_SPARSE = 81, // GB_subref_sparse
+    GB_JIT_KERNEL_BITMAP_SUBREF = 82, // GB_bitmap_subref
 
-    // future:: masker methods:
-    GB_JIT_KERNEL_MASKER_PHASE1 = 81, // GB_masker_phase1
-    GB_JIT_KERNEL_MASKER_PHASE2 = 82, // GB_masker_phase2
-
-    // future:: Kronecker:
-    GB_JIT_KERNEL_KRONER        = 83, // GB_kroner
-
-    // future:: utilities:
-    GB_JIT_KERNEL_CHECKISO      = 84, // GB_all_entries_are_iso
-    GB_JIT_KERNEL_CONVERTBITMAP = 85, // GB_convert_bitmap_worker
-    GB_JIT_KERNEL_EXPANDISO     = 86, // GB_expand_iso
+    // sort methods:
     GB_JIT_KERNEL_SORT          = 87, // GB_sort
 
     //--------------------------------------------------------------------------
@@ -195,7 +192,8 @@ typedef enum
     //... (up to 9 apply methods?)
 
     // select methods:
-    GB_JIT_CUDA_KERNEL_SELECT_BITMAP = 1035
+    GB_JIT_CUDA_KERNEL_SELECT_BITMAP = 1035,
+    GB_JIT_CUDA_KERNEL_SELECT_SPARSE = 1036
 
 }
 GB_jit_kcode ;
@@ -204,14 +202,12 @@ GB_jit_kcode ;
 // GB_jitifyer_entry: an entry in the jitifyer hash table
 //------------------------------------------------------------------------------
 
-// kcode can be reduced to uint8_t, and suffix_len to uint16_t.
-// To save space, prejit_index could then be reduced to uint32_t and saved
-// in the encoding struct.
-
 struct GB_jit_encoding_struct
 {
     uint64_t code ;         // from GB_enumify_*
-    uint32_t kcode ;        // which kernel (a GB_jit_kcode)
+    uint8_t major ;         // for CUDA kernels only; zero for CPU kernels
+    uint8_t minor ;         // for CUDA kernels only; zero for CPU kernels
+    uint16_t kcode ;        // which kernel (a GB_jit_kcode)
     uint32_t suffix_len ;   // length of the suffix (0 for builtin)
 } ;
 
@@ -233,6 +229,39 @@ struct GB_jit_entry_struct
 } ;
 
 typedef struct GB_jit_entry_struct GB_jit_entry ;
+
+//------------------------------------------------------------------------------
+// GB_encodify_kcode: encode the kcode, and major.minor for CUDA
+//------------------------------------------------------------------------------
+
+static inline void GB_encodify_kcode
+(
+    // output:
+    GB_jit_encoding *encoding,  // unique encoding of the entire problem
+    // input
+    const GB_jit_kcode kcode    // kernel to encode
+)
+{
+    encoding->kcode = (uint16_t) kcode ;
+    #if defined ( GRAPHBLAS_HAS_CUDA )
+    if (kcode >= GB_JIT_CUDA_KERNEL)
+    {
+        // CUDA kernel
+        int device = 0 ;
+        GB_cuda_get_device (&device) ;
+        int major = GB_Global_gpu_compute_capability_major_get (device) ;
+        int minor = GB_Global_gpu_compute_capability_minor_get (device) ;
+        encoding->major = (uint8_t) major ;
+        encoding->minor = (uint8_t) minor ;
+    }
+    else
+    #endif
+    {
+        // CPU kernel
+        encoding->major = 0 ;
+        encoding->minor = 0 ;
+    }
+}
 
 //------------------------------------------------------------------------------
 // GB_jitifyer methods for GraphBLAS
@@ -355,7 +384,14 @@ bool GB_jitifyer_query
 
 void GB_jitifyer_cmake_compile (char *kernel_name, uint64_t hash) ;
 void GB_jitifyer_direct_compile (char *kernel_name, uint32_t bucket) ;
-void GB_jitifyer_nvcc_compile (char *kernel_name, uint32_t bucket) ;
+
+void GB_jitifyer_nvcc_compile
+(
+    char *kernel_name,
+    uint32_t bucket,
+    uint8_t major,
+    uint8_t minor
+) ;
 
 GrB_Info GB_jitifyer_init (void) ;  // initialize the JIT
 
@@ -372,7 +408,7 @@ GrB_Info GB_jitifyer_alloc_space (void) ;
 GrB_Info GB_jitifyer_include (void) ;
 
 void GB_jitifyer_set_control (int control) ;
-GxB_JIT_Control GB_jitifyer_get_control (void) ;
+int GB_jitifyer_get_control (void) ;
 
 const char *GB_jitifyer_get_cache_path (void) ;
 GrB_Info GB_jitifyer_set_cache_path (const char *new_cache_path) ;
@@ -414,6 +450,10 @@ bool GB_jitifyer_get_use_cmake (void) ;
 void GB_jitifyer_set_use_cmake (bool use_cmake) ;
 
 void GB_jitifyer_sanitize (char *string, size_t len) ;
+
+GB_jit_query_func GB_jitifyer_get_query (void *p) ;
+GB_user_op_f GB_jitifyer_get_user_op (void *p) ;
+GB_user_type_f GB_jitifyer_get_user_type (void *p) ;
 
 #endif
 

@@ -2,7 +2,7 @@
 //////////////////////////  ParU_Factorize /////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-// ParU, Copyright (c) 2022-2024, Mohsen Aznaveh and Timothy A. Davis,
+// ParU, Copyright (c) 2022-2025, Mohsen Aznaveh and Timothy A. Davis,
 // All Rights Reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -72,10 +72,18 @@ static void paru_frontal_flops
     // # of entries in U for this front, including diagonal
     int64_t nzu = tril + k*n ;
 
-    (*fl) += f ;
-    (*lnz) += nzl ;
-    (*unz) += nzu ;
+    (*fl) = f ;
+    (*lnz) = nzl ;
+    (*unz) = nzu ;
 }
+
+#ifndef NPR
+#ifndef CBLAS_H
+#if defined ( BLAS_OpenBLAS )
+extern "C" { char *openblas_get_config (void) ; }
+#endif
+#endif
+#endif
 
 //------------------------------------------------------------------------------
 // ParU_Factorize: factorize a sparse matrix A
@@ -98,10 +106,14 @@ ParU_Info ParU_Factorize
         return (PARU_INVALID) ;
     }
 
+    #if defined ( BLAS_OpenBLAS )
+    PRLEVEL (-1, ("OpenBLAS config: %s\n", openblas_get_config ( ))) ;
+    #endif
+
     ParU_Info info ;
     PARU_DEFINE_PRLEVEL;
 #ifndef NTIME
-    double my_start_time = PARU_OPENMP_GET_WTIME;
+    double my_start_time = PARU_omp_get_wtime ( ) ;
 #endif
 
     // get Control
@@ -127,6 +139,7 @@ ParU_Info ParU_Factorize
         Work->diag_toler       = Control->diag_toler ;
         Work->prescale         = Control->prescale ;
     }
+    Work->nthreads_for_blas = BLAS_get_max_threads ( ) ;
 
     int32_t nthreads = Work->nthreads ;
     size_t mem_chunk = Work->mem_chunk ;
@@ -204,8 +217,8 @@ ParU_Info ParU_Factorize
     for (int64_t i = 0; i < (int64_t)task_Q.size(); i++)
     {
         int64_t t = task_Q[i];
-        PRLEVEL(PR, ("" LD "[" LD "-" LD "](" LD ") ", t, task_map[t] + 1, task_map[t + 1],
-                    task_depth[t]));
+        PRLEVEL(PR, ("" LD "[" LD "-" LD "](" LD ") ", t, task_map[t] + 1,
+            task_map[t + 1], task_depth[t]));
     }
     PRLEVEL(PR, ("\n"));
 #endif
@@ -214,23 +227,31 @@ ParU_Info ParU_Factorize
     // execute the task tree
     //--------------------------------------------------------------------------
 
-#if ! defined ( PARU_1TASK )
+    int omp_dynamic  = PARU_omp_get_dynamic ( ) ;
+    int blas_dynamic = BLAS_get_dynamic ( ) ;
+    int levels = PARU_omp_get_max_active_levels ( ) ;
+
     // The parallel factorization gets stuck intermittently on Windows or Mac
     // with gcc, so always use the sequential factorization in that case.
-    // This case is handled by cmake.
+    // This case is handled by cmake, which #define's PARU_1TASK.
+
+#if ! defined ( PARU_1TASK )
+
     if (task_Q.size() * 2 > ((long unsigned int) nthreads))
     {
+
+        //----------------------------------------------------------------------
+        // parallel task tree
+        //----------------------------------------------------------------------
+
         PRLEVEL(1, ("Parallel\n"));
         // checking user input
 
-#if ( defined ( BLAS_Intel10_64ilp ) || defined ( BLAS_Intel10_64lp ) )
-        PARU_OPENMP_SET_DYNAMIC(0);
-        mkl_set_dynamic((int)0);
-        // mkl_set_threading_layer(MKL_THREADING_INTEL);
-        // mkl_set_interface_layer(MKL_INTERFACE_ILP64);
-#endif
-        BLAS_set_num_threads(1);
-        PARU_OPENMP_SET_MAX_ACTIVE_LEVELS(4);
+        // revise the OpenMP and BLAS settings for the parallel task tree
+        PARU_omp_set_dynamic (0) ;
+        BLAS_set_dynamic (1) ;
+        PARU_omp_set_max_active_levels (4) ;
+
         const int64_t size = (int64_t)task_Q.size();
         const int64_t steps = size == 0 ? 1 : size;
         const int64_t stages = size / steps + 1;
@@ -255,7 +276,6 @@ ParU_Info ParU_Factorize
                 {
                     #pragma omp atomic update
                     Work->naft++;
-
                     ParU_Info myInfo =
                         paru_exec_tasks(t, task_num_child, chain_task, Work,
                             Sym, Num);
@@ -266,13 +286,13 @@ ParU_Info ParU_Factorize
                     }
                     #pragma omp atomic update
                     Work->naft--;
-
                     #pragma omp atomic update
                     Work->resq--;
                 }
             }
             start += steps;
         }
+
         // chain break
         if (chain_task != -1 && info == PARU_SUCCESS)
         {
@@ -295,12 +315,19 @@ ParU_Info ParU_Factorize
             }
             paru_free_work(Sym, Work);   // free the work DS
             ParU_FreeNumeric(Num_handle, Control);
-            return info;
         }
+
     }
     else
 #endif
     {
+
+        //----------------------------------------------------------------------
+        // handle frontal matrices one at a time
+        //----------------------------------------------------------------------
+
+        // Parallelism is exploited when factorizing each frontal matrix.
+
         PRLEVEL(1, ("Sequential\n"));
         Work->naft = 1;
         for (int64_t i = 0; i < nf; i++)
@@ -311,9 +338,22 @@ ParU_Info ParU_Factorize
                 PRLEVEL(1, ("%% A problem happend in " LD "\n", i));
                 paru_free_work(Sym, Work);   // free the work DS
                 ParU_FreeNumeric(Num_handle, Control);
-                return info;
+                break ;
             }
         }
+    }
+
+    //--------------------------------------------------------------------------
+    // restore the OpenMP and BLAS settings to their original values
+    //--------------------------------------------------------------------------
+
+    PARU_omp_set_dynamic (omp_dynamic) ;
+    BLAS_set_dynamic (blas_dynamic) ;
+    PARU_omp_set_max_active_levels (levels) ;
+
+    if (info != PARU_SUCCESS)
+    {
+        return (info) ;
     }
 
     //--------------------------------------------------------------------------
@@ -350,30 +390,34 @@ ParU_Info ParU_Factorize
     if (nf > 0)
     {
         ParU_Factors *LUs = Num->partial_LUs;
+        const int64_t *Super = Sym->Super;
         max_udiag = min_udiag = fabs(*(LUs[0].p));
         #ifdef PARU_COVERAGE
         #define M1 1000
         #else
         #define M1 65536
         #endif
-        if (Num->m < M1)
+
+        int nth = paru_nthreads_to_use ((double) Num->m, M1, nthreads) ;
+        if (nth == 1)
         {
             //Serial
             for (int64_t f = 0; f < nf; f++)
             {
                 int64_t rowCount = Num->frowCount[f];
                 int64_t colCount = Num->fcolCount[f];
-                const int64_t *Super = Sym->Super;
                 int64_t col1 = Super[f];
                 int64_t col2 = Super[f + 1];
                 int64_t fp = col2 - col1;
                 max_rc = std::max(max_rc, rowCount);
                 max_cc = std::max(max_cc, colCount + fp);
+                double fl ;
+                int64_t lnz, unz ;
+                paru_frontal_flops (fp, rowCount-fp, colCount, &fl, &lnz, &unz);
+                sfc += fl ;
+                nnzL += lnz ;
+                nnzU += unz ;
                 double *X = LUs[f].p;
-
-                paru_frontal_flops (fp, rowCount - fp, colCount,
-                    &sfc, &nnzL, &nnzU) ;
-
                 for (int64_t i = 0; i < fp; i++)
                 {
                     double udiag = fabs(X[rowCount * i + i]);
@@ -385,10 +429,15 @@ ParU_Info ParU_Factorize
         else
         {
             //Parallel
-            const int64_t *Super = Sym->Super;
-            #pragma omp parallel for reduction(max:max_rc)      \
-                reduction(max: max_cc) if (nf > 65536)          \
-                num_threads(nthreads)
+            #pragma omp parallel for num_threads(nth) \
+                reduction(max:max_rc)       \
+                reduction(max:max_cc)       \
+                reduction(min:min_udiag)    \
+                reduction(max:max_udiag)    \
+                reduction(+:sfc)            \
+                reduction(+:nnzL)           \
+                reduction(+:nnzU)           \
+                schedule (static, 1)
             for (int64_t f = 0; f < nf; f++)
             {
                 int64_t rowCount = Num->frowCount[f];
@@ -398,29 +447,23 @@ ParU_Info ParU_Factorize
                 int64_t fp = col2 - col1;
                 max_rc = std::max(max_rc, rowCount);
                 max_cc = std::max(max_cc, colCount + fp);
-            }
-
-            for (int64_t f = 0; f < nf; f++)
-            {
-                int64_t rowCount = Num->frowCount[f];
-                int64_t colCount = Num->fcolCount[f];
-                int64_t col1 = Super[f];
-                int64_t col2 = Super[f + 1];
-                int64_t fp = col2 - col1;
-
-                paru_frontal_flops (fp, rowCount - fp, colCount,
-                    &sfc, &nnzL, &nnzU) ;
-
+                double fl ;
+                int64_t lnz, unz ;
+                paru_frontal_flops (fp, rowCount-fp, colCount, &fl, &lnz, &unz);
+                sfc += fl ;
+                nnzL += lnz ;
+                nnzU += unz ;
                 double *X = LUs[f].p;
-                #pragma omp parallel for reduction(min:min_udiag)   \
-                    reduction(max: max_udiag)                       \
-                    num_threads(nthreads)
+                double my_min_udiag = 1 ;
+                double my_max_udiag = -1 ;
                 for (int64_t i = 0; i < fp; i++)
                 {
                     double udiag = fabs(X[rowCount * i + i]);
-                    min_udiag = std::min(min_udiag, udiag);
-                    max_udiag = std::max(max_udiag, udiag);
+                    my_min_udiag = std::min(my_min_udiag, udiag);
+                    my_max_udiag = std::max(my_max_udiag, udiag);
                 }
+                min_udiag = std::min(min_udiag, my_min_udiag);
+                max_udiag = std::max(max_udiag, my_max_udiag);
             }
         }
     }
@@ -437,7 +480,7 @@ ParU_Info ParU_Factorize
     Num->nnzU = nnzU;
     Num->sfc= sfc;
 #ifndef NTIME
-    double time = PARU_OPENMP_GET_WTIME;
+    double time = PARU_omp_get_wtime ( ) ;
     time -= my_start_time;
     PRLEVEL(1, ("factorization time took is %lf\n", time));
 #endif

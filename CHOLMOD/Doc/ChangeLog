@@ -1,3 +1,19 @@
+July 25, 2025: version 5.3.4
+
+    * minor updates to build system
+
+May 5, 2025: version 5.3.3
+
+    * cholmod_analyze: restore Common->try_catch after trying ordering methods.
+
+Apr 10, 2025: version 5.3.2
+
+    * build system: use CUDA as linker if applicable
+
+Feb 20, 2025: version 5.3.1
+
+    * minor changes: removing compiler warnings
+
 June 20, 2024: version 5.3.0
 
     * added cholmod_query: to deterimine at run time which modules

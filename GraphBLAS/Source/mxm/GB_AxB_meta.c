@@ -2,7 +2,7 @@
 // GB_AxB_meta: C<M>=A*B meta algorithm
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -58,7 +58,7 @@ GrB_Info GB_AxB_meta                // C<M>=A*B meta algorithm
     bool flipxy,                    // if true, do z=fmult(b,a) vs fmult(a,b)
     bool *mask_applied,             // if true, mask was applied
     bool *done_in_place,            // if true, C was computed in-place
-    GrB_Desc_Value AxB_method,      // for auto vs user selection of methods
+    int AxB_method,                 // for auto vs user selection of methods
     const int do_sort,              // if nonzero, try to return C unjumbled
     GB_Werk Werk
 )
@@ -88,8 +88,8 @@ GrB_Info GB_AxB_meta                // C<M>=A*B meta algorithm
 
     ASSERT_SEMIRING_OK (semiring_in, "semiring_in for numeric A*B", GB0) ;
     ASSERT (mask_applied != NULL) ;
-    ASSERT (C  != NULL && ( C->static_header || GBNSTATIC)) ;
-    ASSERT (MT != NULL && (MT->static_header || GBNSTATIC)) ;
+    ASSERT (C  != NULL && ( C->header_size == 0 || GBNSTATIC)) ;
+    ASSERT (MT != NULL && (MT->header_size == 0 || GBNSTATIC)) ;
 
     //--------------------------------------------------------------------------
     // declare workspace
@@ -107,17 +107,20 @@ GrB_Info GB_AxB_meta                // C<M>=A*B meta algorithm
     //--------------------------------------------------------------------------
 
     GB_Opcode opcode = semiring_in->multiply->opcode  ;
-    bool op_is_positional = GB_OPCODE_IS_POSITIONAL (opcode) ;
+    bool op_is_positional = GB_IS_BUILTIN_BINOP_CODE_POSITIONAL (opcode) ;
     bool op_is_first  = (opcode == GB_FIRST_binop_code) ;
     bool op_is_second = (opcode == GB_SECOND_binop_code) ;
     bool op_is_pair   = (opcode == GB_PAIR_binop_code) ;
     bool allow_scale = true ;
-    if (semiring_in->multiply->binop_function == NULL &&
-        (op_is_first || op_is_second))
+    if ((semiring_in->multiply->binop_function == NULL &&
+        (op_is_first || op_is_second)) || GB_IS_INDEXBINARYOP_CODE (opcode))
     { 
         // GB_rowscale and GB_colscale do not handle the implicit FIRST
-        // operator for GB_reduce_to_vector.  They do handle any other
-        // positional operator (FIRSTI, FIRSTJ, SECONDI, SECONDJ, etc).
+        // operator for GB_reduce_to_vector, where all function pointers are
+        // NULL.  They do handle builtin index binary operator (FIRSTI,
+        // FIRSTJ, SECONDI, SECONDJ, etc), by converting the operation into
+        // GB_apply_op with a built-in unary POSITION* op.  They do not handle
+        // any user-defined index binary operators.
         allow_scale = false ;
     }
 
@@ -225,14 +228,14 @@ GrB_Info GB_AxB_meta                // C<M>=A*B meta algorithm
     // CSR, treat it as A' in CSC, and if A' is in CSR, treat it as A in CSC.
     if (!A_in->is_csc)
     { 
-        // Flip the sense of A_transpose
+        // Negate A_transpose
         A_transpose = !A_transpose ;
     }
 
     // B is treated just like A
     if (!B_in->is_csc)
     { 
-        // Flip the sense of B_transpose
+        // Negate B_transpose
         B_transpose = !B_transpose ;
     }
 
@@ -581,7 +584,7 @@ GrB_Info GB_AxB_meta                // C<M>=A*B meta algorithm
             // This is currently unused, since C=A'*B' and C'=A'*B' are always
             // converted to C=(B*A)' and C=B*A, respectively.  It is left here
             // in case the swap_rule changes.
-            GB_CLEAR_STATIC_HEADER (BT, &BT_header) ;
+            GB_CLEAR_MATRIX_HEADER (BT, &BT_header) ;
             GB_OK (GB_transpose_cast (BT, btype_cast, true, B, B_is_pattern,
                 Werk)) ;
             B = BT ;
@@ -602,7 +605,7 @@ GrB_Info GB_AxB_meta                // C<M>=A*B meta algorithm
         if (axb_method == GB_USE_COLSCALE || axb_method == GB_USE_SAXPY)
         {
             // AT = A', or AT=one(A') if only the pattern is needed.
-            GB_CLEAR_STATIC_HEADER (AT, &AT_header) ;
+            GB_CLEAR_MATRIX_HEADER (AT, &AT_header) ;
             GB_OK (GB_transpose_cast (AT, atype_cast, true, A, A_is_pattern,
                 Werk)) ;
             // do not use colscale if AT is now bitmap
@@ -683,7 +686,7 @@ GrB_Info GB_AxB_meta                // C<M>=A*B meta algorithm
         if (axb_method != GB_USE_COLSCALE)
         {
             // BT = B', or BT=one(B') if only the pattern of B is needed
-            GB_CLEAR_STATIC_HEADER (BT, &BT_header) ;
+            GB_CLEAR_MATRIX_HEADER (BT, &BT_header) ;
             GB_OK (GB_transpose_cast (BT, btype_cast, true, B, B_is_pattern,
                 Werk)) ;
             // do not use rowscale if BT is now bitmap
@@ -715,7 +718,7 @@ GrB_Info GB_AxB_meta                // C<M>=A*B meta algorithm
                 // C<M>=A*B' via dot product, or C_in<M>+=A*B' if in-place
                 GBURBLE ("C%s=A*B', dot_product (transposed %s) "
                     "(transposed %s) ", M_str, A_str, B_str) ;
-                GB_CLEAR_STATIC_HEADER (AT, &AT_header) ;
+                GB_CLEAR_MATRIX_HEADER (AT, &AT_header) ;
                 GB_OK (GB_transpose_cast (AT, atype_cast, true, A, A_is_pattern,
                     Werk)) ;
                 GB_OK (GB_AxB_dot (C, can_do_in_place ? C_in : NULL, M,
@@ -819,7 +822,7 @@ GrB_Info GB_AxB_meta                // C<M>=A*B meta algorithm
                 // C<M>=A*B via dot product, or C_in<M>+=A*B if in-place.
                 GBURBLE ("C%s=A*B', dot_product (transposed %s) ",
                     M_str, A_str) ;
-                GB_CLEAR_STATIC_HEADER (AT, &AT_header) ;
+                GB_CLEAR_MATRIX_HEADER (AT, &AT_header) ;
                 GB_OK (GB_transpose_cast (AT, atype_cast, true, A, A_is_pattern,
                     Werk)) ;
                 GB_OK (GB_AxB_dot (C, can_do_in_place ? C_in : NULL, M,

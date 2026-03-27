@@ -2,15 +2,21 @@
 // GB_ew: ewise kernels for each built-in binary operator
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
-#include "GB.h"
 #include "GB_control.h"
-#include "ewise/GB_emult.h"
-#include "slice/GB_ek_slice.h"
+#if defined (GxB_NO_INT32)
+#define GB_TYPE_ENABLED 0
+#else
+#define GB_TYPE_ENABLED 1
+#endif
+
+#if GB_TYPE_ENABLED
+#include "GB.h"
+#include "emult/GB_emult.h"
 #include "assign/GB_bitmap_assign_methods.h"
 #include "FactoryKernels/GB_ew__include.h"
 
@@ -34,6 +40,8 @@
 
 // C matrix:
 #define GB_C_TYPE int32_t
+
+#define GB_Cp_IS_32 Cp_is_32
 
 // disable this operator and use the generic case if these conditions hold
 #if (defined(GxB_NO_LXOR) || defined(GxB_NO_INT32) || defined(GxB_NO_LXOR_INT32))
@@ -140,7 +148,7 @@ GrB_Info GB (_AaddB__lxor_int32)
     // for the "easy mask" condition:
     bool M_is_A = GB_all_aliased (M, A) ;
     bool M_is_B = GB_all_aliased (M, B) ;
-    #include "ewise/template/GB_add_template.c"
+    #include "add/template/GB_add_template.c"
     return (GrB_SUCCESS) ;
     #endif
 }
@@ -187,7 +195,7 @@ GrB_Info GB (_AunionB__lxor_int32)
     // for the "easy mask" condition:
     bool M_is_A = GB_all_aliased (M, A) ;
     bool M_is_B = GB_all_aliased (M, B) ;
-    #include "ewise/template/GB_add_template.c"
+    #include "add/template/GB_add_template.c"
     return (GrB_SUCCESS) ;
     #endif
 }
@@ -215,7 +223,7 @@ GrB_Info GB (_AemultB_08__lxor_int32)
     #if GB_DISABLE
     return (GrB_NO_VALUE) ;
     #else
-    #include "ewise/template/GB_emult_08_meta.c"
+    #include "emult/template/GB_emult_08_template.c"
     return (GrB_SUCCESS) ;
     #endif
 }
@@ -232,7 +240,7 @@ GrB_Info GB (_AemultB_02__lxor_int32)
     const bool Mask_comp,
     const GrB_Matrix A,
     const GrB_Matrix B,
-    const int64_t *restrict Cp_kfirst,
+    const uint64_t *restrict Cp_kfirst,
     const int64_t *A_ek_slicing,
     const int A_ntasks,
     const int A_nthreads
@@ -241,7 +249,7 @@ GrB_Info GB (_AemultB_02__lxor_int32)
     #if GB_DISABLE
     return (GrB_NO_VALUE) ;
     #else
-    #include "ewise/template/GB_emult_02_template.c"
+    #include "emult/template/GB_emult_02_template.c"
     return (GrB_SUCCESS) ;
     #endif
 }
@@ -257,7 +265,7 @@ GrB_Info GB (_AemultB_04__lxor_int32)
     const bool Mask_struct,
     const GrB_Matrix A,
     const GrB_Matrix B,
-    const int64_t *restrict Cp_kfirst,
+    const uint64_t *restrict Cp_kfirst,
     const int64_t *M_ek_slicing,
     const int M_ntasks,
     const int M_nthreads
@@ -266,7 +274,7 @@ GrB_Info GB (_AemultB_04__lxor_int32)
     #if GB_DISABLE
     return (GrB_NO_VALUE) ;
     #else
-    #include "ewise/template/GB_emult_04_template.c"
+    #include "emult/template/GB_emult_04_template.c"
     return (GrB_SUCCESS) ;
     #endif
 }
@@ -292,7 +300,7 @@ GrB_Info GB (_AemultB_bitmap__lxor_int32)
     #if GB_DISABLE
     return (GrB_NO_VALUE) ;
     #else
-    #include "ewise/template/GB_emult_bitmap_template.c"
+    #include "emult/template/GB_emult_bitmap_template.c"
     return (GrB_SUCCESS) ;
     #endif
 }
@@ -347,11 +355,11 @@ GrB_Info GB (_bind2nd__lxor_int32)
 
 // cij = op (x, aij)
 #undef  GB_APPLY_OP
-#define GB_APPLY_OP(pC,pA)                      \
-{                                               \
-    GB_DECLAREB (aij) ;                         \
-    GB_GETB (aij, Ax, pA, false) ;              \
-    GB_EWISEOP (Cx, pC, x, aij, 0, 0) ;         \
+#define GB_APPLY_OP(pC,pA)              \
+{                                       \
+    GB_DECLAREB (aij) ;                 \
+    GB_GETB (aij, Ax, pA, false) ;      \
+    GB_EWISEOP (Cx, pC, x, aij, 0, 0) ; \
 }
 
 GrB_Info GB (_bind1st_tran__lxor_int32)
@@ -359,7 +367,7 @@ GrB_Info GB (_bind1st_tran__lxor_int32)
     GrB_Matrix C,
     const GB_void *x_input,
     const GrB_Matrix A,
-    int64_t *restrict *Workspaces,
+    void **Workspaces,
     const int64_t *restrict A_slice,
     int nworkspaces,
     int nthreads
@@ -370,6 +378,7 @@ GrB_Info GB (_bind1st_tran__lxor_int32)
     return (GrB_NO_VALUE) ;
     #else
     GB_X_TYPE x = (*((const GB_X_TYPE *) x_input)) ;
+    bool Cp_is_32 = C->p_is_32 ;
     #include "transpose/template/GB_transpose_template.c"
     return (GrB_SUCCESS) ;
     #endif
@@ -382,11 +391,11 @@ GrB_Info GB (_bind1st_tran__lxor_int32)
 
 // cij = op (aij, y)
 #undef  GB_APPLY_OP
-#define GB_APPLY_OP(pC,pA)                      \
-{                                               \
-    GB_DECLAREA (aij) ;                         \
-    GB_GETA (aij, Ax, pA, false) ;              \
-    GB_EWISEOP (Cx, pC, aij, y, 0, 0) ;         \
+#define GB_APPLY_OP(pC,pA)              \
+{                                       \
+    GB_DECLAREA (aij) ;                 \
+    GB_GETA (aij, Ax, pA, false) ;      \
+    GB_EWISEOP (Cx, pC, aij, y, 0, 0) ; \
 }
 
 GrB_Info GB (_bind2nd_tran__lxor_int32)
@@ -394,7 +403,7 @@ GrB_Info GB (_bind2nd_tran__lxor_int32)
     GrB_Matrix C,
     const GrB_Matrix A,
     const GB_void *y_input,
-    int64_t *restrict *Workspaces,
+    void **Workspaces,
     const int64_t *restrict A_slice,
     int nworkspaces,
     int nthreads
@@ -404,8 +413,13 @@ GrB_Info GB (_bind2nd_tran__lxor_int32)
     return (GrB_NO_VALUE) ;
     #else
     GB_Y_TYPE y = (*((const GB_Y_TYPE *) y_input)) ;
+    bool Cp_is_32 = C->p_is_32 ;
     #include "transpose/template/GB_transpose_template.c"
     return (GrB_SUCCESS) ;
     #endif
 }
+
+#else
+GB_EMPTY_PLACEHOLDER
+#endif
 

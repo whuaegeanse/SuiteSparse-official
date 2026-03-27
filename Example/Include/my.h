@@ -2,7 +2,7 @@
 // SuiteSparse/Example/[Config or Include]/my.h
 //------------------------------------------------------------------------------
 
-// Copyright (c) 2022-2023, Timothy A. Davis, All Rights Reserved.
+// Copyright (c) 2022-2025, Timothy A. Davis, All Rights Reserved.
 // SPDX-License-Identifier: BSD-3-clause
 
 //------------------------------------------------------------------------------
@@ -11,10 +11,10 @@
 // file, since it is constructed from Config/my.h.in by cmake.
 
 // version and date for example user library
-#define MY_DATE "Oct 10, 2024"
+#define MY_DATE "Nov 1, 2025"
 #define MY_MAJOR_VERSION 1
 #define MY_MINOR_VERSION 8
-#define MY_PATCH_VERSION 3
+#define MY_PATCH_VERSION 10
 
 #ifdef __cplusplus
 extern "C" {

@@ -2,19 +2,17 @@
 // GB_convert_s2b: convert from sparse/hypersparse to bitmap
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
-// JIT: done.
-
 // The matrix A is converted from sparse/hypersparse to bitmap.
+
 // FUTURE: A could also be typecasted and/or a unary operator applied,
 // via the JIT kernel.
 
 #include "apply/GB_apply.h"
-#include "slice/GB_ek_slice.h"
 #include "jitifyer/GB_stringify.h"
 
 #define GB_FREE_WORKSPACE                   \
@@ -25,8 +23,8 @@
 #define GB_FREE_ALL                         \
 {                                           \
     GB_FREE_WORKSPACE ;                     \
-    GB_FREE (&Ax_new, Ax_size) ;            \
-    GB_FREE (&Ab, Ab_size) ;                \
+    GB_FREE_MEMORY (&Cx_new, Cx_size) ;            \
+    GB_FREE_MEMORY (&Cb, Cb_size) ;                \
 }
 
 GrB_Info GB_convert_s2b    // convert sparse/hypersparse to bitmap
@@ -42,8 +40,8 @@ GrB_Info GB_convert_s2b    // convert sparse/hypersparse to bitmap
 
     GrB_Info info ;
     GB_WERK_DECLARE (A_ek_slicing, int64_t) ;
-    int8_t  *restrict Ab      = NULL ; size_t Ab_size = 0 ;
-    GB_void *restrict Ax_new  = NULL ; size_t Ax_size = 0 ;
+    int8_t  *restrict Cb      = NULL ; size_t Cb_size = 0 ;
+    GB_void *restrict Cx_new  = NULL ; size_t Cx_size = 0 ;
     GB_void *restrict Ax_keep = NULL ;
 
     ASSERT_MATRIX_OK (A, "A converting sparse/hypersparse to bitmap", GB0) ;
@@ -71,7 +69,7 @@ GrB_Info GB_convert_s2b    // convert sparse/hypersparse to bitmap
     bool in_place = A_as_if_full || A_iso ;
 
     //--------------------------------------------------------------------------
-    // allocate A->b
+    // allocate Cb
     //--------------------------------------------------------------------------
 
     const int64_t anz = GB_nnz (A) ;
@@ -79,14 +77,14 @@ GrB_Info GB_convert_s2b    // convert sparse/hypersparse to bitmap
     const int64_t avdim = A->vdim ;
     const int64_t avlen = A->vlen ;
     int64_t anzmax ;
-    if (!GB_int64_multiply ((GrB_Index *) (&anzmax), avdim, avlen))
+    if (!GB_int64_multiply ((uint64_t *) (&anzmax), avdim, avlen))
     { 
         // problem too large
         return (GrB_OUT_OF_MEMORY) ;
     }
     anzmax = GB_IMAX (anzmax, 1) ;
-    Ab = GB_MALLOC (anzmax, int8_t, &Ab_size) ;
-    if (Ab == NULL)
+    Cb = GB_MALLOC_MEMORY (anzmax, sizeof (int8_t), &Cb_size) ;
+    if (Cb == NULL)
     { 
         // out of memory
         return (GrB_OUT_OF_MEMORY) ;
@@ -103,22 +101,22 @@ GrB_Info GB_convert_s2b    // convert sparse/hypersparse to bitmap
     { 
         // keep the existing A->x
         Ax_keep = (GB_void *) A->x ;
-        Ax_shallow = A->x_shallow ; Ax_size = A->x_size ;
+        Ax_shallow = A->x_shallow ; Cx_size = A->x_size ;
     }
     else
     {
         // A->x must be modified to fit the bitmap structure.  A->x is calloc'd
         // since otherwise it would contain uninitialized values where A->b is
         // false and entries are not present.
-        Ax_new = GB_CALLOC (anzmax * asize, GB_void, &Ax_size) ; // x:OK:calloc
+        Cx_new = GB_CALLOC_MEMORY (anzmax, asize, &Cx_size) ;
         Ax_shallow = false ;
-        if (Ax_new == NULL)
+        if (Cx_new == NULL)
         { 
             // out of memory
             GB_FREE_ALL ;
             return (GrB_OUT_OF_MEMORY) ;
         }
-        Ax_keep = Ax_new ;
+        Ax_keep = Cx_new ;
     }
 
     //--------------------------------------------------------------------------
@@ -134,8 +132,8 @@ GrB_Info GB_convert_s2b    // convert sparse/hypersparse to bitmap
         //----------------------------------------------------------------------
 
         ASSERT (nzombies == 0) ;
-        // set all of Ab [0..anz-1] to 1, in parallel
-        GB_memset (Ab, 1, anz, nthreads_max) ;
+        // set all of Cb [0..anz-1] to 1, in parallel
+        GB_memset (Cb, 1, anz, nthreads_max) ;
         info = GrB_SUCCESS ;
 
     }
@@ -143,10 +141,10 @@ GrB_Info GB_convert_s2b    // convert sparse/hypersparse to bitmap
     {
 
         //----------------------------------------------------------------------
-        // set all of Ab to zero
+        // set all of Cb to zero
         //----------------------------------------------------------------------
 
-        GB_memset (Ab, 0, anzmax, nthreads_max) ;
+        GB_memset (Cb, 0, anzmax, nthreads_max) ;
 
         //----------------------------------------------------------------------
         // scatter the values and pattern of A into the bitmap
@@ -159,14 +157,23 @@ GrB_Info GB_convert_s2b    // convert sparse/hypersparse to bitmap
 
         if (A_iso)
         { 
+
+            //------------------------------------------------------------------
+            // via the iso kernel
+            //------------------------------------------------------------------
+
             // A is iso; numerical entries are not modified
             #undef  GB_COPY
-            #define GB_COPY(Axnew,pnew,Ax,p) ;
+            #define GB_COPY(Cx,pC,Ax,pA) ;
             #include "convert/template/GB_convert_s2b_template.c"
             info = GrB_SUCCESS ;
         }
         else
         {
+
+            //------------------------------------------------------------------
+            // via the built-in kernel
+            //------------------------------------------------------------------
 
             #ifndef GBCOMPACT
             GB_IF_FACTORY_KERNELS_ENABLED
@@ -174,8 +181,7 @@ GrB_Info GB_convert_s2b    // convert sparse/hypersparse to bitmap
                 switch (asize)
                 {
                     #undef  GB_COPY
-                    #define GB_COPY(Axnew,pnew,Ax,p)         \
-                        Axnew [pnew] = Ax [p] ;
+                    #define GB_COPY(Cx,pC,Ax,pA) Cx [pC] = Ax [pA] ;
 
                     case GB_1BYTE : // uint8, int8, bool, or 1-byte user
                         #define GB_A_TYPE uint8_t
@@ -222,7 +228,7 @@ GrB_Info GB_convert_s2b    // convert sparse/hypersparse to bitmap
                 struct GB_UnaryOp_opaque op_header ;
                 GB_Operator op = GB_unop_identity (A->type, &op_header) ;
                 ASSERT_OP_OK (op, "identity op for convert s2b", GB0) ;
-                info = GB_convert_s2b_jit (Ax_new, Ab, op,
+                info = GB_convert_s2b_jit (Cx_new, Cb, op,
                     A, A_ek_slicing, A_ntasks, A_nthreads) ;
             }
 
@@ -233,10 +239,11 @@ GrB_Info GB_convert_s2b    // convert sparse/hypersparse to bitmap
             if (info == GrB_NO_VALUE)
             { 
                 // with user-defined types of other sizes
+                GBURBLE ("(generic convert) ") ;
                 #define GB_A_TYPE GB_void
                 #undef  GB_COPY
-                #define GB_COPY(Axnew,pnew,Ax,p)                         \
-                    memcpy (Axnew +(pnew)*asize, Ax +(p)*asize, asize)
+                #define GB_COPY(Cx,pC,Ax,pA) \
+                    memcpy (Cx +(pC)*asize, Ax +(pA)*asize, asize)
                 #include "convert/template/GB_convert_s2b_template.c"
                 info = GrB_SUCCESS ;
             }
@@ -262,19 +269,24 @@ GrB_Info GB_convert_s2b    // convert sparse/hypersparse to bitmap
     }
 
     GB_phybix_free (A) ;
-    A->iso = A_iso ;        // OK: convert_s2b, keep iso
+    A->iso = A_iso ;
 
-    A->b = Ab ; A->b_size = Ab_size ; A->b_shallow = false ;
-    Ab = NULL ;
+    A->b = Cb ; A->b_size = Cb_size ; A->b_shallow = false ;
+    Cb = NULL ;
 
-    A->x = Ax_keep ; A->x_size = Ax_size ; A->x_shallow = Ax_shallow ;
+    A->x = Ax_keep ; A->x_size = Cx_size ; A->x_shallow = Ax_shallow ;
 
     A->nvals = anz - nzombies ;
     ASSERT (A->nzombies == 0) ;
 
     A->plen = -1 ;
     A->nvec = avdim ;
-    A->nvec_nonempty = (avlen == 0) ? 0 : avdim ;
+//  A->nvec_nonempty = (avlen == 0) ? 0 : avdim ;
+    GB_nvec_nonempty_set (A, (avlen == 0) ? 0 : avdim) ;
+
+    A->p_is_32 = false ;    // OK: bitmap always has p_is_32 = false
+    A->j_is_32 = false ;    // OK: bitmap always has j_is_32 = false
+    A->i_is_32 = false ;    // OK: bitmap always has i_is_32 = false
 
     A->magic = GB_MAGIC ;
 

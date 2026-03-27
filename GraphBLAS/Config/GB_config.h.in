@@ -2,7 +2,7 @@
 // GraphBLAS/Config/GB_config.h: JIT configuration for GraphBLAS
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -78,11 +78,6 @@
 // GB_CUDA_INC: -I includes for CUDA JIT kernels:
 #ifndef GB_CUDA_INC
 #define GB_CUDA_INC "@GB_CUDA_INC@"
-#endif
-
-// GB_CUDA_ARCHITECTURES: the CUDA ARCHITECTURES for CUDA JIT kernels:
-#ifndef GB_CUDA_ARCHITECTURES
-#define GB_CUDA_ARCHITECTURES "@GB_CUDA_ARCHITECTURES@"
 #endif
 
 #endif

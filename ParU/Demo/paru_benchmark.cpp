@@ -2,7 +2,7 @@
 // =======================  paru_benchmark.cpp ==============================  /
 // ==========================================================================  /
 
-// ParU, Copyright (c) 2022-2024, Mohsen Aznaveh and Timothy A. Davis,
+// ParU, Copyright (c) 2022-2025, Mohsen Aznaveh and Timothy A. Davis,
 // All Rights Reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -16,7 +16,6 @@
 #include <iomanip>
 #include <ios>
 #include <cmath>
-
 #include "ParU.h"
 #include <stdlib.h>
 #ifdef _OPENMP
@@ -51,6 +50,22 @@ static int compar (const void *p1, const void *p2)
     return (x1 < x2 ? -1 : ((x1 > x2) ? 1 : 0)) ;
 }
 
+static int next_threads (int current_threads)
+{
+    if (current_threads == 32)
+    {
+        return (24) ;
+    }
+    else if (current_threads == 24)
+    {
+        return (16) ;
+    }
+    else
+    {
+        return (current_threads/2) ;
+    }
+}
+
 int main(int argc, char **argv)
 {
     cholmod_common Common, *cc;
@@ -63,16 +78,26 @@ int main(int argc, char **argv)
     void *Symbolic = NULL, *Numeric = NULL ;
     FILE *fp = stdin ;
 
-    //~~~~~~~~~Reading the input matrix and test if the format is OK~~~~~~~~~~~~
+    //--------------------------------------------------------------------------
+    // read the input matrix
+    //--------------------------------------------------------------------------
+
     // start CHOLMOD
     cc = &Common;
     int mtype;
     cholmod_l_start(cc);
 
+    char *filename = NULL ;
     if (argc > 1)
     {
+        filename = argv [1] ;
         std::cout << "Matrix: " << argv [1] << std::endl ;
         fp = fopen (argv [1], "r") ;
+        // look for the last slash in filename:
+        for (char *p = filename ; *p != '\0' ; p++)
+        {
+            if (*p == '/') filename = p+1 ;
+        }
     }
     else
     {
@@ -99,7 +124,10 @@ int main(int argc, char **argv)
         FREE_ALL_AND_RETURN (PARU_INVALID) ;
     }
 
-    //~~~~~~~~~~~~~~~~~~~Starting computation~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    //--------------------------------------------------------------------------
+    // initializations
+    //--------------------------------------------------------------------------
+
     int ver[3];
     char date[128];
     ParU_Version(ver, date);
@@ -138,13 +166,16 @@ int main(int argc, char **argv)
     std::cout << "OpenMP in ParU: " << (using_openmp ? "yes" : "no" )
         << std::endl ;
 
-    int64_t max_nthreads ;
+    int64_t max_nthreads, max_levels ;
     #ifdef _OPENMP
     max_nthreads = omp_get_max_threads ( ) ;
+    max_levels   = omp_get_max_active_levels ( ) ;
     #else
     max_ntreads = 1 ;
+    max_levels  = 1 ;
     #endif
     std::cout << "max # threads: " << max_nthreads << std::endl ;
+    std::cout << "max # levels:  " << max_levels   << std::endl ;
 
     // allocate workspace
     int64_t n, anz ;
@@ -157,182 +188,26 @@ int main(int argc, char **argv)
     x = (double *)malloc(n * sizeof(double));
     double rcond ;
 
-    #define NTRIALS 5
+    #define NTRIALS 3
     int middle = NTRIALS / 2 ;
 
-    for (int ord = 0 ; ord <= 1 ; ord++)
+    //--------------------------------------------------------------------------
+    // to print one line with all timings, in ParU and UMFPACK
+    //--------------------------------------------------------------------------
+
+    double sym_time, num_times [20], sol_times [20] ;
+    for (int kk = 0 ; kk < 19 ; kk++)
     {
-        int ordering = (ord == 0) ? PARU_ORDERING_AMD :
-            PARU_ORDERING_METIS_GUARD ;
-        printf ("===== ParU ordering: %d\n", ordering) ;
-        ParU_Set (PARU_CONTROL_ORDERING, ordering, Control) ;
-        for (int nthreads = max_nthreads ; nthreads > 0 ; nthreads = nthreads/2)
-        {
-            printf ("# threads: %d\n", nthreads) ;
-            ParU_Set (PARU_CONTROL_MAX_THREADS, (int64_t) nthreads, Control) ;
-            int64_t nthreads2 = 0 ;
-            ParU_Get (PARU_CONTROL_NUM_THREADS, &nthreads2, Control) ;
-            if (nthreads != (int32_t) nthreads2)
-            {
-                std::cout << "ParU: invalid # of threads!" << std::endl;
-                FREE_ALL_AND_RETURN (PARU_INVALID) ;
-            }
-
-            double ParU_sym_times [NTRIALS] ;
-            double ParU_num_times [NTRIALS] ;
-            double ParU_sol_times [NTRIALS] ;
-            for (int trial = 0 ; trial < NTRIALS  ; trial++)
-            {
-                printf ("Trial: %d\n", trial) ;
-
-                double my_start_time = SUITESPARSE_TIME ;
-                info = ParU_Analyze(A, &Sym, Control);
-                double my_time_analyze = SUITESPARSE_TIME - my_start_time;
-                if (info != PARU_SUCCESS)
-                {
-                    std::cout << "ParU: analyze failed" << std::endl;
-                    FREE_ALL_AND_RETURN (info) ;
-                }
-
-                info = ParU_Get (Sym, Num, PARU_GET_N, &n, Control) ;
-                if (info != PARU_SUCCESS)
-                {
-                    std::cout << "ParU: stats failed" << std::endl;
-                    FREE_ALL_AND_RETURN (info) ;
-                }
-
-                info = ParU_Get (Sym, Num, PARU_GET_ANZ, &anz, Control) ;
-                if (info != PARU_SUCCESS)
-                {
-                    std::cout << "ParU: stats failed" << std::endl;
-                    FREE_ALL_AND_RETURN (info) ;
-                }
-
-                if (trial == 0)
-                {
-                    std::cout << "n: " << n << " anz: " << anz << std::endl ;
-                }
-
-                double my_start_time_fac = SUITESPARSE_TIME;
-                info = ParU_Factorize(A, Sym, &Num, Control);
-                double my_time_fac = SUITESPARSE_TIME - my_start_time_fac;
-                if (info != PARU_SUCCESS)
-                {
-                    std::cout << std::scientific << std::setprecision(6)
-                        << "ParU: factorization was NOT successful: "
-                        << my_time_fac << " seconds\n";
-                    if (info == PARU_OUT_OF_MEMORY)
-                        std::cout << "Out of memory\n";
-                    if (info == PARU_INVALID)
-                        std::cout << "Invalid!\n";
-                    if (info == PARU_SINGULAR)
-                        std::cout << "Singular!\n";
-                    FREE_ALL_AND_RETURN (info) ;
-                }
-
-                info = ParU_Get (Sym, Num, PARU_GET_RCOND_ESTIMATE, &rcond,
-                    Control) ;
-                if (info != PARU_SUCCESS)
-                {
-                    std::cout << "ParU: stats failed" << std::endl;
-                    FREE_ALL_AND_RETURN (info) ;
-                }
-
-                //~~~~~~~~~~Test the results ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-                double my_time, my_solve_time;
-
-                for (int64_t i = 0; i < n; ++i) b[i] = i + 1;
-                double my_solve_time_start = SUITESPARSE_TIME;
-                info = ParU_Solve(Sym, Num, b, xx, Control);
-                if (info != PARU_SUCCESS)
-                {
-                    std::cout << "ParU: solve failed" << std::endl;
-                    FREE_ALL_AND_RETURN (info) ;
-                }
-                my_solve_time = SUITESPARSE_TIME - my_solve_time_start;
-                my_time = SUITESPARSE_TIME - my_start_time;
-
-                double resid, anorm, xnorm;
-                info = ParU_Residual(A, xx, b, resid, anorm, xnorm, Control);
-                if (info != PARU_SUCCESS)
-                {
-                    std::cout << "ParU: resid failed" << std::endl;
-                    FREE_ALL_AND_RETURN (info) ;
-                }
-                double rresid = (anorm == 0 || xnorm == 0 ) ? 0 :
-                    (resid/(anorm*xnorm));
-
-                for (int64_t i = 0; i < n; ++i)
-                {
-                    for (int64_t j = 0; j < nrhs; ++j)
-                    {
-                        B[j * n + i] = (double)(i + j + 1);
-                    }
-                }
-
-                my_solve_time_start = SUITESPARSE_TIME;
-                info = ParU_Solve(Sym, Num, nrhs, B, X, Control);
-                if (info != PARU_SUCCESS)
-                {
-                    std::cout << "ParU: solve failed" << std::endl;
-                    FREE_ALL_AND_RETURN (info) ;
-                }
-                double my_solve_time2 = SUITESPARSE_TIME - my_solve_time_start;
-
-                info = ParU_Residual(A, X, B, nrhs, resid, anorm, xnorm,
-                    Control);
-                if (info != PARU_SUCCESS)
-                {
-                    std::cout << "ParU: solve failed" << std::endl;
-                    FREE_ALL_AND_RETURN (info) ;
-                }
-                double rresid2 = (anorm == 0 || xnorm == 0 ) ? 0 :
-                    (resid/(anorm*xnorm));
-
-                if (trial == 0)
-                {
-                    std::cout << std::scientific << std::setprecision(6)
-                        << "Relative residual: " << rresid << " rcond: "
-                        << rcond << std::endl;
-                    std::cout << std::scientific << std::setprecision(6)
-                        << "Multiple right hand side: relative residual is |"
-                        << rresid2 << "|." << std::endl;
-                }
-
-                std::cout << std::scientific << std::setprecision(6)
-                    << "ParU: time: sym: " << my_time_analyze
-                    << " num: " << my_time_fac
-                    << " solve (1 rhs): " << my_solve_time
-                    << " solve (16 rhs): " << my_solve_time2 << std::endl ;
-
-                ParU_sym_times [trial] = my_time_analyze ;
-                ParU_num_times [trial] = my_time_fac ;
-                ParU_sol_times [trial] = my_solve_time ;
-
-                ParU_FreeNumeric(&Num, Control);
-                ParU_FreeSymbolic(&Sym, Control);
-            }
-
-            qsort (ParU_sym_times, NTRIALS, sizeof (double), compar) ;
-            qsort (ParU_num_times, NTRIALS, sizeof (double), compar) ;
-            qsort (ParU_sol_times, NTRIALS, sizeof (double), compar) ;
-
-            std::cout << std::scientific << std::setprecision(6)
-                << "\nParU ordering " << ordering
-                << " threads " << nthreads
-                << " median sym: " << ParU_sym_times [middle]
-                << " num: " << ParU_num_times [middle]
-                << " sol: " << ParU_sol_times [middle]
-                << " total: " << ParU_sym_times [middle] +
-                ParU_num_times [middle] + ParU_sol_times [middle]
-                << std::endl << std::endl ;
-        }
+        num_times [kk] = -1 ;
+        sol_times [kk] = -1 ;
     }
 
-    //~~~~~~~~~~~~~~~~~~~End computation~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    //--------------------------------------------------------------------------
+    // benchmark UMFPACK
+    //--------------------------------------------------------------------------
 
-    //~~~~~~~~~~~~~~~~~~~Calling umfpack~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#if 1
+
     double umf_time = 0;
     double status,           // Info [UMFPACK_STATUS]
         Info[UMFPACK_INFO],  // Contains statistics about the symbolic analysis
@@ -350,7 +225,9 @@ int main(int argc, char **argv)
         int ordering = (ord == 0) ?  UMFPACK_ORDERING_AMD :
             UMFPACK_ORDERING_METIS_GUARD ;
         printf ("\n===== UMFPACK ordering: %d\n", ordering) ;
-        for (int nthreads = max_nthreads ; nthreads > 0 ; nthreads = nthreads/2)
+        int kthread = 0 ;
+        sym_time = -1 ;
+        for (int nthreads = max_nthreads ; nthreads > 0 ; nthreads = next_threads (nthreads))
         {
             printf ("# threads: %d\n", nthreads) ;
             #ifdef _OPENMP
@@ -435,10 +312,255 @@ int main(int argc, char **argv)
                 << " total: " << UMF_sym_times [middle] +
                 UMF_num_times [middle] + UMF_sol_times [middle]
                 << std::endl << std::endl ;
+
+            if (nthreads == max_nthreads) sym_time = UMF_sym_times [middle] ;
+            num_times [kthread] = UMF_num_times [middle] ;
+            sol_times [kthread] = UMF_sol_times [middle] ;
+            kthread++ ;
         }
+
+        printf ("UMFPACK strategy used: %d\n", (int) Info [UMFPACK_STRATEGY_USED]) ;
+        printf ("UMFPACK ordering used: %d\n", (int) Info [UMFPACK_ORDERING_USED]) ;
+        printf ("TABLE,  UMF, %s, %d, %d, %d, sym_time:, %12.6e, num_times:, ",
+            (filename == NULL) ? " " : filename,
+            (int) Info [UMFPACK_STRATEGY_USED], (int) Info [UMFPACK_STRATEGY_USED],
+            (int) Info [UMFPACK_ORDERING_USED], sym_time) ;
+        for (int kk = 0 ; kk < 19 ; kk++)
+        {
+            if (num_times [kk] < 0) break ;
+            printf (" %12.6e, ", num_times [kk]) ;
+        }
+        printf (" sol_times:, ") ;
+        for (int kk = 0 ; kk < 19 ; kk++)
+        {
+            if (sol_times [kk] < 0) break ;
+            printf (" %12.6e, ", sol_times [kk]) ;
+        }
+        printf ("\n") ;
+
     }
 
-    //~~~~~~~~~~~~~~~~~~~Free Everything~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #ifdef _OPENMP
+    // restore max threads to its default
+    omp_set_num_threads (max_nthreads) ;
+    #endif
+
+#endif
+
+    //--------------------------------------------------------------------------
+    // benchmark ParU
+    //--------------------------------------------------------------------------
+
+    for (int ord = 0 ; ord <= 1 ; ord++)
+    {
+        int ordering = (ord == 0) ? PARU_ORDERING_AMD :
+            PARU_ORDERING_METIS_GUARD ;
+        printf ("\n===== ParU ordering: %d\n", ordering) ;
+        ParU_Set (PARU_CONTROL_ORDERING, ordering, Control) ;
+        int kthread = 0 ;
+        sym_time = -1 ;
+        int64_t ordering_used, strategy_used, umf_strategy_used ;
+        for (int nthreads = max_nthreads ; nthreads > 0 ; nthreads = next_threads (nthreads))
+        {
+            printf ("# threads: %d\n", nthreads) ;
+            ParU_Set (PARU_CONTROL_MAX_THREADS, (int64_t) nthreads, Control) ;
+            int64_t nthreads2 = 0 ;
+            ParU_Get (PARU_CONTROL_NUM_THREADS, &nthreads2, Control) ;
+            if (nthreads != (int32_t) nthreads2)
+            {
+                std::cout << "ParU: invalid # of threads!" << std::endl;
+                FREE_ALL_AND_RETURN (PARU_INVALID) ;
+            }
+
+            double ParU_sym_times [NTRIALS] ;
+            double ParU_num_times [NTRIALS] ;
+            double ParU_sol_times [NTRIALS] ;
+            for (int trial = 0 ; trial < NTRIALS  ; trial++)
+            {
+                printf ("Trial: %d\n", trial) ;
+
+                double my_start_time = SUITESPARSE_TIME ;
+                info = ParU_Analyze(A, &Sym, Control);
+                double my_time_analyze = SUITESPARSE_TIME - my_start_time;
+                if (info != PARU_SUCCESS)
+                {
+                    std::cout << "ParU: analyze failed" << std::endl;
+                    FREE_ALL_AND_RETURN (info) ;
+                }
+                ParU_Get (Sym, Num, PARU_GET_ORDERING, &ordering_used, Control) ;
+                ParU_Get (Sym, Num, PARU_GET_STRATEGY, &strategy_used, Control) ;
+                ParU_Get (Sym, Num, PARU_GET_UMFPACK_STRATEGY, &umf_strategy_used, Control) ;
+                info = ParU_Get (Sym, Num, PARU_GET_N, &n, Control) ;
+                if (info != PARU_SUCCESS)
+                {
+                    std::cout << "ParU: stats failed" << std::endl;
+                    FREE_ALL_AND_RETURN (info) ;
+                }
+                info = ParU_Get (Sym, Num, PARU_GET_ANZ, &anz, Control) ;
+                if (info != PARU_SUCCESS)
+                {
+                    std::cout << "ParU: stats failed" << std::endl;
+                    FREE_ALL_AND_RETURN (info) ;
+                }
+
+                if (trial == 0)
+                {
+                    std::cout << "n: " << n << " anz: " << anz << std::endl ;
+                }
+
+                double my_start_time_fac = SUITESPARSE_TIME;
+                info = ParU_Factorize(A, Sym, &Num, Control);
+                double my_time_fac = SUITESPARSE_TIME - my_start_time_fac;
+                if (info != PARU_SUCCESS)
+                {
+                    std::cout << std::scientific << std::setprecision(6)
+                        << "ParU: factorization was NOT successful: "
+                        << my_time_fac << " seconds\n";
+                    if (info == PARU_OUT_OF_MEMORY)
+                        std::cout << "Out of memory\n";
+                    if (info == PARU_INVALID)
+                        std::cout << "Invalid!\n";
+                    if (info == PARU_SINGULAR)
+                        std::cout << "Singular!\n";
+                    FREE_ALL_AND_RETURN (info) ;
+                }
+
+                info = ParU_Get (Sym, Num, PARU_GET_RCOND_ESTIMATE, &rcond,
+                    Control) ;
+                if (info != PARU_SUCCESS)
+                {
+                    std::cout << "ParU: stats failed" << std::endl;
+                    FREE_ALL_AND_RETURN (info) ;
+                }
+
+                //~~~~~~~~~~Test the results ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+                double my_time, my_solve_time;
+
+                for (int64_t i = 0; i < n; ++i) b[i] = i + 1;
+                double my_solve_time_start = SUITESPARSE_TIME;
+                info = ParU_Solve(Sym, Num, b, xx, Control);
+                if (info != PARU_SUCCESS)
+                {
+                    std::cout << "ParU: solve failed" << std::endl;
+                    FREE_ALL_AND_RETURN (info) ;
+                }
+                my_solve_time = SUITESPARSE_TIME - my_solve_time_start;
+                my_time = SUITESPARSE_TIME - my_start_time;
+
+                double resid, anorm, xnorm;
+                info = ParU_Residual(A, xx, b, resid, anorm, xnorm, Control);
+                if (info != PARU_SUCCESS)
+                {
+                    std::cout << "ParU: resid failed" << std::endl;
+                    FREE_ALL_AND_RETURN (info) ;
+                }
+                double rresid = (anorm == 0 || xnorm == 0 ) ? 0 :
+                    (resid/(anorm*xnorm));
+
+                #if 0
+                for (int64_t i = 0; i < n; ++i)
+                {
+                    for (int64_t j = 0; j < nrhs; ++j)
+                    {
+                        B[j * n + i] = (double)(i + j + 1);
+                    }
+                }
+
+                my_solve_time_start = SUITESPARSE_TIME;
+                info = ParU_Solve(Sym, Num, nrhs, B, X, Control);
+                if (info != PARU_SUCCESS)
+                {
+                    std::cout << "ParU: solve failed" << std::endl;
+                    FREE_ALL_AND_RETURN (info) ;
+                }
+                double my_solve_time2 = SUITESPARSE_TIME - my_solve_time_start;
+
+                info = ParU_Residual(A, X, B, nrhs, resid, anorm, xnorm,
+                    Control);
+                if (info != PARU_SUCCESS)
+                {
+                    std::cout << "ParU: solve failed" << std::endl;
+                    FREE_ALL_AND_RETURN (info) ;
+                }
+                double rresid2 = (anorm == 0 || xnorm == 0 ) ? 0 :
+                    (resid/(anorm*xnorm));
+                #endif
+
+                if (trial == 0)
+                {
+                    std::cout << std::scientific << std::setprecision(6)
+                        << "Relative residual: " << rresid << " rcond: "
+                        << rcond << std::endl;
+                    #if 0
+                    std::cout << std::scientific << std::setprecision(6)
+                        << "Multiple right hand side: relative residual is |"
+                        << rresid2 << "|." << std::endl;
+                    #endif
+                }
+
+                std::cout << std::scientific << std::setprecision(6)
+                    << "ParU: time: sym: " << my_time_analyze
+                    << " num: " << my_time_fac
+                    << " solve (1 rhs): " << my_solve_time
+                    #if 0
+                    << " solve (16 rhs): " << my_solve_time2
+                    #endif
+                    << std::endl ;
+
+                ParU_sym_times [trial] = my_time_analyze ;
+                ParU_num_times [trial] = my_time_fac ;
+                ParU_sol_times [trial] = my_solve_time ;
+
+                ParU_FreeNumeric(&Num, Control);
+                ParU_FreeSymbolic(&Sym, Control);
+            }
+
+            qsort (ParU_sym_times, NTRIALS, sizeof (double), compar) ;
+            qsort (ParU_num_times, NTRIALS, sizeof (double), compar) ;
+            qsort (ParU_sol_times, NTRIALS, sizeof (double), compar) ;
+
+            std::cout << std::scientific << std::setprecision(6)
+                << "\nParU ordering " << ordering
+                << " threads " << nthreads
+                << " median sym: " << ParU_sym_times [middle]
+                << " num: " << ParU_num_times [middle]
+                << " sol: " << ParU_sol_times [middle]
+                << " total: " << ParU_sym_times [middle] +
+                ParU_num_times [middle] + ParU_sol_times [middle]
+                << std::endl << std::endl ;
+
+            if (nthreads == max_nthreads) sym_time = ParU_sym_times [middle] ;
+            num_times [kthread] = ParU_num_times [middle] ;
+            sol_times [kthread] = ParU_sol_times [middle] ;
+            kthread++ ;
+        }
+
+        printf ("UMF  strategy used: %d\n", (int) umf_strategy_used) ;
+        printf ("ParU strategy used: %d\n", (int) strategy_used) ;
+        printf ("ParU ordering used: %d\n", (int) ordering_used) ;
+        printf ("TABLE, ParU, %s, %d, %d, %d, sym_time:, %12.6e, num_times:, ",
+            (filename == NULL) ? " " : filename,
+            (int) umf_strategy_used, (int) strategy_used,
+            (int) ordering_used, sym_time) ;
+        for (int kk = 0 ; kk < 19 ; kk++)
+        {
+            if (num_times [kk] < 0) break ;
+            printf (" %12.6e, ", num_times [kk]) ;
+        }
+        printf (" sol_times:, ") ;
+        for (int kk = 0 ; kk < 19 ; kk++)
+        {
+            if (sol_times [kk] < 0) break ;
+            printf (" %12.6e, ", sol_times [kk]) ;
+        }
+        printf ("\n") ;
+    }
+
+    //--------------------------------------------------------------------------
+    // free everything and return
+    //--------------------------------------------------------------------------
+
     FREE_ALL_AND_RETURN (PARU_SUCCESS) ;
 }
 

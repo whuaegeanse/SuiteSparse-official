@@ -2,7 +2,7 @@
 // GB_mex_context_text: based on Demo/Programcontext_demo
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -61,6 +61,7 @@ void mexFunction
     GxB_Context Context = NULL ;
     METHOD (GxB_Context_new (&Context)) ;
     OK (GxB_Context_set (Context, GxB_NTHREADS, 5)) ;
+    OK (GxB_Context_set_String (Context, "my context", GrB_NAME)) ;
     OK (GxB_Context_fprint (Context, "context", 3, stdout)) ;
     int nth = 0 ;
     OK (GxB_Context_get (GxB_CONTEXT_WORLD, GxB_NTHREADS, &nth)) ;
@@ -80,13 +81,6 @@ void mexFunction
     OK (GxB_Context_set (Context, GxB_CHUNK, -1)) ;
     OK (GxB_Context_get (Context, GxB_CHUNK, &chunk)) ;
     OK (chunk == GB_CHUNK_DEFAULT) ;
-    int gpu = 9 ;
-    OK (GxB_Context_get (Context, GxB_CONTEXT_GPU_ID, &gpu)) ;
-    CHECK (gpu == -1) ;
-    OK (GxB_Context_set (Context, GxB_CONTEXT_GPU_ID, 3)) ;
-    OK (GxB_Context_get (Context, GxB_CONTEXT_GPU_ID, &gpu)) ;
-    printf ("gpu now %d\n", gpu) ;
-    CHECK (gpu == -1) ;
     OK (GxB_Context_engage (GxB_CONTEXT_WORLD)) ;
 
     OK (GxB_Context_fprint (Context, "context", 3, stdout)) ;
@@ -117,11 +111,11 @@ void mexFunction
     // construct tuples for a decent-sized random matrix
     //--------------------------------------------------------------------------
 
-    GrB_Index n = 1000 ; // 10000 ;
-    GrB_Index nvals = 20000 ; // 2000000 ;
+    uint64_t n = 1000 ; // 10000 ;
+    uint64_t nvals = 20000 ; // 2000000 ;
     simple_rand_seed (1) ;
-    GrB_Index *I = mxMalloc (nvals * sizeof (GrB_Index)) ;
-    GrB_Index *J = mxMalloc (nvals * sizeof (GrB_Index)) ;
+    uint64_t *I = mxMalloc (nvals * sizeof (uint64_t)) ;    // OK
+    uint64_t *J = mxMalloc (nvals * sizeof (uint64_t)) ;    // OK
     double    *X = mxMalloc (nvals * sizeof (double)) ;
     for (int k = 0 ; k < nvals ; k++)
     {
@@ -157,7 +151,7 @@ void mexFunction
             {
                 if (nouter <= nmat)
                 {
-                    double t = GB_OPENMP_GET_WTIME ;
+                    double t = GB_omp_get_wtime ( ) ;
                     #pragma omp parallel for num_threads (nouter) \
                         schedule (dynamic, 1)
                     for (int k = 0 ; k < nmat ; k++)
@@ -183,7 +177,7 @@ void mexFunction
                         OK (GxB_Context_free (&Context)) ;
                     }
 
-                    t = GB_OPENMP_GET_WTIME - t ;
+                    t = GB_omp_get_wtime ( ) - t ;
                     if (nouter == 1 && ninner == 1) t1 = t ;
 
                     printf ("   threads (%4d,%4d): %4d "

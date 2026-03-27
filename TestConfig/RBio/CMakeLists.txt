@@ -25,6 +25,11 @@ set ( TEST_STATIC_BIN rbio_demo_static )
 set ( TEST_IMPORT_TARGET SuiteSparse::RBio )
 set ( TEST_IMPORT_TARGET_STATIC SuiteSparse::RBio_static )
 
+if ( WIN32 )
+    set ( CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS true )
+    add_compile_definitions ( _CRT_SECURE_NO_WARNINGS )
+endif ( )
+
 #-------------------------------------------------------------------------------
 # define project
 #-------------------------------------------------------------------------------
@@ -50,7 +55,7 @@ if ( BUILD_SHARED_LIBS )
 endif ( )
 
 #-------------------------------------------------------------------------------
-# staticcally linked executable properties
+# statically linked executable properties
 #-------------------------------------------------------------------------------
 
 if ( BUILD_STATIC_LIBS )

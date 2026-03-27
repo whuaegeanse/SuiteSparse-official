@@ -2,7 +2,7 @@
 // GB_Global: global values in GraphBLAS
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -14,6 +14,7 @@
 // global matrix options, and other settings.
 
 #include "GB.h"
+#include "include/GB_unused.h"
 #include "cpu/GB_cpu_features.h"
 
 //------------------------------------------------------------------------------
@@ -27,7 +28,7 @@ typedef struct
     // blocking/non-blocking mode, set by GrB_init
     //--------------------------------------------------------------------------
 
-    GrB_Mode mode ;             // GrB_NONBLOCKING, GrB_BLOCKING
+    int mode ;                  // GrB_NONBLOCKING, GrB_BLOCKING
                                 // GxB_NONBLOCKING_GPU, or GxB_BLOCKING_GPU
     bool init_called ;          // true if GrB_init already called
 
@@ -96,17 +97,26 @@ typedef struct
     // for testing and development
     //--------------------------------------------------------------------------
 
-    int64_t hack [4] ;              // settings for testing/development only
+    int64_t hack [8] ;              // settings for testing/development only
+    // 0:  very_costly parameter in saxpy3 method
+    // 1:  disable the Werk stack for test coverage only
+    // 2:  force the GPU(s) to be used, or disable the GPU(s)
+    // 3:  disable the JIT
+    // 4:  tell GB_cumsum to fail for test coverage only
+    // 5:  tell GB_cumsum to fail for test coverage only
+    // 6:  if true: GB_Global_gpu_count_get returns hack [7]
+    // 7:  fake # of GPUs for test coverage only
 
     //--------------------------------------------------------------------------
     // diagnostic output
     //--------------------------------------------------------------------------
 
-    bool burble ;                   // controls GBURBLE output
-    GB_printf_function_t printf_func ;  // pointer to printf
-    GB_flush_function_t flush_func ;   // pointer to flush
+    bool burble ;                       // controls GBURBLE output
+    GB_printf_function_t printf_func ;  // pointer to printf_style function
+    GB_flush_function_t flush_func ;    // pointer to flush_style function
     bool print_one_based ;          // if true, print 1-based indices
-    bool print_mem_shallow ;        // if true, print # shallow bytes
+    bool stats_mem_shallow ;        // if true, include shallow bytes in
+                                    // memory usage statistics
 
     //--------------------------------------------------------------------------
     // timing: for code development only
@@ -131,15 +141,31 @@ typedef struct
 
     bool cpu_features_avx2 ;        // x86_64 with AVX2
     bool cpu_features_avx512f ;     // x86_64 with AVX512f
+    bool cpu_features_rvv_1_0 ;     // RISC-V with RVV1.0
 
     //--------------------------------------------------------------------------
-    // CUDA (DRAFT: in progress):
+    // integer control
+    //--------------------------------------------------------------------------
+
+    int8_t p_control ;      // controls A->p
+    int8_t j_control ;      // controls A->h and A->Y->[pix]
+    int8_t i_control ;      // controls A->i
+
+    //--------------------------------------------------------------------------
+    // CUDA
     //--------------------------------------------------------------------------
 
     int gpu_count ;                 // # of GPUs in the system
     // properties of each GPU:
     GB_cuda_device gpu_properties [GB_CUDA_MAX_GPUS] ;
 
+    //--------------------------------------------------------------------------
+    // OpenMP locks
+    //--------------------------------------------------------------------------
+
+    #define GB_GLOBAL_NLOCKS 8
+    GB_OPENMP_LOCK_T lock [GB_GLOBAL_NLOCKS] ;
+    bool lock_is_created [GB_GLOBAL_NLOCKS] ;
 }
 GB_Global_struct ;
 
@@ -152,26 +178,26 @@ static GB_Global_struct GB_Global =
     // initialization flag
     .init_called = false,       // GrB_init has not yet been called
 
-    // min dimension                density
-    #define GB_BITSWITCH_1          ((float) 0.04)
-    #define GB_BITSWITCH_2          ((float) 0.05)
-    #define GB_BITSWITCH_3_to_4     ((float) 0.06)
-    #define GB_BITSWITCH_5_to_8     ((float) 0.08)
-    #define GB_BITSWITCH_9_to_16    ((float) 0.10)
-    #define GB_BITSWITCH_17_to_32   ((float) 0.20)
-    #define GB_BITSWITCH_33_to_64   ((float) 0.30)
-    #define GB_BITSWITCH_gt_than_64 ((float) 0.40)
+    // min dimension                    density
+    #define GB_BITMAP_SWITCH_1          ((float) 0.04)
+    #define GB_BITMAP_SWITCH_2          ((float) 0.05)
+    #define GB_BITMAP_SWITCH_3_to_4     ((float) 0.06)
+    #define GB_BITMAP_SWITCH_5_to_8     ((float) 0.08)
+    #define GB_BITMAP_SWITCH_9_to_16    ((float) 0.10)
+    #define GB_BITMAP_SWITCH_17_to_32   ((float) 0.20)
+    #define GB_BITMAP_SWITCH_33_to_64   ((float) 0.30)
+    #define GB_BITMAP_SWITCH_gt_than_64 ((float) 0.40)
 
     // default format
     .bitmap_switch = {
-        GB_BITSWITCH_1,
-        GB_BITSWITCH_2,
-        GB_BITSWITCH_3_to_4,
-        GB_BITSWITCH_5_to_8,
-        GB_BITSWITCH_9_to_16,
-        GB_BITSWITCH_17_to_32,
-        GB_BITSWITCH_33_to_64,
-        GB_BITSWITCH_gt_than_64 },
+        GB_BITMAP_SWITCH_1,
+        GB_BITMAP_SWITCH_2,
+        GB_BITMAP_SWITCH_3_to_4,
+        GB_BITMAP_SWITCH_5_to_8,
+        GB_BITMAP_SWITCH_9_to_16,
+        GB_BITMAP_SWITCH_17_to_32,
+        GB_BITMAP_SWITCH_33_to_64,
+        GB_BITMAP_SWITCH_gt_than_64 },
     .hyper_switch = GB_HYPER_SWITCH_DEFAULT,
 
     .is_csc = false,    // default is GxB_BY_ROW
@@ -196,16 +222,17 @@ static GB_Global_struct GB_Global =
     .malloc_debug = false,       // do not test memory handling
     .malloc_debug_count = 0,     // counter for testing memory handling
 
-    // for testing and development only
-    .hack = {0, 0, 0, 0},
+    // for testing and development only; not used in production
+    .hack = {0, 0, 0, 0, 0, 0, 0, 0},
 
     // diagnostics
     .burble = false,
     .printf_func = NULL,
     .flush_func = NULL,
     .print_one_based = false,   // if true, print 1-based indices
-    .print_mem_shallow = false, // for @GrB interface only
+    .stats_mem_shallow = false, // if true, include shallow bytes in stats
 
+    // timing is for testing and development only; not used in production
     .timing = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 
@@ -215,10 +242,18 @@ static GB_Global_struct GB_Global =
     // CPU features
     .cpu_features_avx2 = false,         // x86_64 with AVX2
     .cpu_features_avx512f = false,      // x86_64 with AVX512f
+    .cpu_features_rvv_1_0 = false,      // RISC-V with RVV1.0
 
-    // CUDA environment (DRAFT: in progress)
+    // integer control
+    .p_control = (int8_t) 32,
+    .j_control = (int8_t) 32,
+    .i_control = (int8_t) 32,
+
+    // CUDA environment
     .gpu_count = 0,                     // # of GPUs in the system
 
+    // OpenMP locks
+    .lock_is_created = {0, 0, 0, 0, 0, 0, 0, 0},    // of size GB_GLOBAL_NLOCKS
 } ;
 
 //==============================================================================
@@ -229,12 +264,12 @@ static GB_Global_struct GB_Global =
 // mode
 //------------------------------------------------------------------------------
 
-void GB_Global_mode_set (GrB_Mode mode)
+void GB_Global_mode_set (int mode)
 { 
     GB_Global.mode = mode ;
 }
 
-GrB_Mode GB_Global_mode_get (void)
+int GB_Global_mode_get (void)
 { 
     return (GB_Global.mode) ;
 }
@@ -251,6 +286,40 @@ void GB_Global_GrB_init_called_set (bool init_called)
 bool GB_Global_GrB_init_called_get (void)
 { 
     return (GB_Global.init_called) ;
+}
+
+//------------------------------------------------------------------------------
+// integer control
+//------------------------------------------------------------------------------
+
+void GB_Global_p_control_set (int8_t p_control)
+{ 
+    GB_Global.p_control = p_control ;
+}
+
+int8_t GB_Global_p_control_get (void)
+{ 
+    return (GB_Global.p_control) ;
+}
+
+void GB_Global_j_control_set (int8_t j_control)
+{ 
+    GB_Global.j_control = j_control ;
+}
+
+int8_t GB_Global_j_control_get (void)
+{ 
+    return (GB_Global.j_control) ;
+}
+
+void GB_Global_i_control_set (int8_t i_control)
+{ 
+    GB_Global.i_control = i_control ;
+}
+
+int8_t GB_Global_i_control_get (void)
+{ 
+    return (GB_Global.i_control) ;
 }
 
 //------------------------------------------------------------------------------
@@ -307,15 +376,47 @@ void GB_Global_cpu_features_query (void)
         #endif
 
     }
+    #elif GBRISCV64
+    {
+
+        //----------------------------------------------------------------------
+        // RISC-V architecture: see if RVV1.0 is supported
+        //----------------------------------------------------------------------
+
+        #if !defined ( GBNCPUFEAT )
+        {
+            // Google's cpu_features package is available: use run-time tests
+            RiscvFeatures features = GetRiscvInfo ().features ;
+            GB_Global.cpu_features_rvv_1_0 = (bool) (features.V) ;
+
+        }
+        #else
+        {
+            #if defined ( GBRVV )
+            {
+                // the build system asserts whether or not RVV1.0 is available
+                GB_Global.cpu_features_rvv_1_0 = (bool) (GBRVV) ;
+            }
+            #else
+            {
+                // RVV1.0 not available
+                GB_Global.cpu_features_rvv_1_0 = false ;
+            }
+            #endif
+        }
+        #endif
+
+    }
     #else
     {
 
         //----------------------------------------------------------------------
-        // not on the x86_64 architecture, so no AVX2 or AVX512F acceleration
+        // not on the x86_64 or RISC-V architecture, so no AVX2, AVX512F or RVV1.0 acceleration
         //----------------------------------------------------------------------
 
         GB_Global.cpu_features_avx2 = false ;
         GB_Global.cpu_features_avx512f = false ;
+        GB_Global.cpu_features_rvv_1_0 = false ;
 
     }
     #endif
@@ -329,6 +430,11 @@ bool GB_Global_cpu_features_avx2 (void)
 bool GB_Global_cpu_features_avx512f (void)
 { 
     return (GB_Global.cpu_features_avx512f) ;
+}
+
+bool GB_Global_cpu_features_rvv_1_0 (void)
+{ 
+    return (GB_Global.cpu_features_rvv_1_0) ;
 }
 
 //------------------------------------------------------------------------------
@@ -392,14 +498,14 @@ float GB_Global_bitmap_switch_matrix_get (int64_t vlen, int64_t vdim)
 
 void GB_Global_bitmap_switch_default (void)
 { 
-    GB_Global.bitmap_switch [0] = GB_BITSWITCH_1 ;
-    GB_Global.bitmap_switch [1] = GB_BITSWITCH_2 ;
-    GB_Global.bitmap_switch [2] = GB_BITSWITCH_3_to_4 ;
-    GB_Global.bitmap_switch [3] = GB_BITSWITCH_5_to_8 ;
-    GB_Global.bitmap_switch [4] = GB_BITSWITCH_9_to_16 ;
-    GB_Global.bitmap_switch [5] = GB_BITSWITCH_17_to_32 ;
-    GB_Global.bitmap_switch [6] = GB_BITSWITCH_33_to_64 ;
-    GB_Global.bitmap_switch [7] = GB_BITSWITCH_gt_than_64 ;
+    GB_Global.bitmap_switch [0] = GB_BITMAP_SWITCH_1 ;
+    GB_Global.bitmap_switch [1] = GB_BITMAP_SWITCH_2 ;
+    GB_Global.bitmap_switch [2] = GB_BITMAP_SWITCH_3_to_4 ;
+    GB_Global.bitmap_switch [3] = GB_BITMAP_SWITCH_5_to_8 ;
+    GB_Global.bitmap_switch [4] = GB_BITMAP_SWITCH_9_to_16 ;
+    GB_Global.bitmap_switch [5] = GB_BITMAP_SWITCH_17_to_32 ;
+    GB_Global.bitmap_switch [6] = GB_BITMAP_SWITCH_33_to_64 ;
+    GB_Global.bitmap_switch [7] = GB_BITMAP_SWITCH_gt_than_64 ;
 }
 
 //------------------------------------------------------------------------------
@@ -439,12 +545,12 @@ void GB_Global_abort (void)
 
 void GB_Global_memtable_dump (void)
 {
-    #ifdef GB_DEBUG
-    printf ("\nmemtable dump: %d nmalloc " GBd "\n",    // MEMDUMP
+    #if defined (GB_DEBUG) && defined (GB_MEMDUMP)
+    GBMDUMP ("\nmemtable dump: %d nmalloc " GBd "\n",
         GB_Global.nmemtable, GB_Global.nmalloc) ;
     for (int k = 0 ; k < GB_Global.nmemtable ; k++)
     {
-        printf ("  %4d: %12p : %ld\n", k,               // MEMDUMP
+        GBMDUMP ("  %4d: %12p : %ld\n", k,
             GB_Global.memtable_p [k],
             GB_Global.memtable_s [k]) ;
     }
@@ -473,10 +579,8 @@ void GB_Global_memtable_add (void *p, size_t size)
 
     #ifdef GB_DEBUG
     bool fail = false ;
-    #ifdef GB_MEMDUMP
-    printf ("memtable add %p size %ld\n", p, size) ;    // MEMDUMP
-    #endif
-    #pragma omp critical(GB_memtable)
+    GBMDUMP ("memtable add %p size %ld\n", p, size) ;
+    GB_OPENMP_LOCK_SET (3)
     {
         int n = GB_Global.nmemtable ;
         fail = (n > GB_MEMTABLE_SIZE) ;
@@ -486,8 +590,7 @@ void GB_Global_memtable_add (void *p, size_t size)
             {
                 if (p == GB_Global.memtable_p [i])
                 {
-                    printf ("\nadd duplicate %p size %ld\n",    // MEMDUMP
-                        p, size) ;
+                    GBDUMP ("\nFAIL add duplicate %p size %ld\n", p, size) ;
                     GB_Global_memtable_dump ( ) ;
                     fail = true ;
                     break ;
@@ -501,12 +604,10 @@ void GB_Global_memtable_add (void *p, size_t size)
             GB_Global.nmemtable++ ;
         }
     }
+    GB_OPENMP_LOCK_UNSET (3)
     ASSERT (!fail) ;
-    #ifdef GB_MEMDUMP
     GB_Global_memtable_dump ( ) ;
     #endif
-    #endif
-
 }
 
 // get the size of a malloc'd block
@@ -517,7 +618,7 @@ size_t GB_Global_memtable_size (void *p)
     #ifdef GB_DEBUG
     if (p == NULL) return (0) ;
     bool found = false ;
-    #pragma omp critical(GB_memtable)
+    GB_OPENMP_LOCK_SET (3)
     {
         int n = GB_Global.nmemtable ;
         for (int i = 0 ; i < n ; i++)
@@ -530,9 +631,10 @@ size_t GB_Global_memtable_size (void *p)
             }
         }
     }
+    GB_OPENMP_LOCK_UNSET (3)
     if (!found)
     {
-        printf ("\nFAIL: %p not found\n", p) ;      // MEMDUMP
+        GBDUMP ("\nFAIL: %p not found\n", p) ;
         GB_Global_memtable_dump ( ) ;
         ASSERT (0) ;
     }
@@ -548,7 +650,7 @@ bool GB_Global_memtable_find (void *p)
 
     #ifdef GB_DEBUG
     if (p == NULL) return (false) ;
-    #pragma omp critical(GB_memtable)
+    GB_OPENMP_LOCK_SET (3)
     {
         int n = GB_Global.nmemtable ;
         for (int i = 0 ; i < n ; i++)
@@ -560,6 +662,7 @@ bool GB_Global_memtable_find (void *p)
             }
         }
     }
+    GB_OPENMP_LOCK_UNSET (3)
     #endif
 
     return (found) ;
@@ -577,10 +680,8 @@ void GB_Global_memtable_remove (void *p)
 
     #ifdef GB_DEBUG
     bool found = false ;
-    #ifdef GB_MEMDUMP
-    printf ("memtable remove %p ", p) ;             // MEMDUMP
-    #endif
-    #pragma omp critical(GB_memtable)
+    GBMDUMP ("memtable remove %p ", p) ;
+    GB_OPENMP_LOCK_SET (3)
     {
         int n = GB_Global.nmemtable ;
         for (int i = 0 ; i < n ; i++)
@@ -596,15 +697,14 @@ void GB_Global_memtable_remove (void *p)
             }
         }
     }
+    GB_OPENMP_LOCK_UNSET (3)
     if (!found)
     {
-        printf ("remove %p NOT FOUND\n", p) ;       // MEMDUMP
+        GBDUMP ("remove %p NOT FOUND\n", p) ;
         GB_Global_memtable_dump ( ) ;
+        ASSERT (0) ;
     }
-    ASSERT (found) ;
-    #ifdef GB_MEMDUMP
     GB_Global_memtable_dump ( ) ;
-    #endif
     #endif
 
 }
@@ -612,6 +712,8 @@ void GB_Global_memtable_remove (void *p)
 //------------------------------------------------------------------------------
 // malloc_function
 //------------------------------------------------------------------------------
+
+#include "include/GB_pedantic_disable.h"
 
 void GB_Global_malloc_function_set (void * (* malloc_function) (size_t))
 { 
@@ -632,10 +734,11 @@ void * GB_Global_malloc_function (size_t size)
     }
     else
     {
-        #pragma omp critical(GB_malloc_protection)
+        GB_OPENMP_LOCK_SET (2)
         {
             p = GB_Global.malloc_function (size) ;
         }
+        GB_OPENMP_LOCK_UNSET (2)
     }
     GB_Global_memtable_add (p, size) ;
     return (p) ;
@@ -686,10 +789,11 @@ void * GB_Global_realloc_function (void *p, size_t size)
     }
     else
     {
-        #pragma omp critical(GB_malloc_protection)
+        GB_OPENMP_LOCK_SET (2)
         {
             pnew = GB_Global.realloc_function (p, size) ;
         }
+        GB_OPENMP_LOCK_UNSET (2)
     }
     if (pnew != NULL)
     {
@@ -721,10 +825,11 @@ void GB_Global_free_function (void *p)
     }
     else
     {
-        #pragma omp critical(GB_malloc_protection)
+        GB_OPENMP_LOCK_SET (2)
         {
             GB_Global.free_function (p) ;
         }
+        GB_OPENMP_LOCK_UNSET (2)
     }
     GB_Global_memtable_remove (p) ;
 }
@@ -741,12 +846,17 @@ void * GB_Global_persistent_malloc (size_t size)
 {
     // malloc persistent memory
     void *p = GB_Global.malloc_function (size) ;
+    GB_Global_make_persistent (p) ;
+    return (p) ;
+}
+
+void GB_Global_make_persistent (void *p)
+{
     if (p != NULL && GB_Global.persistent_function != NULL)
     { 
         // tell MATLAB to make this memory persistent
         GB_Global.persistent_function (p) ;
     }
-    return (p) ;
 }
 
 void GB_Global_persistent_set (void (* persistent_function) (void *))
@@ -913,27 +1023,29 @@ bool GB_Global_print_one_based_get (void)
 }
 
 //------------------------------------------------------------------------------
-// for printing matrix in @GrB interface
+// for memory usage statistics
 //------------------------------------------------------------------------------
 
-void GB_Global_print_mem_shallow_set (bool mem_shallow)
+void GB_Global_stats_mem_shallow_set (bool mem_shallow)
 { 
-    GB_Global.print_mem_shallow = mem_shallow ;
+    GB_Global.stats_mem_shallow = mem_shallow ;
 }
 
-bool GB_Global_print_mem_shallow_get (void)
+bool GB_Global_stats_mem_shallow_get (void)
 { 
-    return (GB_Global.print_mem_shallow) ;
+    return (GB_Global.stats_mem_shallow) ;
 }
 
 //------------------------------------------------------------------------------
-// CUDA (DRAFT: in progress)
+// CUDA
 //------------------------------------------------------------------------------
 
 bool GB_Global_gpu_count_set (bool enable_cuda)
 { 
     // set the # of GPUs in the system;
     // this function is only called once, by GB_init.
+    memset (GB_Global.gpu_properties, 0,
+            GB_CUDA_MAX_GPUS * sizeof (GB_cuda_device)) ;
     #if defined ( GRAPHBLAS_HAS_CUDA )
     if (enable_cuda)
     {
@@ -950,7 +1062,11 @@ bool GB_Global_gpu_count_set (bool enable_cuda)
 
 int GB_Global_gpu_count_get (void)
 { 
-    // get the # of GPUs in the system
+    // get the max # of GPUs in the system
+    if (GB_Global_hack_get (6) != 0)
+    { 
+        return (GB_Global_hack_get (7)) ;
+    }
     return (GB_Global.gpu_count) ;
 }
 
@@ -971,6 +1087,20 @@ int GB_Global_gpu_sm_get (int device)
     return (GB_Global.gpu_properties [device].number_of_sms) ;
 }
 
+int GB_Global_gpu_compute_capability_major_get (int device)
+{
+    // get the compute-capability-major
+    GB_GPU_DEVICE_CHECK (0) ;       // zero if invalid GPU
+    return (GB_Global.gpu_properties [device].compute_capability_major) ;
+}
+
+int GB_Global_gpu_compute_capability_minor_get (int device)
+{
+    // get the compute-capability-minor
+    GB_GPU_DEVICE_CHECK (0) ;       // zero if invalid GPU
+    return (GB_Global.gpu_properties [device].compute_capability_minor) ;
+}
+
 bool GB_Global_gpu_device_pool_size_set (int device, size_t size)
 {
     GB_GPU_DEVICE_CHECK (false) ;   // fail if invalid GPU
@@ -981,20 +1111,20 @@ bool GB_Global_gpu_device_pool_size_set (int device, size_t size)
 bool GB_Global_gpu_device_max_pool_size_set (int device, size_t size)
 {
     GB_GPU_DEVICE_CHECK (false) ;   // fail if invalid GPU
-    GB_Global.gpu_properties[device].max_pool_size = size ;
+    GB_Global.gpu_properties [device].max_pool_size = size ;
     return (true) ; 
 }
 
 bool GB_Global_gpu_device_memory_resource_set (int device, void *resource)
 {
     GB_GPU_DEVICE_CHECK (false) ;   // fail if invalid GPU
-    GB_Global.gpu_properties[device].memory_resource = resource;
+    GB_Global.gpu_properties [device].memory_resource = resource ;
     return (true) ; 
 }
 
 void* GB_Global_gpu_device_memory_resource_get (int device)
 {
-    GB_GPU_DEVICE_CHECK (false) ;   // fail if invalid GPU
+    GB_GPU_DEVICE_CHECK (NULL) ;   // fail if invalid GPU
     return  (GB_Global.gpu_properties [device].memory_resource) ;
     // NOTE: this returns a void*, needs to be cast to be used
 }
@@ -1046,11 +1176,60 @@ double GB_Global_timing_get (int k)
 }
 
 //------------------------------------------------------------------------------
-// get_wtime: return current wallclock time
+// global OpenMP locks
 //------------------------------------------------------------------------------
 
-double GB_Global_get_wtime (void)
-{ 
-    return (GB_OPENMP_GET_WTIME) ;
+void GB_Global_lock_init (void)
+{
+    // initialize all locks
+    for (int k = 0 ; k < GB_GLOBAL_NLOCKS ; k++)
+    {
+        #if defined ( _OPENMP )
+        if (!GB_Global.lock_is_created [k])
+        {
+            omp_init_lock (&(GB_Global.lock [k])) ;
+            GB_Global.lock_is_created [k] = true ;
+        }
+        #else
+        GB_Global.lock [k] = 0 ;
+        #endif
+    }
+}
+
+void GB_Global_lock_destroy (void)
+{
+    // destroy all locks
+    #if defined ( _OPENMP )
+    for (int k = 0 ; k < GB_GLOBAL_NLOCKS ; k++)
+    {
+        if (GB_Global.lock_is_created [k])
+        {
+            omp_destroy_lock (&(GB_Global.lock [k])) ;
+            GB_Global.lock_is_created [k] = false ;
+        }
+    }
+    #endif
+}
+
+void GB_Global_lock_set (int k)
+{
+    // set a lock
+    #if defined ( _OPENMP )
+    if (GB_Global.lock_is_created [k])
+    {
+        omp_set_lock (&(GB_Global.lock [k])) ;
+    }
+    #endif
+}
+
+void GB_Global_lock_unset (int k)
+{
+    // unset a lock
+    #if defined ( _OPENMP )
+    if (GB_Global.lock_is_created [k])
+    {
+        omp_unset_lock (&(GB_Global.lock [k])) ;
+    }
+    #endif
 }
 

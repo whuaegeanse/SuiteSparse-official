@@ -2,8 +2,8 @@
 // GraphBLAS/CUDA/template/GB_cuda_kernel.cuh: definitions for CUDA kernels
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
-// This file: Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
+// This file: Copyright (c) 2024-2025, NVIDIA CORPORATION. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -23,7 +23,8 @@
 #include <cstdint>
 #include <cmath>
 #include <stdio.h>
-#include <cub/block/block_scan.cuh>
+// #include <cub/block/block_scan.cuh>
+#include <cub/cub.cuh>
 #include <cooperative_groups.h>
 using namespace cooperative_groups ;
 
@@ -33,9 +34,6 @@ using namespace cooperative_groups ;
 
 #define GB_CUDA_KERNEL
 
-#undef  ASSERT
-#define ASSERT(x)
-
 // for internal static inline functions
 #undef  GB_STATIC_INLINE
 #define GB_STATIC_INLINE static __device__ __inline__
@@ -44,7 +42,7 @@ using namespace cooperative_groups ;
 // subset of GraphBLAS.h
 //------------------------------------------------------------------------------
 
-#include "GraphBLAS_cuda.hpp"
+#include "include/GraphBLAS_cuda.hpp"
 
 //------------------------------------------------------------------------------
 // internal #include files
@@ -52,26 +50,33 @@ using namespace cooperative_groups ;
 
 extern "C"
 {
+    #include "include/GB_opaque.h"
+    #include "include/GB_index.h"
+    #include "include/GB_math_macros.h"
+    #include "include/GB_bytes.h"
     #include "include/GB_pun.h"
     #include "include/GB_partition.h"
-    #include "include/GB_binary_search.h"
     #include "include/GB_zombie.h"
+    #include "include/GB_binary_search.h"
     #include "include/GB_int64_mult.h"
-    #include "include/GB_index.h"
+    #include "include/GB_math_macros.h"
     #include "include/GB_hash.h"
     #include "include/GB_complex.h"
     #include "include/GB_iceil.h"
-    #include "include/GB_math_macros.h"
     #include "include/GB_memory_macros.h"
     #include "include/GB_printf_kernels.h"
-    #include "include/GB_opaque.h"
+    #include "include/GB_clear_matrix_header.h"
     #include "include/GB_werk.h"
+    #include "include/GB_task_struct.h"
     #include "include/GB_callback_proto.h"
     #include "include/GB_saxpy3task_struct.h"
     #include "include/GB_callback.h"
     #include "include/GB_hyper_hash_lookup.h"
+    #include "include/GB_ok.h"
+    #include "include/GB_omp_kernels.h"
 }
 
-#include "GB_cuda_error.hpp"
-#include "GB_cuda_atomics.cuh"
+#include "include/GB_cuda_error.hpp"
+#include "include/GB_cuda_atomics.cuh"
+#include "include/GB_cuda_timer.hpp"
 

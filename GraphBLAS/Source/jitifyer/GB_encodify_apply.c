@@ -2,7 +2,7 @@
 // GB_encodify_apply: encode an apply problem, including types and op
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -18,12 +18,25 @@ uint64_t GB_encodify_apply      // encode an apply problem
     char **suffix,              // suffix for user-defined kernel
     // input:
     const GB_jit_kcode kcode,   // kernel to encode
+    // C matrix:
     const int C_sparsity,
     const bool C_is_matrix,     // true for C=op(A), false for Cx=op(A)
     const GrB_Type ctype,
-    const GB_Operator op,
+    const bool Cp_is_32,        // if true, Cp is uint32_t, else uint64_t
+    const bool Ci_is_32,        // if true, Ci is uint32_t, else uint64_t
+    const bool Cj_is_32,        // if true, Cj is uint32_t, else uint64_t
+    // operator:
+    const GB_Operator op,       // not JIT'd if NULL
     const bool flipij,
-    const GrB_Matrix A
+    // A matrix:
+    const int A_sparsity,
+    const bool A_is_matrix,
+    const GrB_Type atype,
+    const bool Ap_is_32,        // if true, Ap is uint32_t, else uint64_t
+    const bool Aj_is_32,        // if true, Ah is uint32_t, else uint64_t
+    const bool Ai_is_32,        // if true, Ai is uint32_t, else uint64_t
+    const bool A_iso,
+    const int64_t A_nzombies
 )
 { 
 
@@ -43,9 +56,10 @@ uint64_t GB_encodify_apply      // encode an apply problem
     // primary encoding of the problem
     //--------------------------------------------------------------------------
 
-    encoding->kcode = kcode ;
-    GB_enumify_apply (&encoding->code, C_sparsity, C_is_matrix, ctype, op,
-        flipij, A) ;
+    GB_encodify_kcode (encoding, kcode) ;
+    GB_enumify_apply (&encoding->code, C_sparsity, C_is_matrix, ctype,
+        Cp_is_32, Ci_is_32, Cj_is_32, op, flipij, A_sparsity, A_is_matrix,
+        atype, Ap_is_32, Aj_is_32, Ai_is_32, A_iso, A_nzombies) ;
 
     //--------------------------------------------------------------------------
     // determine the suffix and its length

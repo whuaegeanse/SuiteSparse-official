@@ -2,7 +2,7 @@
 //////////////////////////  paru_assemble //////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-// ParU, Copyright (c) 2022-2024, Mohsen Aznaveh and Timothy A. Davis,
+// ParU, Copyright (c) 2022-2025, Mohsen Aznaveh and Timothy A. Davis,
 // All Rights Reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -30,18 +30,19 @@ void paru_assemble_all
 
     // get Control
     int32_t nthreads = Work->nthreads ;
+    int nth = 1 ;
 
     DEBUGLEVEL(0);
     PARU_DEFINE_PRLEVEL;
 #ifndef NTIME
-    static double tot_assem_time = 0;
-    double start_time = PARU_OPENMP_GET_WTIME;
+    double tot_assem_time = 0;
+    double start_time = PARU_omp_get_wtime ( ) ;
 #endif
 
     const int64_t *snM = Sym->super2atree;
     int64_t eli = snM[f];
     PRLEVEL(PR, ("%% Eliminate all of " LD " in " LD "(f=" LD ") (tid=%d)\n", e, eli, f,
-                 PARU_OPENMP_GET_THREAD_ID));
+                 PARU_omp_get_thread_num ( )));
 
 #ifndef NDEBUG
     PR = 1;
@@ -150,17 +151,22 @@ void paru_assemble_all
         #pragma omp atomic read
         naft = Work->naft;
 
+        #define CHUNK 65536
+        double work = ((double) el->nrowsleft) * ((double) el->ncolsleft) ;
+        nth = paru_nthreads_to_use (work, CHUNK, nthreads) ;
+
         if (el->nrowsleft * el->ncolsleft < 4096 || el->nrowsleft < 1024
             #ifndef PARU_COVERAGE
             // In production, do sequential assembly if the number
             // of active fronts is large.  For test coverage, don't
             // check this condition, to exercise the parallel assembly.
-            || naft > nthreads / 2
+            || naft > nth / 2
             #endif
             )
         {
             // not enough resources or very small assembly
             // sequential
+            nth = 1 ;
             PRLEVEL(1,
                     ("Seqntial Assembly naft=" LD " colsleft=" LD " rowsleft=" LD " \n",
                      naft, el->ncolsleft, el->nrowsleft));
@@ -195,50 +201,18 @@ void paru_assemble_all
         {
             // enough threads and big assembly
             // go parallel
-            PRLEVEL(1, ("Parallel Assembly naft=" LD " colsleft=" LD " rowsleft=" LD " "
-                        "el->lac = " LD " nEl=" LD " rem =" LD " (" LD "->" LD ")\n",
-                        naft, el->ncolsleft, el->nrowsleft, el->lac, nEl,
-                        nEl - el->lac, e, eli));
-
-            // // each column a tsk
-            //#..pragma omp parallel proc_bind(close)
-            // num_threads(nthreads / naft)
-            //#..pragma omp single nowait
-            //#..pragma omp task untied
-            // for (int64_t j = el->lac; j < nEl; j++)
-            //{
-            //    PRLEVEL(1, ("%% j =" LD " \n", j));
-            //    double *sC = el_Num + mEl * j;  // source column pointer
-            //    int64_t colInd = el_colIndex[j];
-            //    PRLEVEL(1, ("%% colInd =" LD " \n", colInd));
-            //    if (colInd < 0) continue;
-
-            //    int64_t fcolind = colRelIndex[j];
-
-            //    double *dC = curEl_Num + fcolind * curEl->nrows;
-
-            //    #pragma omp task
-            //    for (int64_t iii = 0; iii < el->nrowsleft; iii++)
-            //    {
-            //        int64_t i = tempRow[iii];
-            //        int64_t ri = rowRelIndex[i];
-
-            //        PRLEVEL(1, ("%% ri = " LD " \n", ri));
-            //        PRLEVEL(1, ("%% sC [" LD "] =%2.5lf \n", i, sC[i]));
-            //        PRLEVEL(1, ("%% dC [" LD "] =%2.5lf \n", ri, dC[ri]));
-            //        dC[ri] += sC[i];
-            //        PRLEVEL(1, ("%% dC [" LD "] =%2.5lf \n", i, dC[ri]));
-            //    }
-            //    if (--el->ncolsleft == 0) break;
-            //    PRLEVEL(1, ("\n"));
-            //}
+            PRLEVEL(1, ("Parallel Assembly naft=" LD " colsleft=" LD
+                " rowsleft=" LD " el->lac = " LD " nEl=" LD " rem =" LD 
+                " (" LD "->" LD ")\n",
+                naft, el->ncolsleft, el->nrowsleft, el->lac, nEl,
+                nEl - el->lac, e, eli));
 
             ///////////////////////////////////////////////////////////////////
             /////////////// making tasks and such /////////////////////////////
             ///////////////////////////////////////////////////////////////////
 
             // This code is tested in ParU/Tcov by the c-62.mtx
-            int64_t ntasks = (nthreads - naft + 1) * 2;
+            int64_t ntasks = (nth - naft + 1) * 2;
             ntasks = (ntasks <= 0) ? 1 : ntasks;
             int64_t task_size = (nEl - el->lac) / ntasks;
             PRLEVEL(1, ("BBB el->lac=" LD " nEl=" LD " ntasks=" LD
@@ -251,7 +225,7 @@ void paru_assemble_all
             }
             PRLEVEL(1, ("el->lac=" LD " nEl=" LD " ntasks=" LD " task_size="
                 LD "\n", el->lac, nEl, ntasks, task_size));
-            #pragma omp parallel proc_bind(close) num_threads(ntasks)
+            #pragma omp parallel proc_bind(close) num_threads(nth)
             #pragma omp single
             #pragma omp task
             for (int64_t t = 0; t < ntasks; t++)
@@ -269,8 +243,8 @@ void paru_assemble_all
                     PRLEVEL(1, ("%% colInd =" LD " \n", colInd));
                     if (colInd < 0) continue;
                     PRLEVEL(1, ("inside paralle region %d j=" LD " (tid=%d)\n",
-                                PARU_OPENMP_GET_ACTIVE_LEVEL, j,
-                                PARU_OPENMP_GET_THREAD_NUM));
+                                PARU_omp_get_active_level ( ), j,
+                                PARU_omp_get_thread_num ( )));
                     int64_t fcolind = colRelIndex[j];
 
                     double *dC = curEl_Num + fcolind * curEl->nrows;
@@ -300,14 +274,14 @@ void paru_assemble_all
 #endif
 
 #ifndef NTIME
-    double time = PARU_OPENMP_GET_WTIME;
+    double time = PARU_omp_get_wtime ( ) ;
     time -= start_time;
     #pragma omp atomic update
     tot_assem_time += time;
     if (f > Sym->nf - 5)
     {
-        PRLEVEL(-1, ("%% assemble all " LD "\t->" LD "\t took %lf seconds tot=%lf\n",
-                     e, eli, time, tot_assem_time));
+        PRLEVEL(1, ("%% assemble all " LD "\t->" LD
+            "\t took %lf seconds, nth %d\n", e, eli, time, nth));
     }
 #endif
 }
@@ -381,16 +355,6 @@ void paru_assemble_cols
     std::vector<int64_t> tempRow(el->nrowsleft);
     int64_t tempRow_ready = 0;
     int64_t toll = 8;  // number of times it continue when do not find anything
-
-    // int64_t naft; //number of active frontal tasks
-    // pragma omp atomic read
-    // naft = Num->naft;
-    //// const int64_t *Depth = Sym->Depth;
-    // pragma omp parallel proc_bind(close) num_threads(nthreads/naft)
-    // if (naft < nthreads/2 &&
-    //        el->nrowsleft*el->ncolsleft < 4096 && el->nrowsleft < 1024 )
-    // pragma omp single nowait
-    // pragma omp task untied
 
     // TOLL FREE zone
     while (paru_find_hash(el_colIndex[el->lac], colHash, fcolList) != -1)

@@ -2,15 +2,13 @@
 // GB_mex_test33: test GrB_get and GrB_set (context)
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 #include "GB_mex.h"
 #include "GB_mex_errors.h"
-
-#define USAGE "GB_mex_test33"
 
 #define FREE_ALL ;
 #define GET_DEEP_COPY ;
@@ -75,20 +73,6 @@ void mexFunction
 
     GxB_set (GxB_NTHREADS, nthreads1) ;
 
-    int32_t gpu ;
-    OK (GxB_Context_get_INT_ (GxB_CONTEXT_WORLD, &gpu, GxB_GPU_ID)) ;
-    CHECK (gpu == -1) ;
-
-    gpu = 4 ;
-    OK (GxB_Context_set_INT_ (GxB_CONTEXT_WORLD, 3, GxB_GPU_ID)) ;
-    OK (GxB_Context_get_INT_ (GxB_CONTEXT_WORLD, &gpu, GxB_GPU_ID)) ;
-    CHECK (gpu == -1) ;
-
-    OK (GxB_Context_set_Scalar_ (GxB_CONTEXT_WORLD, s_int32, GxB_GPU_ID)) ;
-    OK (GxB_Context_get_Scalar_ (GxB_CONTEXT_WORLD, s_fp64, GxB_GPU_ID)) ;
-    OK (GrB_Scalar_extractElement_FP64 (&dvalue, s_fp64)) ;
-    CHECK (dvalue == -1) ;
-
     double chunk ;
     OK (GxB_Context_get_Scalar_ (GxB_CONTEXT_WORLD, s_fp64, GxB_CHUNK)) ;
     OK (GrB_Scalar_extractElement_FP64 (&chunk, s_fp64)) ;
@@ -112,7 +96,7 @@ void mexFunction
     OK (GxB_Context_get_String_ (GxB_CONTEXT_WORLD, name, GrB_NAME)) ;
     CHECK (MATCH (name, "GxB_CONTEXT_WORLD")) ;
 
-    ERR (GxB_Context_get_SIZE_ (GxB_CONTEXT_WORLD, &size, (GrB_Field) GxB_FORMAT)) ;
+    ERR (GxB_Context_get_SIZE_ (GxB_CONTEXT_WORLD, &size, GxB_FORMAT)) ;
 
     expected = GrB_INVALID_VALUE ;
     ERR (GxB_Context_get_VOID_ (GxB_CONTEXT_WORLD, nothing, 0)) ;

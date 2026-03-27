@@ -21,7 +21,7 @@ template <typename Int> inline double spqr_private_nrm2 (Int n, double *X, cholm
 template <typename Int> inline double spqr_private_nrm2 (Int n, Complex *X, cholmod_common *cc)
 {
     double norm ;
-    SUITESPARSE_BLAS_dznrm2 (norm, n, X, 1, cc->blas_ok) ;
+    SUITESPARSE_BLAS_dznrm2 (norm, n, (SUITESPARSE_COMPLEX_DOUBLE *) X, 1, cc->blas_ok) ;
     return (norm) ;
 }
 

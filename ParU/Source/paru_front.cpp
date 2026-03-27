@@ -2,7 +2,7 @@
 /////////////////////////// paru_front  ////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-// ParU, Copyright (c) 2022-2024, Mohsen Aznaveh and Timothy A. Davis,
+// ParU, Copyright (c) 2022-2025, Mohsen Aznaveh and Timothy A. Davis,
 // All Rights Reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -46,7 +46,7 @@ ParU_Info paru_front
     /* ---------------------------------------------------------------------- */
 
     PRLEVEL(-2, ("%%~~~~~~~  Assemble Front " LD " start ~~%.0lf~~~~~~~(%d)\n",
-        f, Sym->stree_flop_bound[f], PARU_OPENMP_GET_THREAD_ID));
+        f, Sym->stree_flop_bound[f], PARU_omp_get_thread_num ( )));
 
     /* pivotal columns Super [f] ... Super [f+1]-1 */
     int64_t col1 = Super[f]; /* fornt F has columns col1:col2-1 */
@@ -55,7 +55,7 @@ ParU_Info paru_front
 
     paru_element **elementList = Work->elementList;
 
-    PRLEVEL(-1, ("%% fp=" LD " pivotal columns:clo1=" LD "...col2=" LD "\n", fp, col1,
+    PRLEVEL(1, ("%% fp=" LD " pivotal columns:clo1=" LD "...col2=" LD "\n", fp, col1,
                  col2 - 1));
     ASSERT(fp > 0);
 
@@ -582,12 +582,12 @@ ParU_Info paru_front
 
         /*** 7 * Count number of rows and columsn of prior CBs to asslemble ***/
 
-        PRLEVEL(-1, ("\n%%||||  Start Finalize " LD " ||||\n", f));
+        PRLEVEL(1, ("\n%%||||  Start Finalize " LD " ||||\n", f));
         ParU_Info res_prior;
         res_prior = paru_prior_assemble(f, start_fac, pivotal_elements, colHash,
                                         hi, Work, Sym, Num);
         if (res_prior != PARU_SUCCESS) return res_prior;
-        PRLEVEL(-1, ("\n%%||||  Finish Finalize " LD " ||||\n", f));
+        PRLEVEL(1, ("\n%%||||  Finish Finalize " LD " ||||\n", f));
 
         ////////////////////////////////////////////////////////////////////////
 

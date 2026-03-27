@@ -2,19 +2,18 @@
 // GB_ewise_fulla: C += A+B where all 3 matries are full
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 // C += A+B where no matrix is iso and all three matrices are as-if-full
 
-// JIT: done.
-
 #include "ewise/GB_ewise.h"
 #include "binaryop/GB_binop.h"
 #include "jitifyer/GB_stringify.h"
 #ifndef GBCOMPACT
+#include "GB_control.h"
 #include "FactoryKernels/GB_ew__include.h"
 #endif
 

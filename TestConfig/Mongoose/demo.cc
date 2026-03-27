@@ -15,7 +15,7 @@
 
 int main (void)
 {
-    // FIXME: Do something more meaningful
+    // Fixme: Do something more meaningful
     std::cout << "Mongoose::mongoose_version(): " <<
         Mongoose::mongoose_version ( ) << std::endl;
 

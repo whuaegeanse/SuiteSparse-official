@@ -2,7 +2,7 @@
 // GB_cpu_features_impl.c: Google's cpu_features package for GraphBLAS
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -30,17 +30,21 @@
 
 #include "include/GB_compiler.h"
 #include "cpu/GB_cpu_features.h"
+#include "include/GB_pedantic_disable.h"
+#include "include/GB_unused.h"
 
 #if !defined ( GBNCPUFEAT )
 
     // include the implementation files from cpu_features/src/impl_*.c
-    #include "src/impl_aarch64.c"
+    #include "src/impl_aarch64_linux_or_android.c"
+    #include "src/impl_aarch64_windows.c"
     #include "src/impl_arm_linux_or_android.c"
     #include "src/impl_mips_linux_or_android.c"
     #include "src/impl_ppc_linux.c"
     #include "src/impl_x86_freebsd.c"
     #include "src/impl_x86_linux_or_android.c"
     #include "src/impl_x86_windows.c"
+    #include "src/impl_riscv_linux.c"
     #if GBX86
         #if (defined(__apple__) || defined(__APPLE__) || defined(__MACH__))
         // needed for src/impl_x86_macos.c:

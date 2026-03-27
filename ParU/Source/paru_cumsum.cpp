@@ -2,7 +2,7 @@
 //////////////////////////  paru_cumsum ////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-// ParU, Copyright (c) 2022-2024, Mohsen Aznaveh and Timothy A. Davis,
+// ParU, Copyright (c) 2022-2025, Mohsen Aznaveh and Timothy A. Davis,
 // All Rights Reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -14,6 +14,8 @@
  */
 #include "paru_internal.hpp"
 
+#define CHUNK ((double) (1024*1024))
+
 int64_t paru_cumsum
 (
     int64_t n,
@@ -22,6 +24,9 @@ int64_t paru_cumsum
     int32_t nthreads
 )
 {
+
+    // reduce # of threads if problem is small
+    int nth = paru_nthreads_to_use ((double) n, CHUNK, nthreads) ;
 
     // n is size, X is size n and in/out
     int64_t tot = 0;
@@ -39,15 +44,15 @@ int64_t paru_cumsum
     int64_t mid = n / 2;
     int64_t sum = 0;
 
-    #pragma omp parallel shared(sum, n, X, mem_chunk, nthreads) \
-        firstprivate(mid) num_threads(nthreads)
+    #pragma omp parallel shared(sum, n, X, mem_chunk, nth) \
+        firstprivate(mid) num_threads(nth)
     {
         #pragma omp single
         {
             #pragma omp task
-            sum = paru_cumsum(mid, X, mem_chunk, nthreads) ;
+            sum = paru_cumsum(mid, X, mem_chunk, nth) ;
             #pragma omp task
-            paru_cumsum(n - mid, X + mid, mem_chunk, nthreads) ;
+            paru_cumsum(n - mid, X + mid, mem_chunk, nth) ;
             #pragma omp taskwait
             #pragma omp taskloop
             for (int64_t i = mid; i < n; i++)

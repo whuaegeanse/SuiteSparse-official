@@ -2,7 +2,7 @@
 // GB_encodify_user_op: encode a user op
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -37,7 +37,7 @@ uint64_t GB_encodify_user_op      // encode a user defined op
     // primary encoding of the user operator
     //--------------------------------------------------------------------------
 
-    encoding->kcode = GB_JIT_KERNEL_USEROP ;
+    GB_encodify_kcode (encoding, GB_JIT_KERNEL_USEROP) ;
     encoding->code = 0 ;
 
     //--------------------------------------------------------------------------

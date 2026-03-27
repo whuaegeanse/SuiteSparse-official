@@ -2,13 +2,15 @@
 // GB_red:  hard-coded functions for reductions
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
-#include "GB.h"
 #include "GB_control.h"
+GB_type_enabled
+#if GB_TYPE_ENABLED
+#include "GB.h"
 #include "FactoryKernels/GB_red__include.h"
 
 // reduction operator and type:
@@ -70,4 +72,8 @@ GrB_Info GB (_red)
     return (GrB_SUCCESS) ;
     #endif
 }
+
+#else
+GB_EMPTY_PLACEHOLDER
+#endif
 

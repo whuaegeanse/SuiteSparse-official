@@ -13,10 +13,10 @@
 # cmake 3.22 is required to find the BLAS in SuiteSparsePolicy.cmake
 cmake_minimum_required ( VERSION 3.22 )
 
-set ( SPQR_DATE "June 20, 2024" )
+set ( SPQR_DATE "Nov 1, 2025" )
 set ( SPQR_VERSION_MAJOR 4 CACHE STRING "" FORCE )
 set ( SPQR_VERSION_MINOR 3 CACHE STRING "" FORCE )
-set ( SPQR_VERSION_SUB   4 CACHE STRING "" FORCE )
+set ( SPQR_VERSION_SUB   6 CACHE STRING "" FORCE )
 
 message ( STATUS "Building SPQR version: v"
     ${SPQR_VERSION_MAJOR}.
@@ -45,16 +45,16 @@ include ( SuiteSparsePolicy )
 #-------------------------------------------------------------------------------
 
 if ( NOT SUITESPARSE_ROOT_CMAKELISTS )
-    find_package ( SuiteSparse_config 7.8.0
+    find_package ( SuiteSparse_config 7.12.0
         PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-        find_package ( SuiteSparse_config 7.8.0 REQUIRED )
+        find_package ( SuiteSparse_config 7.11.0 REQUIRED )
     endif ( )
 
-    find_package ( CHOLMOD 5.3.0
+    find_package ( CHOLMOD 5.3.4
         PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::CHOLMOD )
-        find_package ( CHOLMOD 5.3.0 REQUIRED )
+        find_package ( CHOLMOD 5.3.4 REQUIRED )
     endif ( )
 endif ( )
 
@@ -251,26 +251,36 @@ if ( BUILD_SHARED_LIBS )
         LIBRARY DESTINATION ${SUITESPARSE_LIBDIR}
         ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
         RUNTIME DESTINATION ${SUITESPARSE_BINDIR} )
+
+    # create (temporary) export target file during build
+    export ( EXPORT SPQRTargets
+        NAMESPACE SuiteSparse::
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/SPQRTargets.cmake )
+
+    # install export target, config and version files for find_package
+    install ( EXPORT SPQRTargets
+        NAMESPACE SuiteSparse::
+        DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/SPQR )
 endif ( )
 if ( BUILD_STATIC_LIBS )
     install ( TARGETS SPQR_static
-        EXPORT SPQRTargets
+        EXPORT SPQRTargets_static
         ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR} )
+
+    # create (temporary) export target file during build
+    export ( EXPORT SPQRTargets_static
+        NAMESPACE SuiteSparse::
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/SPQRTargets_static.cmake )
+
+    # install export target, config and version files for find_package
+    install ( EXPORT SPQRTargets_static
+        NAMESPACE SuiteSparse::
+        DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/SPQR )
 endif ( )
 
 install ( FILES "Include/SuiteSparseQR_C.h"
     "Include/SuiteSparseQR_definitions.h"
     "Include/SuiteSparseQR.hpp" DESTINATION ${SUITESPARSE_INCLUDEDIR} )
-
-# create (temporary) export target file during build
-export ( EXPORT SPQRTargets
-    NAMESPACE SuiteSparse::
-    FILE ${CMAKE_CURRENT_BINARY_DIR}/SPQRTargets.cmake )
-
-# install export target, config and version files for find_package
-install ( EXPORT SPQRTargets
-    NAMESPACE SuiteSparse::
-    DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/SPQR )
 
 # generate config file to be used in common build tree
 set ( SUITESPARSE_IN_BUILD_TREE ON )

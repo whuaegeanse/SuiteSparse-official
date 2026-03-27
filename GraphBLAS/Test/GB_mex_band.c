@@ -2,7 +2,7 @@
 // GB_mex_band: C = tril (triu (A,lo), hi), or with A'
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -34,16 +34,16 @@
     }                                                   \
 }
 
- typedef struct { int64_t lo ; int64_t hi ; } LoHi_type ; 
+ typedef struct { int64_t lo ; int64_t hi ; } gb_LoHi_type ; 
 
 #define LOHI_DEFN                                       \
-"typedef struct { int64_t lo ; int64_t hi ; } LoHi_type ;"
+"typedef struct { int64_t lo ; int64_t hi ; } gb_LoHi_type ;"
 
-void LoHi_band (bool *z, /* x is unused: */ const void *x,
-    GrB_Index i, GrB_Index j, const LoHi_type *thunk) ;
+void gb_LoHi_band (bool *z, /* x is unused: */ const void *x,
+    uint64_t i, uint64_t j, const gb_LoHi_type *thunk) ;
 
-void LoHi_band (bool *z, /* x is unused: */ const void *x,
-    GrB_Index i, GrB_Index j, const LoHi_type *thunk)
+void gb_LoHi_band (bool *z, /* x is unused: */ const void *x,
+    uint64_t i, uint64_t j, const gb_LoHi_type *thunk)
 {
     int64_t i2 = (int64_t) i ;
     int64_t j2 = (int64_t) j ;
@@ -86,9 +86,9 @@ void mexFunction
     }
 
     // create the Thunk
-    LoHi_type bandwidth  ;
-    OK (GxB_Type_new (&Thunk_type, sizeof (LoHi_type),
-        "LoHi_type", LOHI_DEFN)) ;
+    gb_LoHi_type bandwidth  ;
+    OK (GxB_Type_new (&Thunk_type, sizeof (gb_LoHi_type),
+        "gb_LoHi_type", LOHI_DEFN)) ;
 
     // get lo and hi
     bandwidth.lo = (int64_t) mxGetScalar (pargin [1]) ;
@@ -108,12 +108,12 @@ void mexFunction
     }
 
     // create operator
-    // use the user-defined operator, from the LoHi_band function.
+    // use the user-defined operator, from the gb_LoHi_band function.
     // This operator cannot be JIT'd because it doesn't have a name or defn.
-    METHOD (GrB_IndexUnaryOp_new (&op, (GxB_index_unary_function) LoHi_band,
+    METHOD (GrB_IndexUnaryOp_new (&op, (GxB_index_unary_function) gb_LoHi_band,
         GrB_BOOL, GrB_FP64, Thunk_type)) ;
 
-    GrB_Index nrows, ncols ;
+    uint64_t nrows, ncols ;
     GrB_Matrix_nrows (&nrows, A) ;
     GrB_Matrix_ncols (&ncols, A) ;
     if (bandwidth.lo == 0 && bandwidth.hi == 0 && nrows == 10 && ncols == 10)

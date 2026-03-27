@@ -119,7 +119,7 @@ if ( BUILD_STATIC_LIBS )
         CUDA_RUNTIME_LIBRARY Static )
     target_link_libraries ( GPURuntime_static PRIVATE CUDA::nvrtc CUDA::cudart_static )
     target_compile_definitions ( GPURuntime_static PRIVATE "SPQR_HAS_CUDA" )
-    # FIXME: Ok to hardcode CUDA library names like this?
+    # Fixme: Ok to hardcode CUDA library names like this?
     set ( GPURUNTIME_STATIC_LIBS "-L${CUDAToolkit_LIBRARY_DIR} -lcuda -lcudart_static" )
     if ( TARGET CUDA::cublas_static )
         target_link_libraries ( GPURuntime_static PRIVATE CUDA::cublas_static )

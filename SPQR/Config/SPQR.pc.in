@@ -7,7 +7,7 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-# FIXME: Which flags do we need to statically link CUDA
+# Fixme: Which flags do we need to statically link CUDA
 
 Name: SPQR
 URL: https://github.com/DrTimothyAldenDavis/SuiteSparse

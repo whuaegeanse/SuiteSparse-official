@@ -2,7 +2,7 @@
 // GB_op_name_and_defn: construct name and defn of a user-defined op
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -36,6 +36,8 @@ GrB_Info GB_op_name_and_defn
     //--------------------------------------------------------------------------
 
     ASSERT (op_name != NULL) ;
+    ASSERT (op_name_len != NULL) ;
+    ASSERT (op_hash != NULL) ;
     ASSERT (op_defn != NULL) ;
     ASSERT (op_defn_size != NULL) ;
     (*op_defn) = NULL ;
@@ -60,24 +62,21 @@ GrB_Info GB_op_name_and_defn
     // get the operator name length (zero if no name given)
     (*op_name_len) = (int32_t) strlen (op_name) ;
 
-    // a user-defined op can only be JIT'd if it has a name and defn.
-    // a new builtin op (created by GB_reduce_to_vector) can always be JIT'd.
-    (*op_hash) = GB_jitifyer_hash (op_name, (*op_name_len),
-        jitable && (!user_op || (*op_name_len) > 0)) ;
-
     //--------------------------------------------------------------------------
     // get the definition of the operator, if present
     //--------------------------------------------------------------------------
 
     char *defn = NULL ;
     size_t defn_size = 0 ;
+    size_t defn_len = 0 ;
+
     if (input_defn != NULL)
     { 
         // determine the string length of the definition
-        size_t defn_len = strlen (input_defn) ;
+        defn_len = strlen (input_defn) ;
 
         // allocate space for the definition
-        defn = GB_MALLOC (defn_len+1, char, &defn_size) ;
+        defn = GB_MALLOC_MEMORY (defn_len+1, sizeof (char), &defn_size) ;
         if (defn == NULL)
         { 
             // out of memory
@@ -87,6 +86,15 @@ GrB_Info GB_op_name_and_defn
         // copy the definition into the new operator
         memcpy (defn, input_defn, defn_len+1) ;
     }
+
+    //--------------------------------------------------------------------------
+    // compute the operator hash
+    //--------------------------------------------------------------------------
+
+    // a user-defined op can only be JIT'd if it has a name and defn.
+    // a new builtin op (created by GB_reduce_to_vector) can always be JIT'd.
+    (*op_hash) = GB_jitifyer_hash (op_name, (*op_name_len),
+        jitable && (!user_op || ((*op_name_len) > 0 && defn_len > 0))) ;
 
     //--------------------------------------------------------------------------
     // return result

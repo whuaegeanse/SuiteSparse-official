@@ -2,7 +2,7 @@
 // GB_ewise: C<M> = accum (C, A+B) or A.*B
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -20,8 +20,8 @@
 }
 
 #include "ewise/GB_ewise.h"
-#include "ewise/GB_add.h"
-#include "ewise/GB_emult.h"
+#include "add/GB_add.h"
+#include "emult/GB_emult.h"
 #include "transpose/GB_transpose.h"
 #include "mask/GB_accum_mask.h"
 #include "binaryop/GB_binop.h"
@@ -83,8 +83,8 @@ GrB_Info GB_ewise                   // C<M> = accum (C, A+B) or A.*B
         if (is_eWiseUnion)
         {
             // alpha and beta scalars must be present
-            GB_RETURN_IF_NULL_OR_FAULTY (alpha) ;
-            GB_RETURN_IF_NULL_OR_FAULTY (beta) ;
+            ASSERT_SCALAR_OK (alpha, "alpha for GB_ewise", GB0) ;
+            ASSERT_SCALAR_OK (beta, "beta for GB_ewise", GB0) ;
             GB_MATRIX_WAIT (alpha) ;
             GB_MATRIX_WAIT (beta) ;
             if (GB_nnz ((GrB_Matrix) alpha) == 0)
@@ -162,14 +162,19 @@ GrB_Info GB_ewise                   // C<M> = accum (C, A+B) or A.*B
     // handle CSR and CSC formats
     //--------------------------------------------------------------------------
 
+    // The op can be a built-in or user-defined positional operator.
+
     GB_Opcode opcode = op->opcode ;
-    bool op_is_positional = GB_OPCODE_IS_POSITIONAL (opcode) ;
+    bool op_is_builtin_positional =
+        GB_IS_BUILTIN_BINOP_CODE_POSITIONAL (opcode) ;
+    bool op_is_index_binop = GB_IS_INDEXBINARYOP_CODE (opcode) ;
+    bool op_is_positional = op_is_builtin_positional || op_is_index_binop ;
 
     // CSC/CSR format of T is same as C.  Conform A and B to the format of C.
     bool T_is_csc = C->is_csc ;
     if (T_is_csc != A->is_csc)
     { 
-        // Flip the sense of A_transpose.  For example, if C is CSC and A is
+        // Negate A_transpose.  For example, if C is CSC and A is
         // CSR, and A_transpose is true, then C=A'+B is being computed.  But
         // this is the same as C=A+B where A is treated as if it is CSC.
         A_transpose = !A_transpose ;
@@ -177,7 +182,7 @@ GrB_Info GB_ewise                   // C<M> = accum (C, A+B) or A.*B
 
     if (T_is_csc != B->is_csc)
     { 
-        // Flip the sense of B_transpose.
+        // Negate B_transpose.
         B_transpose = !B_transpose ;
     }
 
@@ -191,13 +196,20 @@ GrB_Info GB_ewise                   // C<M> = accum (C, A+B) or A.*B
         T_is_csc = !T_is_csc ;
     }
 
-    if (!T_is_csc)
+    bool flipij = false ;
+    if (!T_is_csc && op_is_positional)
     {
-        if (op_is_positional)
+        if (op_is_builtin_positional)
         { 
-            // positional ops must be flipped, with i and j swapped
+            // positional ops must be flipped, with i and j swapped.
+            // This can be done for builtin ops (FIRSTI, SECONDJ, etc).
             op = GB_positional_binop_ijflip (op) ;
             opcode = op->opcode ;
+        }
+        else // if (op_is_index_binop)
+        {
+            // user-defined index binary ops must have their i,j flipped
+            flipij = true ;
         }
     }
 
@@ -223,7 +235,7 @@ GrB_Info GB_ewise                   // C<M> = accum (C, A+B) or A.*B
     { 
         // MT = (bool) M'
         GBURBLE ("(M transpose) ") ;
-        GB_CLEAR_STATIC_HEADER (MT, &MT_header) ;
+        GB_CLEAR_MATRIX_HEADER (MT, &MT_header) ;
         GB_OK (GB_transpose_cast (MT, GrB_BOOL, T_is_csc, M, Mask_struct,
             Werk)) ;
         M1 = MT ;
@@ -246,7 +258,7 @@ GrB_Info GB_ewise                   // C<M> = accum (C, A+B) or A.*B
     { 
         // AT = (xtype) A' or AT = (xtype) one (A')
         GBURBLE ("(A transpose) ") ;
-        GB_CLEAR_STATIC_HEADER (AT, &AT_header) ;
+        GB_CLEAR_MATRIX_HEADER (AT, &AT_header) ;
         GB_OK (GB_transpose_cast (AT, op->xtype, T_is_csc, A, A_is_pattern,
             Werk)) ;
         A1 = AT ;
@@ -258,7 +270,7 @@ GrB_Info GB_ewise                   // C<M> = accum (C, A+B) or A.*B
     { 
         // BT = (ytype) B' or BT = (ytype) one (B')
         GBURBLE ("(B transpose) ") ;
-        GB_CLEAR_STATIC_HEADER (BT, &BT_header) ;
+        GB_CLEAR_MATRIX_HEADER (BT, &BT_header) ;
         GB_OK (GB_transpose_cast (BT, op->ytype, T_is_csc, B, B_is_pattern,
             Werk)) ;
         B1 = BT ;
@@ -354,7 +366,7 @@ GrB_Info GB_ewise                   // C<M> = accum (C, A+B) or A.*B
     //--------------------------------------------------------------------------
 
     bool mask_applied = false ;
-    GB_CLEAR_STATIC_HEADER (T, &T_header) ;
+    GB_CLEAR_MATRIX_HEADER (T, &T_header) ;
 
     if (eWiseAdd)
     { 
@@ -375,8 +387,8 @@ GrB_Info GB_ewise                   // C<M> = accum (C, A+B) or A.*B
         // could be faster to exploit the mask duing GB_add.
 
         GB_OK (GB_add (T, T_type, T_is_csc, M1, Mask_struct, Mask_comp,
-            &mask_applied, A1, B1, is_eWiseUnion, alpha, beta, op, false,
-            Werk)) ;
+            &mask_applied, A1, B1, is_eWiseUnion, alpha, beta, op, flipij,
+            false, Werk)) ;
 
     }
     else
@@ -391,10 +403,10 @@ GrB_Info GB_ewise                   // C<M> = accum (C, A+B) or A.*B
         // shallow copy of A1->h, B1->h, or M1->h.  T is hypersparse if any
         // matrix A1, B1, or M1 are hypersparse.  Internally, T->h always
         // starts as a shallow copy of A1->h, B1->h, or M1->h, but it may be
-        // pruned by GB_hypermatrix_prune, and thus no longer shallow.
+        // pruned by GB_hyper_prune, and thus no longer shallow.
 
         GB_OK (GB_emult (T, T_type, T_is_csc, M1, Mask_struct, Mask_comp,
-            &mask_applied, A1, B1, op, Werk)) ;
+            &mask_applied, A1, B1, op, flipij, Werk)) ;
 
         //----------------------------------------------------------------------
         // transplant shallow content from AT, BT, or MT

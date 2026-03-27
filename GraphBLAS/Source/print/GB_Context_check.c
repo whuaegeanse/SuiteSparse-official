@@ -2,7 +2,7 @@
 // GB_Context_check: check and print a Context
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -22,6 +22,7 @@ GrB_Info GB_Context_check       // check a GraphBLAS Context
     // check inputs
     //--------------------------------------------------------------------------
 
+    GB_CHECK_INIT ;
     GBPR0 ("\n    GraphBLAS Context: %s ", ((name != NULL) ? name : "")) ;
 
     if (Context == NULL)
@@ -38,14 +39,31 @@ GrB_Info GB_Context_check       // check a GraphBLAS Context
 
     GBPR0 ("\n") ;
 
+    // name given by GrB_set, or 'GrB_*' name for built-in objects
+    char *given_name = Context->user_name ;
+    if (Context->user_name_size > 0 && given_name != NULL)
+    { 
+        GBPR0 ("    Context given name: [%s]\n", given_name) ;
+    }
+
     int nthreads_max = GB_Context_nthreads_max_get (Context) ;
     GBPR0 ("    Context.nthreads: %d\n", nthreads_max) ;
 
     double chunk = GB_Context_chunk_get (Context) ;
     GBPR0 ("    Context.chunk:    %g\n", chunk) ;
 
-    int gpu_id = GB_Context_gpu_id_get (Context) ;
-    if (gpu_id >= 0) GBPR0 ("    Context.gpu_id:   %d\n", gpu_id) ;
+    int32_t ngpus, gpu_ids [GB_MAX_NGPUS] ;
+    ngpus = GB_Context_gpu_ids_get (Context, gpu_ids) ;
+    if (ngpus >= 0)
+    {
+        GBPR0 ("    Context.ngpus:    %d\n", ngpus) ;
+        GBPR0 ("    Context.gpu_ids:  [") ;
+        for (int k = 0 ; k < ngpus ; k++)
+        { 
+            GBPR0 (" %d ", gpu_ids [k]) ;
+        }
+        GBPR0 ("]\n") ;
+    }
 
     return (GrB_SUCCESS) ;
 }

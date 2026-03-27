@@ -2,14 +2,14 @@
 // GB_positional_idxunop_ijflip: swap i and j in an index unary positional op
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 // Flip i and j to handle the CSR/CSC variations, for index-unary positional
-// ops.  The two operators GB_FLIPDIAG_INT[32,64] are only used internally
-// and are not available to the user application.
+// ops.  The two operators GxB_FLIPDIAGINDEX_INT32 and GxB_FLIPDIAGINDEX_INT64
+// are only used internally and are not available to the user application.
 
 #include "GB.h"
 

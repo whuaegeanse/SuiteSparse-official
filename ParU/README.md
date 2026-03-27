@@ -1,6 +1,6 @@
 # SuiteSparse:ParU
 
-ParU, Copyright (c) 2022-2024, Mohsen Aznaveh and Timothy A. Davis,
+ParU, Copyright (c) 2022-2025, Mohsen Aznaveh and Timothy A. Davis,
 All Rights Reserved.
 SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -17,19 +17,39 @@ details).
 ##  How to install
 
 See the SuiteSparse/README.md for instructions on building all of SuiteSparse
-via the SuiteSparse/CMakeLists.txt file.  You may also build each individual
-package that ParU depends on (`SuiteSparse_config`, AMD, COLAMD, CCAMD,
-CCOLAMD, CHOLMOD, and UMFPACK).  Then simply do:
+via the SuiteSparse/CMakeLists.txt file.  Namely:
 
 ```
-    cd ParU/build
-    cmake ..
-    cmake --build . --config Release
-    sudo cmake --install .
+    cd SuiteSparse
+    make
+    sudo make --install
+    
 ```
 
-Alternatively, on Linux, Mac, or MINGW, simply type `make` in the ParU
-folder, then `sudo make install`.
+Alternatively, you may just build each individual package that ParU depends on
+(`SuiteSparse_config`, AMD, COLAMD, CCAMD, CCOLAMD, CHOLMOD, and UMFPACK).
+Then simply do:
+
+```
+    cd SuiteSparse/ParU
+    make
+    sudo make --install
+```
+
+If you are using Windows (without MINGW), then you must import the top-level
+SuiteSparse/CMakeLists.txt file into MS Visual Studio, and build the packages
+in SuiteSparse within that application.
+
+After building the ParU library, you may try some demo programs:
+
+```
+    cd SuiteSparse/ParU
+    make demos
+```
+
+Full benchmarking results were obtained with the `paru_benchmark.cpp` program
+in the SuiteSparse/ParU/Demo folder.  See details in the 
+SuiteSparse/ParU/Demo/Benchmarking folder.
 
 ##  How to use
 

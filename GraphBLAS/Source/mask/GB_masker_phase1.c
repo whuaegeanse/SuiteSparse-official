@@ -2,32 +2,33 @@
 // GB_masker_phase1: find # of entries in R = masker (C,M,Z)
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
-
-// JIT: needed.
 
 // GB_masker_phase1 counts the number of entries in each vector of R, for R =
 // masker (C,M,Z), and then does a cumulative sum to find Cp.  GB_masker_phase1
 // is preceded by GB_add_phase0, which finds the non-empty vectors of R.  This
 // phase is done entirely in parallel.
 
-// R, M, C, and Z can be standard sparse or hypersparse, as determined by
-// GB_add_phase0.  All cases of the mask M are handled: present and not
-// complemented, and present and complemented.  The mask is always present for
-// R=masker(C,M,Z).
+// R can be sparse or hypersparse, as determined by GB_add_phase0.  M, C, and Z
+// can have any sparsity format.  All cases of the mask M are handled: present
+// and not complemented, and present and complemented.  The mask is always
+// present for R=masker(C,M,Z).
 
 // Rp is either freed by phase2, or transplanted into R.
 
 #include "mask/GB_mask.h"
-#include "include/GB_unused.h"
+#include "jitifyer/GB_stringify.h"
+#include "include/GB_masker_shared_definitions.h"
+
+#define GB_FREE_ALL GB_FREE_MEMORY (&Rp, Rp_size) ;
 
 GrB_Info GB_masker_phase1           // count nnz in each R(:,j)
 (
     // computed by phase1:
-    int64_t **Rp_handle,            // output of size Rnvec+1
+    void **Rp_handle,               // vector pointers for R
     size_t *Rp_size_handle,
     int64_t *Rnvec_nonempty,        // # of non-empty vectors in R
     // tasks from phase1a:
@@ -36,10 +37,13 @@ GrB_Info GB_masker_phase1           // count nnz in each R(:,j)
     const int R_nthreads,             // # of threads to use
     // analysis from phase0:
     const int64_t Rnvec,
-    const int64_t *restrict Rh,
+    const void *Rh,
     const int64_t *restrict R_to_M,
     const int64_t *restrict R_to_C,
     const int64_t *restrict R_to_Z,
+    const bool Rp_is_32,
+    const bool Rj_is_32,
+    const int R_sparsity,           // GxB_SPARSE or GxB_HYPERSPARSE
     // original input:
     const GrB_Matrix M,             // required mask
     const bool Mask_comp,           // if true, then M is complemented
@@ -57,6 +61,7 @@ GrB_Info GB_masker_phase1           // count nnz in each R(:,j)
     ASSERT (Rp_handle != NULL) ;
     ASSERT (Rp_size_handle != NULL) ;
     ASSERT (Rnvec_nonempty != NULL) ;
+    ASSERT (R_sparsity == GxB_SPARSE || R_sparsity == GxB_HYPERSPARSE) ;
 
     ASSERT_MATRIX_OK (M, "M for mask phase1", GB0) ;
     ASSERT (!GB_ZOMBIES (M)) ; 
@@ -78,14 +83,14 @@ GrB_Info GB_masker_phase1           // count nnz in each R(:,j)
     ASSERT (C->vdim == Z->vdim && C->vlen == Z->vlen) ;
     ASSERT (C->vdim == M->vdim && C->vlen == M->vlen) ;
 
-    int64_t *restrict Rp = NULL ; size_t Rp_size = 0 ;
-    (*Rp_handle) = NULL ;
-
     //--------------------------------------------------------------------------
     // allocate the result
     //--------------------------------------------------------------------------
 
-    Rp = GB_CALLOC (GB_IMAX (2, Rnvec+1), int64_t, &Rp_size) ;
+    (*Rp_handle) = NULL ;
+    void *Rp = NULL ; size_t Rp_size = 0 ;
+    size_t rpsize = (Rp_is_32) ? sizeof (uint32_t) : sizeof (uint64_t) ;
+    Rp = GB_CALLOC_MEMORY (GB_IMAX (2, Rnvec+1), rpsize, &Rp_size) ;
     if (Rp == NULL)
     { 
         // out of memory
@@ -96,15 +101,37 @@ GrB_Info GB_masker_phase1           // count nnz in each R(:,j)
     // count the entries in each vector of R
     //--------------------------------------------------------------------------
 
-    #define GB_PHASE_1_OF_2
-    #include "mask/factory/GB_masker_template.c"
+    // via the JIT kernel
+    GrB_Info info = GB_masker_phase1_jit (
+        // computed by phase1:
+        Rp,                         // output of size Rnvec+1
+        Rnvec_nonempty,             // # of non-empty vectors in R
+        // tasks from phase1a:
+        TaskList,                   // array of structs
+        R_ntasks,                   // # of tasks
+        R_nthreads,                 // # of threads to use
+        // analysis from phase0:
+        Rnvec, Rh, R_to_M, R_to_C, R_to_Z, Rp_is_32, Rj_is_32, R_sparsity,
+        // original input:
+        M, Mask_comp, Mask_struct, C, Z) ;
+
+    if (info == GrB_NO_VALUE)
+    { 
+        // via the generic kernel
+        GBURBLE ("(generic masker) ") ;
+        #define GB_PHASE_1_OF_2
+        #include "mask/template/GB_masker_template.c"
+        info = GrB_SUCCESS ;
+    }
+
+    GB_OK (info) ;
 
     //--------------------------------------------------------------------------
     // cumulative sum of Rp and fine tasks in TaskList
     //--------------------------------------------------------------------------
 
-    GB_task_cumsum (Rp, Rnvec, Rnvec_nonempty, TaskList, R_ntasks, R_nthreads,
-        Werk) ;
+    GB_task_cumsum (Rp, Rp_is_32, Rnvec, Rnvec_nonempty, TaskList, R_ntasks,
+        R_nthreads, Werk) ;
 
     //--------------------------------------------------------------------------
     // return the result

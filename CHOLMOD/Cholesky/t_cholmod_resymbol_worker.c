@@ -29,7 +29,6 @@ static void TEMPLATE (cholmod_resymbol_worker)
     Int *Ap = A->p ;
     Int *Anz = A->nz ;
     bool apacked = A->packed ;
-    bool sorted = A->sorted ;
     int stype = A->stype ;
 
     Int  *Li = L->i ;

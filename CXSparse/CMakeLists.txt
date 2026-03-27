@@ -11,10 +11,10 @@
 
 cmake_minimum_required ( VERSION 3.22 )
 
-set ( CXSPARSE_DATE "June 20, 2024" )
+set ( CXSPARSE_DATE "July 25, 2025" )
 set ( CXSPARSE_VERSION_MAJOR 4 CACHE STRING "" FORCE )
 set ( CXSPARSE_VERSION_MINOR 4 CACHE STRING "" FORCE )
-set ( CXSPARSE_VERSION_SUB   1 CACHE STRING "" FORCE )
+set ( CXSPARSE_VERSION_SUB   2 CACHE STRING "" FORCE )
 
 message ( STATUS "Building CXSparse version: v"
     ${CXSPARSE_VERSION_MAJOR}.
@@ -43,7 +43,7 @@ include ( SuiteSparsePolicy )
 #-------------------------------------------------------------------------------
 
 # MS Visual Studio does not support the complex type for ANSI C11.
-# FIXME: see GraphBLAS for how to use complex types in MS Visual Studio.
+# Fixme: see GraphBLAS for how to use complex types in MS Visual Studio.
 
 if ( MSVC OR ("${CMAKE_C_SIMULATE_ID}" STREQUAL "MSVC") )
     option ( CXSPARSE_USE_COMPLEX "ON: complex data type enabled.  OFF (default): complex data type disabled." OFF )
@@ -70,10 +70,10 @@ endif ( )
 #-------------------------------------------------------------------------------
 
 if ( NOT SUITESPARSE_ROOT_CMAKELISTS )
-    find_package ( SuiteSparse_config 7.8.0
+    find_package ( SuiteSparse_config 7.11.0
         PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-        find_package ( SuiteSparse_config 7.8.0 REQUIRED )
+        find_package ( SuiteSparse_config 7.11.0 REQUIRED )
     endif ( )
 endif ( )
 
@@ -199,23 +199,33 @@ if ( BUILD_SHARED_LIBS )
         ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
         RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
         PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+
+    # create (temporary) export target file during build
+    export ( EXPORT CXSparseTargets
+        NAMESPACE SuiteSparse::
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/CXSparseTargets.cmake )
+
+    # install export target, config and version files for find_package
+    install ( EXPORT CXSparseTargets
+        NAMESPACE SuiteSparse::
+        DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/CXSparse )
 endif ( )
 if ( BUILD_STATIC_LIBS )
     install ( TARGETS CXSparse_static
-        EXPORT CXSparseTargets
+        EXPORT CXSparseTargets_static
         ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
         PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+
+    # create (temporary) export target file during build
+    export ( EXPORT CXSparseTargets_static
+        NAMESPACE SuiteSparse::
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/CXSparseTargets_static.cmake )
+
+    # install export target, config and version files for find_package
+    install ( EXPORT CXSparseTargets_static
+        NAMESPACE SuiteSparse::
+        DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/CXSparse )
 endif ( )
-
-# create (temporary) export target file during build
-export ( EXPORT CXSparseTargets
-    NAMESPACE SuiteSparse::
-    FILE ${CMAKE_CURRENT_BINARY_DIR}/CXSparseTargets.cmake )
-
-# install export target, config and version files for find_package
-install ( EXPORT CXSparseTargets
-    NAMESPACE SuiteSparse::
-    DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/CXSparse )
 
 # generate config file to be used in common build tree
 set ( SUITESPARSE_IN_BUILD_TREE ON )

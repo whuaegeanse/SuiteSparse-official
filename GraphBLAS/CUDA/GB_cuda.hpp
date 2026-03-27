@@ -2,8 +2,8 @@
 // GraphBLAS/CUDA/GB_cuda.hpp: include file for host CUDA methods (not for JIT)
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
-// This file: Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
+// This file: Copyright (c) 2024-2025, NVIDIA CORPORATION. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -28,6 +28,10 @@ extern "C"
 #include <limits>
 #include <iostream>
 #include <cstdint>
+#include <thread>
+#include <array>
+#include <vector>
+
 #include <stdint.h>
 #include <stdio.h>
 
@@ -39,7 +43,7 @@ extern "C"
 //------------------------------------------------------------------------------
 
 // for the "which" parameter of GB_cuda_matrix_prefetch:
-// FIXME: rename this to GB_WHATEVER_P for GB_cuda_matrix_advise
+// FIXME: rename this to GB_WHATEVER_P for GB_cuda_matrix_memadvise
 
 #define GB_PREFETCH_P   1
 #define GB_PREFETCH_H   2
@@ -64,12 +68,10 @@ GrB_Info GB_cuda_matrix_prefetch
 ) ;
 
 #if 0
-// do we need this function too?
-GrB_Info GB_cuda_matrix_advise
+// we need this function too:
+GrB_Info GB_cuda_matrix_memadvise
 (
     GrB_Matrix A,
-
-    p, h, y, b, i, x?   6 bools
 
     what to do:  advise (prefer location? access by)?  prefetch? nothing?
         avdice: enum (1 to 6)
@@ -83,6 +85,13 @@ void GB_cuda_upscale_identity
     GB_void *identity_upscaled,     // output: at least sizeof (uint32_t)
     GrB_Monoid monoid               // input: monoid to upscale
 ) ;
+
+//------------------------------------------------------------------------------
+// stream pool
+//------------------------------------------------------------------------------
+
+GrB_Info GB_cuda_stream_pool_acquire (cudaStream_t *stream) ;
+GrB_Info GB_cuda_stream_pool_release (cudaStream_t *stream) ;
 
 #endif
 

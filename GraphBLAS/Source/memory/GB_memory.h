@@ -2,7 +2,7 @@
 // GB_memory.h: memory allocation
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -22,11 +22,6 @@ void GB_memoryUsage         // count # allocated blocks and their sizes
     const GrB_Matrix A,     // matrix to query
     bool count_hyper_hash   // if true, include A->Y
 ) ;
-
-// See GB_callbacks.h:
-// GB_CALLBACK_MALLOC_MEMORY_PROTO (GB_malloc_memory) ;
-// GB_CALLBACK_FREE_MEMORY_PROTO (GB_free_memory) ;
-// GB_CALLBACK_MEMSET_PROTO (GB_memset) ;
 
 void *GB_calloc_memory      // pointer to allocated block of memory
 (

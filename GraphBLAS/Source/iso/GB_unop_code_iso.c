@@ -2,7 +2,7 @@
 // GB_unop_code_iso: determine if C = A, C = unop(A), or C = binop(A) is iso
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -32,6 +32,7 @@ GB_iso_code GB_unop_code_iso    // return the iso status of C
 
     GB_Opcode opcode = GB_NOP_code ;
     if (op != NULL) opcode = op->opcode ;
+    ASSERT (!GB_IS_INDEXBINARYOP_CODE (opcode)) ;
 
     //--------------------------------------------------------------------------
     // positional ops or user-defined idxunops never result in an iso matrix

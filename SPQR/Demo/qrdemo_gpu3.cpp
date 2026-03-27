@@ -65,8 +65,8 @@ int main (int argc, char **argv)
 
     int ordering = (argc < 3 ? SPQR_ORDERING_DEFAULT : atoi(argv[2]));
 
-    printf ("Matrix %6ld-by-%-6ld nnz: %6ld\n",
-        m, n, cholmod_l_nnz (A, cc)) ;
+    printf ("Matrix %6" PRId64 "-by-%-6" PRId64 " nnz: %6" PRId64 "\n",
+        (int64_t) m, (int64_t) n, cholmod_l_nnz (A, cc)) ;
 
     // B = ones (m,1), a dense right-hand-side of the same type as A
     B = cholmod_l_ones (m, 1, A->xtype, cc) ;

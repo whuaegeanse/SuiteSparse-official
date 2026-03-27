@@ -2,13 +2,15 @@
 // GB_uop.c:  hard-coded functions for each built-in unary operator
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
-#include "GB.h"
 #include "GB_control.h"
+GB_type_enabled
+#if GB_TYPE_ENABLED
+#include "GB.h"
 #include "FactoryKernels/GB_uop__include.h"
 
 // unary operator: z = f(x)
@@ -23,6 +25,7 @@ GB_geta
 
 // C matrix
 GB_ctype
+#define GB_Cp_IS_32 Cp_is_32
 
 // cij = op (aij)
 #define GB_APPLY_OP(pC,pA)          \
@@ -30,14 +33,14 @@ GB_ctype
     /* aij = Ax [pA] */             \
     GB_DECLAREA (aij) ;             \
     GB_GETA (aij, Ax, pA, false) ;  \
-    /* Cx [pC] = unaryop (aij) */      \
+    /* Cx [pC] = unaryop (aij) */   \
     GB_UNARYOP (Cx [pC], aij) ;     \
 }
 
 // disable this operator and use the generic case if these conditions hold
 GB_disable
 
-#include "apply/include/GB_apply_shared_definitions.h"
+#include "omp/include/GB_kernel_shared_definitions.h"
 
 m4_divert(if_uop_apply_enabled)
 //------------------------------------------------------------------------------
@@ -56,7 +59,7 @@ GrB_Info GB (_uop_apply)
     #if GB_DISABLE
     return (GrB_NO_VALUE) ;
     #else
-    #include "apply/template/GB_apply_unop_template.c"
+    #include "apply/factory/GB_apply_unop_template.c"
     return (GrB_SUCCESS) ;
     #endif
 }
@@ -70,7 +73,7 @@ GrB_Info GB (_uop_tran)
 (
     GrB_Matrix C,
     const GrB_Matrix A,
-    int64_t *restrict *Workspaces,
+    void **Workspaces,
     const int64_t *restrict A_slice,
     int nworkspaces,
     int nthreads
@@ -79,8 +82,13 @@ GrB_Info GB (_uop_tran)
     #if GB_DISABLE
     return (GrB_NO_VALUE) ;
     #else
+    bool Cp_is_32 = C->p_is_32 ;
     #include "transpose/template/GB_transpose_template.c"
     return (GrB_SUCCESS) ;
     #endif
 }
+
+#else
+GB_EMPTY_PLACEHOLDER
+#endif
 

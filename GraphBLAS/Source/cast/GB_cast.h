@@ -2,7 +2,7 @@
 // GB_cast: definitions for GB_cast_* methods
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -80,15 +80,25 @@ static inline void GB_cast_one  // z = 1 with typecasting zcode
 GrB_Info GB_cast_array          // typecast an array
 (
     GB_void *Cx,                // output array
-    const GB_Type_code code1,   // type code for Cx
+    const GB_Type_code ccode,   // type code for Cx
     GrB_Matrix A,
-    const int nthreads          // number of threads to use
+    const int A_nthreads        // number of threads to use
 ) ;
 
 GrB_Info GB_cast_matrix         // copy or typecast the values from A into C
 (
     GrB_Matrix C,
     GrB_Matrix A
+) ;
+
+void GB_cast_int                // parallel memcpy/cast of integer arrays
+(
+    void *dest,                 // destination
+    GB_Type_code dest_code,     // destination type: int32/64, or uint32/64
+    const void *src,            // source
+    GB_Type_code src_code,      // source type: int32/64, or uint32/64
+    size_t n,                   // # of entries to copy
+    int nthreads_max            // max # of threads to use
 ) ;
 
 #endif

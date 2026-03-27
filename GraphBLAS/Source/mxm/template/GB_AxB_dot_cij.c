@@ -2,7 +2,7 @@
 // GB_AxB_dot_cij: compute C(i,j) = A(:,i)'*B(:,j)
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -75,14 +75,15 @@
             cij = (GB_C_TYPE) (((uint64_t) vlen) & 0x1L) ;
         }
         #elif GB_IS_PLUS_PAIR_8_SEMIRING
-        { 
+        {
             // (PLUS int8, uint8 monoids)_PAIR semirings
+            // only used by the JIT if int8 and uint8 FactoryKernels disabled
             cij = (GB_C_TYPE) (((uint64_t) vlen) & 0xFFL) ;
         }
         #elif GB_IS_PLUS_PAIR_16_SEMIRING
         {
             // (PLUS int16, uint16 monoids)_PAIR semirings
-            // this is only used by the JIT
+            // only used by the JIT if int16 and uint16 FactoryKernels disabled
             cij = (GB_C_TYPE) (((uint64_t) vlen) & 0xFFFFL) ;
         }
         #elif GB_IS_PLUS_PAIR_32_SEMIRING
@@ -192,14 +193,15 @@
             cij = (GB_C_TYPE) (((uint64_t) bjnz) & 0x1L) ;
         }
         #elif GB_IS_PLUS_PAIR_8_SEMIRING
-        { 
+        {
             // (PLUS int8, uint8 monoids)_PAIR semirings
+            // only used by the JIT if int8 and uint8 FactoryKernels disabled
             cij = (GB_C_TYPE) (((uint64_t) bjnz) & 0xFFL) ;
         }
         #elif GB_IS_PLUS_PAIR_16_SEMIRING
         {
             // (PLUS int16, uint16 monoids)_PAIR semirings
-            // this is only used by the JIT
+            // only used by the JIT if int16 and uint16 FactoryKernels disabled
             cij = (GB_C_TYPE) (((uint64_t) bjnz) & 0xFFFFL) ;
         }
         #elif GB_IS_PLUS_PAIR_32_SEMIRING
@@ -215,16 +217,16 @@
         #elif GB_IS_MIN_FIRSTJ_SEMIRING
         { 
             // MIN_FIRSTJ semiring: take the first entry in B(:,j)
-            cij = Bi [pB] + GB_OFFSET ;
+            cij = GB_IGET (Bi, pB) + GB_OFFSET ;
         }
         #elif GB_IS_MAX_FIRSTJ_SEMIRING
         { 
             // MAX_FIRSTJ semiring: take the last entry in B(:,j)
-            cij = Bi [pB_end-1] + GB_OFFSET ;
+            cij = GB_IGET (Bi, pB_end-1) + GB_OFFSET ;
         }
         #else
         {
-            int64_t k = Bi [pB] ;               // first row index of B(:,j)
+            int64_t k = GB_IGET (Bi, pB) ;      // first row index of B(:,j)
             // cij = (A(k,i) or A(i,k)) * B(k,j)
             GB_DECLAREA (aki) ;
             GB_GETA (aki, Ax, GB_A_INDEX(k), A_iso) ; // aki = A(k,i) or A(i,k)
@@ -236,7 +238,7 @@
             { 
                 // break if cij terminal
                 GB_IF_TERMINAL_BREAK (cij, zterminal) ;
-                int64_t k = Bi [p] ;
+                int64_t k = GB_IGET (Bi, p) ;
                 // cij += (A(k,i) or A(i,k)) * B(k,j)
                 GB_GETA (aki, Ax, GB_A_INDEX(k), A_iso) ; //aki=A(k,i) or A(i,k)
                 GB_GETB (bkj, Bx, p, B_iso) ;           // bkj = B(k,j)
@@ -353,7 +355,7 @@
             // MIN_FIRSTJ semiring: take the first entry
             for (int64_t p = pB ; p < pB_end ; p++)
             {
-                int64_t k = Bi [p] ;
+                int64_t k = GB_IGET (Bi, p) ;
                 if (Ab [GB_A_INDEX (k)])
                 { 
                     cij_exists = true ;
@@ -367,7 +369,7 @@
             // MAX_FIRSTJ semiring: take the last entry
             for (int64_t p = pB_end-1 ; p >= pB ; p--)
             {
-                int64_t k = Bi [p] ;
+                int64_t k = GB_IGET (Bi, p) ;
                 if (Ab [GB_A_INDEX (k)])
                 { 
                     cij_exists = true ;
@@ -380,7 +382,7 @@
         {
             for (int64_t p = pB ; p < pB_end ; p++)
             {
-                int64_t k = Bi [p] ;
+                int64_t k = GB_IGET (Bi, p) ;
                 if (Ab [GB_A_INDEX (k)])
                 { 
                     GB_DOT (k, GB_A_INDEX (k), p) ;
@@ -408,14 +410,15 @@
             cij = (GB_C_TYPE) (((uint64_t) ainz) & 0x1L) ;
         }
         #elif GB_IS_PLUS_PAIR_8_SEMIRING
-        { 
+        {
             // (PLUS int8, uint8 monoids)_PAIR semirings
+            // only used by the JIT if int8 and uint8 FactoryKernels disabled
             cij = (GB_C_TYPE) (((uint64_t) ainz) & 0xFFL) ;
         }
         #elif GB_IS_PLUS_PAIR_16_SEMIRING
         {
             // (PLUS int16, uint16 monoids)_PAIR semirings
-            // this is only used by the JIT
+            // only used by the JIT if int16 and uint16 FactoryKernels disabled
             cij = (GB_C_TYPE) (((uint64_t) ainz) & 0xFFFFL) ;
         }
         #elif GB_IS_PLUS_PAIR_32_SEMIRING
@@ -431,16 +434,16 @@
         #elif GB_IS_MIN_FIRSTJ_SEMIRING
         { 
             // MIN_FIRSTJ semiring: take the first entry in A(:,i)
-            cij = Ai [pA] + GB_OFFSET ;
+            cij = GB_IGET (Ai, pA) + GB_OFFSET ;
         }
         #elif GB_IS_MAX_FIRSTJ_SEMIRING
         { 
             // MAX_FIRSTJ semiring: take the last entry in A(:,i)
-            cij = Ai [pA_end-1] + GB_OFFSET ;
+            cij = GB_IGET (Ai, pA_end-1) + GB_OFFSET ;
         }
         #else
         {
-            int64_t k = Ai [pA] ;               // first row index of A(:,i)
+            int64_t k = GB_IGET (Ai, pA) ;      // first row index of A(:,i)
             // cij = A(k,i) * B(k,j)
             GB_DECLAREA (aki) ;
             GB_GETA (aki, Ax, pA  , A_iso) ;    // aki = A(k,i)
@@ -452,7 +455,7 @@
             { 
                 // break if cij terminal
                 GB_IF_TERMINAL_BREAK (cij, zterminal) ;
-                int64_t k = Ai [p] ;
+                int64_t k = GB_IGET (Ai, p) ;
                 // cij += A(k,i) * B(k,j)
                 GB_GETA (aki, Ax, p   , A_iso) ;    // aki = A(k,i)
                 GB_GETB (bkj, Bx, pB+k, B_iso) ;    // bkj = B(k,j)
@@ -475,7 +478,7 @@
             // MIN_FIRSTJ semiring: take the first entry
             for (int64_t p = pA ; p < pA_end ; p++)
             {
-                int64_t k = Ai [p] ;
+                int64_t k = GB_IGET (Ai, p) ;
                 if (Bb [pB+k])
                 { 
                     cij_exists = true ;
@@ -489,7 +492,7 @@
             // MAX_FIRSTJ semiring: take the last entry
             for (int64_t p = pA_end-1 ; p >= pA ; p--)
             {
-                int64_t k = Ai [p] ;
+                int64_t k = GB_IGET (Ai, p) ;
                 if (Bb [pB+k])
                 { 
                     cij_exists = true ;
@@ -502,7 +505,7 @@
         {
             for (int64_t p = pA ; p < pA_end ; p++)
             {
-                int64_t k = Ai [p] ;
+                int64_t k = GB_IGET (Ai, p) ;
                 if (Bb [pB+k])
                 { 
                     GB_DOT (k, p, pB+k) ;
@@ -525,7 +528,7 @@
         // specially here.  They could be done with a backwards traversal of
         // the sparse vectors A(:,i) and B(:,j).
 
-        if (Ai [pA_end-1] < ib_first || ib_last < Ai [pA])
+        if (GB_IGET (Ai, pA_end-1) < ib_first || ib_last < GB_IGET (Ai, pA))
         { 
 
             //------------------------------------------------------------------
@@ -544,15 +547,16 @@
 
             while (pA < pA_end && pB < pB_end)
             {
-                int64_t ia = Ai [pA] ;
-                int64_t ib = Bi [pB] ;
+                int64_t ia = GB_IGET (Ai, pA) ;
+                int64_t ib = GB_IGET (Bi, pB) ;
                 if (ia < ib)
                 { 
                     // A(ia,i) appears before B(ib,j)
                     // discard all entries A(ia:ib-1,i)
                     int64_t pleft = pA + 1 ;
                     int64_t pright = pA_end - 1 ;
-                    GB_TRIM_BINARY_SEARCH (ib, Ai, pleft, pright) ;
+                    GB_trim_binary_search (ib, Ai, GB_Ai_IS_32,
+                        &pleft, &pright) ;
                     ASSERT (pleft > pA) ;
                     pA = pleft ;
                 }
@@ -584,8 +588,8 @@
 
             while (pA < pA_end && pB < pB_end)
             {
-                int64_t ia = Ai [pA] ;
-                int64_t ib = Bi [pB] ;
+                int64_t ia = GB_IGET (Ai, pA) ;
+                int64_t ib = GB_IGET (Bi, pB) ;
                 if (ia < ib)
                 { 
                     // A(ia,i) appears before B(ib,j)
@@ -597,7 +601,8 @@
                     // discard all entries B(ib:ia-1,j)
                     int64_t pleft = pB + 1 ;
                     int64_t pright = pB_end - 1 ;
-                    GB_TRIM_BINARY_SEARCH (ia, Bi, pleft, pright) ;
+                    GB_trim_binary_search (ia, Bi, GB_Bi_IS_32,
+                        &pleft, &pright) ;
                     ASSERT (pleft > pB) ;
                     pB = pleft ;
                 }
@@ -624,8 +629,8 @@
 
             while (pA < pA_end && pB < pB_end)
             {
-                int64_t ia = Ai [pA] ;
-                int64_t ib = Bi [pB] ;
+                int64_t ia = GB_IGET (Ai, pA) ;
+                int64_t ib = GB_IGET (Bi, pB) ;
                 if (ia < ib)
                 { 
                     // A(ia,i) appears before B(ib,j)

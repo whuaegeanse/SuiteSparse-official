@@ -2,7 +2,7 @@
 // GB_mex_test5: still more basic tests
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -27,7 +27,7 @@
     p = NULL ;              \
 }
 
-void banded_idx
+void gb_banded_idx
 (
     bool *z,
     const int64_t *x,   // unused
@@ -36,7 +36,7 @@ void banded_idx
     const int64_t *thunk
 ) ;
 
-void banded_idx
+void gb_banded_idx
 (
     bool *z,
     const int64_t *x,   // unused
@@ -52,7 +52,7 @@ void banded_idx
 }
 
 #define BANDED_IDX_DEFN                     \
-"void banded_idx                        \n" \
+"void gb_banded_idx                        \n" \
 "(                                      \n" \
 "    bool *z,                           \n" \
 "    const int64_t *x,   // unused      \n" \
@@ -66,7 +66,7 @@ void banded_idx
 "    (*z) = (d <= *thunk) ;             \n" \
 "}"
 
-void banded_idx_32
+void gb_banded_idx_32
 (
     int32_t *z,
     const int64_t *x,   // unused
@@ -76,7 +76,7 @@ void banded_idx_32
 ) ;
 
 
-void banded_idx_32
+void gb_banded_idx_32
 (
     int32_t *z,
     const int64_t *x,   // unused
@@ -92,7 +92,7 @@ void banded_idx_32
 }
 
 #define BANDED_IDX_32_DEFN                  \
-"void banded_idx_32                     \n" \
+"void gb_banded_idx_32                     \n" \
 "(                                      \n" \
 "    int32_t *z,                        \n" \
 "    const int64_t *x,   // unused      \n" \
@@ -106,7 +106,7 @@ void banded_idx_32
 "    (*z) = (d <= *thunk) ;             \n" \
 "}"
 
-void upperbanded_idx
+void gb_upperbanded_idx
 (
     bool *z,
     const int64_t *x,   // unused
@@ -115,7 +115,7 @@ void upperbanded_idx
     const int64_t *thunk
 ) ;
 
-void upperbanded_idx
+void gb_upperbanded_idx
 (
     bool *z,
     const int64_t *x,   // unused
@@ -129,7 +129,7 @@ void upperbanded_idx
 }
 
 #define UPPERBANDED_IDX_DEFN                \
-"void upperbanded_idx                   \n" \
+"void gb_upperbanded_idx                   \n" \
 "(                                      \n" \
 "    bool *z,                           \n" \
 "    const int64_t *x,   // unused      \n" \
@@ -142,7 +142,7 @@ void upperbanded_idx
 "    (*z) = (d >= 0 && d <= *thunk) ;   \n" \
 "}"
 
-void upperbanded_idx_int64
+void gb_upperbanded_idx_int64
 (
     int64_t *z,
     const int64_t *x,   // unused
@@ -151,7 +151,7 @@ void upperbanded_idx_int64
     const int64_t *thunk
 ) ;
 
-void upperbanded_idx_int64
+void gb_upperbanded_idx_int64
 (
     int64_t *z,
     const int64_t *x,   // unused
@@ -165,7 +165,7 @@ void upperbanded_idx_int64
 }
 
 #define UPPERBANDED_IDX_INT64_DEFN                  \
-"void upperbanded_idx_int64                     \n" \
+"void gb_upperbanded_idx_int64                     \n" \
 "(                                              \n" \
 "    int64_t *z,                                \n" \
 "    const int64_t *x,   // unused              \n" \
@@ -178,14 +178,14 @@ void upperbanded_idx_int64
 "    (*z) = (int64_t) (d >= 0 && d <= *thunk) ; \n" \
 "}"
 
-void add_int64
+void gb_add_int64
 (
     int64_t *z,
     const int64_t *x,
     const int64_t *y
 ) ;
 
-void add_int64
+void gb_add_int64
 (
     int64_t *z,
     const int64_t *x,
@@ -200,7 +200,7 @@ typedef struct
     float x ;
     int y ;
 }
-mytype ;
+gb_mytype11 ;
 
 #define MYTYPE_DEFN \
 "typedef struct \n" \
@@ -208,9 +208,9 @@ mytype ;
 "    float x ;  \n" \
 "    int y ;    \n" \
 "}              \n" \
-"mytype ;"
+"gb_mytype11 ;"
 
-void donothing
+void gb_donothing
 (
     void *z,
     const void *x,
@@ -219,7 +219,7 @@ void donothing
     const void *thunk
 ) ;
 
-void donothing
+void gb_donothing
 (
     void *z,
     const void *x,
@@ -249,11 +249,11 @@ void mexFunction
         UpperBanded_int64 = NULL, Gunk = NULL, Banded32 = NULL ;
     GrB_Type type = NULL, MyType = NULL, MyInt64 = NULL ;
     const char *err ;
-    mytype scalar1 ;
+    gb_mytype11 scalar1 ;
     scalar1.x = 4 ;
     scalar1.y = 3 ;
-    GrB_Index *Ap = NULL ;
-    GrB_Index *Ai = NULL ;
+    uint64_t *Ap = NULL ;   // OK; 64-bit only
+    uint64_t *Ai = NULL ;   // OK; 64-bit only
     float *Ax = NULL  ;
     void *blob = NULL ;
 
@@ -527,37 +527,37 @@ void mexFunction
     ERR (GrB_IndexUnaryOp_wait (NULL, GrB_MATERIALIZE)) ;
 
 //  OK (GrB_IndexUnaryOp_new (&Banded,
-//      (GxB_index_unary_function) banded_idx,
+//      (GxB_index_unary_function) gb_banded_idx,
 //      GrB_BOOL, GrB_INT64, GrB_INT64)) ;
 
     OK (GxB_IndexUnaryOp_new (&Banded,
-        (GxB_index_unary_function) banded_idx,
+        (GxB_index_unary_function) gb_banded_idx,
         GrB_BOOL, GrB_INT64, GrB_INT64,
-        "banded_idx", BANDED_IDX_DEFN)) ;
+        "gb_banded_idx", BANDED_IDX_DEFN)) ;
 
 //  OK (GrB_IndexUnaryOp_new (&Banded32,
-//      (GxB_index_unary_function) banded_idx_32,
+//      (GxB_index_unary_function) gb_banded_idx_32,
 //      GrB_INT32, GrB_INT64, GrB_INT64)) ;
 
     OK (GxB_IndexUnaryOp_new (&Banded32,
-        (GxB_index_unary_function) banded_idx_32,
+        (GxB_index_unary_function) gb_banded_idx_32,
         GrB_INT32, GrB_INT64, GrB_INT64,
-        "banded_idx_32", BANDED_IDX_32_DEFN)) ;
+        "gb_banded_idx_32", BANDED_IDX_32_DEFN)) ;
 
     OK (GrB_IndexUnaryOp_wait_ (Banded, GrB_MATERIALIZE)) ;
     OK (GxB_IndexUnaryOp_fprint (Banded, "banded", 3, NULL)) ;
 
     OK (GxB_IndexUnaryOp_new (&UpperBanded,
-        (GxB_index_unary_function) upperbanded_idx,
+        (GxB_index_unary_function) gb_upperbanded_idx,
         GrB_BOOL, GrB_INT64, GrB_INT64,
-        "upperbanded_idx", UPPERBANDED_IDX_DEFN)) ;
-    OK (GxB_IndexUnaryOp_fprint (UpperBanded, "upperbanded", 3, NULL)) ;
+        "gb_upperbanded_idx", UPPERBANDED_IDX_DEFN)) ;
+    OK (GxB_IndexUnaryOp_fprint (UpperBanded, "gb_upperbanded", 3, NULL)) ;
 
     OK (GxB_IndexUnaryOp_new (&UpperBanded_int64, 
-        (GxB_index_unary_function) upperbanded_idx_int64,
+        (GxB_index_unary_function) gb_upperbanded_idx_int64,
         GrB_INT64, GrB_INT64, GrB_INT64,
-        "upperbanded_idx_int64", UPPERBANDED_IDX_INT64_DEFN)) ;
-    OK (GxB_IndexUnaryOp_fprint (UpperBanded_int64, "upperbanded64", 3, NULL)) ;
+        "gb_upperbanded_idx_int64", UPPERBANDED_IDX_INT64_DEFN)) ;
+    OK (GxB_IndexUnaryOp_fprint (UpperBanded_int64, "gb_upperbanded64", 3, NULL)) ;
 
     for (int trial = 0 ; trial <= 15 ; trial++)
     {
@@ -596,7 +596,7 @@ void mexFunction
         OK (GxB_Matrix_fprint (A, "A", 3, NULL)) ;
 
         OK (GrB_Matrix_new (&C, GrB_INT64, 5, 6)) ;
-        int64_t cnvals ;
+        uint64_t cnvals ;
 
         OK (GxB_Matrix_fprint (A, "A for select:banded", 3, NULL)) ;
         OK (GxB_Global_Option_set (GxB_BURBLE, true)) ;
@@ -663,7 +663,7 @@ void mexFunction
         OK (GrB_Matrix_select_INT64 (E, NULL, NULL, UpperBanded, A, 1,
             GrB_DESC_T0)) ;
         OK (GxB_Matrix_fprint (E, "E = upper_banded (A')", 3, NULL)) ;
-        int64_t envals ;
+        uint64_t envals ;
         OK (GrB_Matrix_nvals (&envals, E)) ;
         CHECK (envals == 8) ;
         for (int i = 0 ; i < 6 ; i++)
@@ -837,7 +837,7 @@ void mexFunction
 
     Banded->idxunop_function = NULL ;
     ERR (GxB_IndexUnaryOp_fprint (Banded, "banded", 3, NULL)) ;
-    Banded->idxunop_function = (GxB_index_unary_function) banded_idx ;
+    Banded->idxunop_function = (GxB_index_unary_function) gb_banded_idx ;
 
     Banded->opcode = 0 ;
     ERR (GB_Operator_check ((GB_Operator) Banded, "banded", 3, NULL)) ;
@@ -884,7 +884,7 @@ void mexFunction
     // apply with user idxunop
     //--------------------------------------------------------------------------
 
-    OK (GxB_Type_new (&MyType, sizeof (mytype), "mytype", MYTYPE_DEFN)) ;
+    OK (GxB_Type_new (&MyType, sizeof (gb_mytype11), "gb_mytype11", MYTYPE_DEFN)) ;
     OK (GrB_Matrix_new (&A, MyType, 4, 4)) ;
     OK (GrB_Matrix_setElement_UDT (A, &scalar1, 2, 3)) ;
     OK (GrB_Matrix_wait_ (A, GrB_MATERIALIZE)) ;
@@ -894,14 +894,14 @@ void mexFunction
     GB_Global_malloc_debug_set (true) ;
     expected = GrB_OUT_OF_MEMORY ;
     ERR (GxB_IndexUnaryOp_new (&Banded,
-        (GxB_index_unary_function) banded_idx,
-        GrB_BOOL, GrB_INT64, GrB_INT64, "banded_idx", BANDED_IDX_DEFN)) ;
+        (GxB_index_unary_function) gb_banded_idx,
+        GrB_BOOL, GrB_INT64, GrB_INT64, "gb_banded_idx", BANDED_IDX_DEFN)) ;
     CHECK (Banded == NULL) ;
     GB_Global_malloc_debug_set (false) ;
 
     OK (GxB_IndexUnaryOp_new (&Banded,
-        (GxB_index_unary_function) banded_idx,
-        GrB_BOOL, GrB_INT64, GrB_INT64, "banded_idx", BANDED_IDX_DEFN)) ;
+        (GxB_index_unary_function) gb_banded_idx,
+        GrB_BOOL, GrB_INT64, GrB_INT64, "gb_banded_idx", BANDED_IDX_DEFN)) ;
 
     expected = GrB_DOMAIN_MISMATCH ;
     OK (GrB_Matrix_new (&C, GrB_BOOL, 4, 4)) ;
@@ -924,13 +924,13 @@ void mexFunction
     //--------------------------------------------------------------------------
 
     blob = NULL ;
-    GrB_Index blob_size = 0, blob_size2 = 0 ;
+    uint64_t blob_size = 0, blob_size2 = 0 ;
     OK (GxB_Matrix_serialize (&blob, &blob_size, A, NULL)) ;
     OK (GxB_Matrix_deserialize (&C, MyType, blob, blob_size, NULL)) ;
     OK (GxB_Matrix_fprint (C, "C of MyType", 3, NULL)) ;
 
     OK (GxB_deserialize_type_name (type_name, blob, blob_size)) ;
-    CHECK (MATCH (type_name, "mytype")) ;
+    CHECK (MATCH (type_name, "gb_mytype11")) ;
 
     // mangle the blob
     expected = GrB_INVALID_OBJECT ;
@@ -948,7 +948,7 @@ void mexFunction
     blob64 [0] = blob_size ;
 
     OK (GxB_deserialize_type_name (type_name, blob, blob_size)) ;
-    CHECK (MATCH (type_name, "mytype")) ;
+    CHECK (MATCH (type_name, "gb_mytype11")) ;
 
     int32_t *blob32 = (int32_t *) blob ;
     blob32 [2] = -1 ;
@@ -956,13 +956,13 @@ void mexFunction
     blob32 [2] = GB_UDT_code ;
 
     OK (GxB_deserialize_type_name (type_name, blob, blob_size)) ;
-    CHECK (MATCH (type_name, "mytype")) ;
+    CHECK (MATCH (type_name, "gb_mytype11")) ;
 
     expected = GrB_DOMAIN_MISMATCH ;
     ERR (GxB_Matrix_deserialize (&E, NULL, blob, blob_size, NULL)) ;
     ERR (GxB_Matrix_deserialize (&E, GrB_BOOL, blob, blob_size, NULL)) ;
     ERR (GxB_Matrix_deserialize (&E, GrB_FP64, blob, blob_size, NULL)) ;
-    printf ("size of mytype: %d\n", sizeof (mytype)) ;
+    printf ("size of gb_mytype11: %d\n", sizeof (gb_mytype11)) ;
 
     OK (GrB_Matrix_free_ (&A)) ;
     OK (GrB_Matrix_free_ (&C)) ;
@@ -1036,7 +1036,7 @@ void mexFunction
         GrB_ALL, 4, NULL)) ;
     OK (GrB_Matrix_setElement_FP32 (A, (float) 32, 0, 0)) ;
 
-    GrB_Format fmt ;
+    int fmt ;
 
     OK (GxB_Matrix_Option_set (A, GxB_FORMAT, GxB_BY_ROW)) ;
     OK (GxB_Matrix_Option_set (A, GxB_SPARSITY_CONTROL, GxB_HYPERSPARSE)) ;
@@ -1131,11 +1131,11 @@ void mexFunction
     // import/export
     //--------------------------------------------------------------------------
 
-    GrB_Index Ap_len = 5 ;
-    GrB_Index Ai_len = 16 ;
-    GrB_Index Ax_len = 16 ;
-    Ap = mxCalloc (Ap_len , sizeof (GrB_Index)) ;
-    Ai = mxCalloc (Ax_len, sizeof (GrB_Index)) ;
+    uint64_t Ap_len = 5 ;
+    uint64_t Ai_len = 16 ;
+    uint64_t Ax_len = 16 ;
+    Ap = mxCalloc (Ap_len, sizeof (uint64_t)) ;
+    Ai = mxCalloc (Ax_len, sizeof (uint64_t)) ;
     Ax = mxCalloc (Ax_len, sizeof (float))  ;
     OK (GrB_Matrix_new (&A, GrB_FP32, 4, 4)) ;
     OK (GrB_Matrix_setElement_FP32 (A, 1, 0, 0)) ;
@@ -1199,10 +1199,9 @@ void mexFunction
     // build with duplicates
     //--------------------------------------------------------------------------
 
-#if 1
-    GrB_Index *I = mxCalloc (4, sizeof (GrB_Index)) ;
-    GrB_Index *J = mxCalloc (4, sizeof (GrB_Index)) ;
-    double *X    = mxCalloc (4, sizeof (double)) ;
+    uint64_t *I = mxCalloc (4, sizeof (uint64_t)) ; // OK
+    uint64_t *J = mxCalloc (4, sizeof (uint64_t)) ; // OK
+    double   *X = mxCalloc (4, sizeof (double)) ;
     expected = GrB_INVALID_VALUE ;
     OK (GrB_Matrix_new (&A, GrB_FP64, 5, 5)) ;
     ERR (GrB_Matrix_build (A, I, J, X, 4, NULL)) ;
@@ -1227,13 +1226,13 @@ void mexFunction
         NULL)) ;
 
     OK (GrB_Scalar_setElement_FP64 (scalar, 3)) ;
-    OK (GxB_Type_new (&MyType, sizeof (mytype), "mytype", MYTYPE_DEFN)) ;
+    OK (GxB_Type_new (&MyType, sizeof (gb_mytype11), "gb_mytype11", MYTYPE_DEFN)) ;
 
     expected = GrB_DOMAIN_MISMATCH ;
 
     printf ("(1)------------------------------------------------\n") ;
     OK (GrB_IndexUnaryOp_new (&Gunk, 
-        (GxB_index_unary_function) donothing, MyType, MyType, MyType)) ;
+        (GxB_index_unary_function) gb_donothing, MyType, MyType, MyType)) ;
     ERR (GrB_Matrix_select_Scalar (A, NULL, NULL, Gunk, A, scalar, NULL)) ;
     OK (GrB_Matrix_error_ (&err, A)) ;
     printf ("\nexpected error: %s\n", err) ;
@@ -1241,7 +1240,7 @@ void mexFunction
 
     printf ("(2)------------------------------------------------\n") ;
     OK (GrB_IndexUnaryOp_new (&Gunk, 
-        (GxB_index_unary_function) donothing, GrB_BOOL, MyType, MyType)) ;
+        (GxB_index_unary_function) gb_donothing, GrB_BOOL, MyType, MyType)) ;
     ERR (GrB_Matrix_select_Scalar (A, NULL, NULL, Gunk, A, scalar, NULL)) ;
     OK (GrB_Matrix_error_ (&err, A)) ;
     printf ("\nexpected error: %s\n", err) ;
@@ -1249,7 +1248,7 @@ void mexFunction
 
     printf ("(3)------------------------------------------------\n") ;
     OK (GrB_IndexUnaryOp_new (&Gunk, 
-        (GxB_index_unary_function) donothing, GrB_BOOL, GrB_FP64, MyType)) ;
+        (GxB_index_unary_function) gb_donothing, GrB_BOOL, GrB_FP64, MyType)) ;
     ERR (GrB_Matrix_select_Scalar (A, NULL, NULL, Gunk, A, scalar, NULL)) ;
     OK (GrB_Matrix_error_ (&err, A)) ;
     printf ("\nexpected error: %s\n", err) ;
@@ -1257,7 +1256,7 @@ void mexFunction
 
     printf ("(4)------------------------------------------------\n") ;
     OK (GrB_IndexUnaryOp_new (&Gunk, 
-        (GxB_index_unary_function) donothing, MyType, GrB_FP64, GrB_FP64)) ;
+        (GxB_index_unary_function) gb_donothing, MyType, GrB_FP64, GrB_FP64)) ;
     ERR (GrB_Matrix_select_Scalar (A, NULL, NULL, Gunk, A, scalar, NULL)) ;
     OK (GrB_Matrix_error_ (&err, A)) ;
     printf ("\nexpected error: %s\n", err) ;
@@ -1271,7 +1270,7 @@ void mexFunction
     OK (GrB_Matrix_select_Scalar (A, NULL, NULL, GrB_VALUEEQ_FP32,
         A, scalar, NULL)) ;
     OK (GxB_Matrix_fprint (A, "A iso select output", 3, NULL)) ;
-    int64_t anvals ;
+    uint64_t anvals ;
     OK (GrB_Matrix_nvals (&anvals, A)) ;
     CHECK (anvals == 5) ;
 
@@ -1305,10 +1304,10 @@ void mexFunction
     OK (GrB_Matrix_nvals (&anvals, A)) ;
     CHECK (anvals == 20) ;
 
-    OK (GxB_Type_new (&MyInt64, sizeof (int64_t), "myint64", "typedef int64_t myint64 ;")) ;
+    OK (GxB_Type_new (&MyInt64, sizeof (int64_t), "gb_myint64", "typedef int64_t gb_myint64 ;")) ;
     OK (GxB_IndexUnaryOp_new (&Banded,
-        (GxB_index_unary_function) banded_idx,
-        GrB_BOOL, GrB_INT64, MyInt64, "banded_idx", BANDED_IDX_DEFN)) ;
+        (GxB_index_unary_function) gb_banded_idx,
+        GrB_BOOL, GrB_INT64, MyInt64, "gb_banded_idx", BANDED_IDX_DEFN)) ;
     OK (GrB_Matrix_assign_FP64 (A, NULL, NULL, (double) 3, GrB_ALL, 5,
         GrB_ALL, 5, NULL)) ;
     int64_t one = 1 ;
@@ -1368,7 +1367,7 @@ void mexFunction
 
     GrB_BinaryOp Add = NULL ;
     OK (GrB_BinaryOp_new (&Add,
-        (GxB_binary_function) add_int64, MyInt64, MyInt64, MyInt64)) ;
+        (GxB_binary_function) gb_add_int64, MyInt64, MyInt64, MyInt64)) ;
     int64_t four = 4 ;
     OK (GrB_Matrix_new (&A, MyInt64, 4, 4)) ;
     for (int i = 0 ; i < 4 ; i++)
@@ -1460,7 +1459,6 @@ void mexFunction
     }
 
     OK (GrB_Matrix_free_ (&A)) ;
-#endif
 
     //--------------------------------------------------------------------------
     // wrapup
@@ -1470,25 +1468,6 @@ void mexFunction
     MXFREE (Ap) ;
     MXFREE (Ai) ;
     MXFREE (Ax) ;
-
-#if 0
-    GrB_free (&C) ;
-    GrB_free (&A) ;
-    GrB_free (&M) ;
-    GrB_free (&S) ;
-    GrB_free (&E) ;
-    GrB_free (&desc) ;
-    GrB_free (&w) ;
-    GrB_free (&scalar) ;
-    GrB_free (&Banded) ;
-    GrB_free (&UpperBanded) ;
-    GrB_free (&UpperBanded_int64) ;
-    GrB_free (&Gunk) ;
-    GrB_free (&Banded32) ;
-    GrB_free (&type) ;
-    GrB_free (&MyType) ;
-    GrB_free (&MyInt64) ;
-#endif
 
     GB_mx_put_global (true) ;
     printf ("\nGB_mex_test5: all tests passed\n\n") ;

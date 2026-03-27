@@ -2,13 +2,20 @@
 // GB_red:  hard-coded functions for reductions
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
-#include "GB.h"
 #include "GB_control.h"
+#if defined (GxB_NO_BOOL)
+#define GB_TYPE_ENABLED 0
+#else
+#define GB_TYPE_ENABLED 1
+#endif
+
+#if GB_TYPE_ENABLED
+#include "GB.h"
 #include "FactoryKernels/GB_red__include.h"
 
 // reduction operator and type:
@@ -17,19 +24,18 @@
 #define GB_GETA_AND_UPDATE(z,Ax,p) z = (z || Ax [p])
 
 // A matrix (no typecasting to Z type here)
-#define GB_A_TYPE bool
+#define GB_A_TYPE  bool
 #define GB_DECLAREA(aij) bool aij
 #define GB_GETA(aij,Ax,pA,A_iso) aij = Ax [pA]
 
 // monoid properties:
-#define GB_Z_TYPE bool
+#define GB_Z_TYPE  bool
 #define GB_DECLARE_IDENTITY(z) bool z = false
 #define GB_DECLARE_IDENTITY_CONST(z) const bool z = false
 
 #define GB_MONOID_IS_TERMINAL 1
 #define GB_TERMINAL_CONDITION(z,zterminal) (z == true)
 #define GB_IF_TERMINAL_BREAK(z,zterminal) if (z == true) { break ; }
-#define GB_DECLARE_TERMINAL_CONST(zterminal) const bool zterminal = true
 
 // panel size
 #define GB_PANEL 8
@@ -74,4 +80,8 @@ GrB_Info GB (_red__lor_bool)
     return (GrB_SUCCESS) ;
     #endif
 }
+
+#else
+GB_EMPTY_PLACEHOLDER
+#endif
 

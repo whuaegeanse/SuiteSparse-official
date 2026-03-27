@@ -2,7 +2,7 @@
 // GB_AxB_saxbit_generic_second.c: C=A*B, C bitmap/full, SECOND mult
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -12,11 +12,10 @@
 
 #define GB_AXB_SAXPY_GENERIC_METHOD GB_AxB_saxbit_generic_second 
 #define GB_GENERIC_C_IS_SPARSE_OR_HYPERSPARSE  0
-#define GB_GENERIC_OP_IS_POSITIONAL            0
 #define GB_GENERIC_FLIPXY                      0
-#define GB_GENERIC_OP_IS_INT64                 0
-#define GB_GENERIC_OP_IS_FIRSTI                0
-#define GB_GENERIC_OP_IS_FIRSTJ                0
+#define GB_GENERIC_NOFLIPXY                    0
+#define GB_GENERIC_IDX_FLIPXY                  0
+#define GB_GENERIC_IDX_NOFLIPXY                0
 #define GB_GENERIC_OP_IS_FIRST                 0
 #define GB_GENERIC_OP_IS_SECOND                1
 

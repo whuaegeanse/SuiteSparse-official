@@ -36,18 +36,18 @@
  *	#endif
  */
 
-#define CCOLAMD_DATE "June 20, 2024"
+#define CCOLAMD_DATE "July 25, 2025"
 #define CCOLAMD_MAIN_VERSION   3
 #define CCOLAMD_SUB_VERSION    3
-#define CCOLAMD_SUBSUB_VERSION 4
+#define CCOLAMD_SUBSUB_VERSION 5
 
 #define CCOLAMD_VERSION_CODE(main,sub) SUITESPARSE_VER_CODE(main,sub)
 #define CCOLAMD_VERSION CCOLAMD_VERSION_CODE(3,3)
 
-#define CCOLAMD__VERSION SUITESPARSE__VERCODE(3,3,4)
+#define CCOLAMD__VERSION SUITESPARSE__VERCODE(3,3,5)
 #if !defined (SUITESPARSE__VERSION) || \
-    (SUITESPARSE__VERSION < SUITESPARSE__VERCODE(7,8,0))
-#error "CCOLAMD 3.3.4 requires SuiteSparse_config 7.8.0 or later"
+    (SUITESPARSE__VERSION < SUITESPARSE__VERCODE(7,11,0))
+#error "CCOLAMD 3.3.5 requires SuiteSparse_config 7.11.0 or later"
 #endif
 
 /* ========================================================================== */

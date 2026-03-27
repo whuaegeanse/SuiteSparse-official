@@ -19,14 +19,14 @@
 #endif
 #define SUITESPARSE_GPU_EXTERN_ON
 
+#include <complex>
+typedef std::complex<double> Complex ;
+
 #include "SuiteSparse_config.h"
 #include "cholmod.h"
 #include "SuiteSparseQR_definitions.h"
 
 #undef SUITESPARSE_GPU_EXTERN_ON
-
-#include <complex>
-typedef std::complex<double> Complex ;
 
 // =============================================================================
 // === spqr_gpu ================================================================

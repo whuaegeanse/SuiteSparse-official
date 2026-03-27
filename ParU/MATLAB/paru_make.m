@@ -28,7 +28,7 @@ function paru_make (try_intel)
 %
 % See also paru, paru_demo, paru_many, paru_tiny, mldivide.
 
-% ParU, Copyright (c) 2022-2024, Mohsen Aznaveh and Timothy A. Davis,
+% ParU, Copyright (c) 2022-2025, Mohsen Aznaveh and Timothy A. Davis,
 % All Rights Reserved.
 % SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -97,7 +97,7 @@ end
 if (try_intel && (ismac || isunix))
     v = version ('-blas') ;
     if (contains (v, 'Intel'))
-        flags = [flags ' -DBLAS_Intel10_64ilp'] ;
+        flags = [flags ' -DBLAS_Intel10_64ilp -DBLAS_Intel10'] ;
     end
 end
 

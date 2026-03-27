@@ -1,3 +1,11 @@
+July 25, 2025: version 4.3.5
+
+    * minor updates to build system
+
+Oct 10, 2024: version 4.3.4
+
+    * revised MATLAB mexFunctions to handle change in SuiteSparse_config.h
+
 June 20, 2024: version 4.3.3
 
     * minor update for MATLAB on Windows

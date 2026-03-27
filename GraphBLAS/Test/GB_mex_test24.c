@@ -2,7 +2,7 @@
 // GB_mex_test24: JIT error handling
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -11,8 +11,6 @@
 #include "GB_mex_errors.h"
 #include "../Source/jitifyer/GB_stringify.h"
 
-#define USAGE "GB_mex_test24"
-
 #define FREE_ALL ;
 #define GET_DEEP_COPY ;
 #define FREE_DEEP_COPY ;
@@ -20,12 +18,12 @@
 void mygunk1 (bool *z, const bool *x) ;
 void mygunk1 (bool *z, const bool *x) { (*z) = !(*x) ; }
 #define MYGUNK1_DEFN \
-"void mygunk (bool *z, const bool *x) { (*z) = !(*x) ; }"
+"void gb_mygunk (bool *z, const bool *x) { (*z) = !(*x) ; }"
 
 void mygunk2 (bool *z, const bool *x) ;
 void mygunk2 (bool *z, const bool *x) { (*z) = (*x) ; }
 #define MYGUNK2_DEFN \
-"void mygunk (bool *z, const bool *x) { (*z) = (*x) ; }"
+"void gb_mygunk (bool *z, const bool *x) { (*z) = (*x) ; }"
 
 void mexFunction
 (
@@ -55,46 +53,46 @@ void mexFunction
     if (c == GxB_JIT_ON)
     {
         printf ("JIT on\n") ;
-        OK (GxB_UnaryOp_new (&op1, NULL, GrB_BOOL, GrB_BOOL, "mygunk",
+        OK (GxB_UnaryOp_new (&op1, NULL, GrB_BOOL, GrB_BOOL, "gb_mygunk",
             MYGUNK1_DEFN)) ;
-        OK (GxB_UnaryOp_new (&op2, NULL, GrB_BOOL, GrB_BOOL, "mygunk",
+        OK (GxB_UnaryOp_new (&op2, NULL, GrB_BOOL, GrB_BOOL, "gb_mygunk",
             MYGUNK2_DEFN)) ;
         GxB_print (op1, 3) ;
         GxB_print (op2, 3) ;
         GrB_free (&op1) ;
         GrB_free (&op2) ;
-        OK (GxB_Type_new (&type1, 0, "mygunktype",
-            "typedef int32_t mygunktype ;")) ;
-        OK (GxB_Type_new (&type2, 0, "mygunktype",
-            "typedef int64_t mygunktype ;")) ;
+        OK (GxB_Type_new (&type1, 0, "gb_mygunktype",
+            "typedef int32_t gb_mygunktype ;")) ;
+        OK (GxB_Type_new (&type2, 0, "gb_mygunktype",
+            "typedef int64_t gb_mygunktype ;")) ;
         GxB_print (type1, 3) ;
         GxB_print (type2, 3) ;
         GrB_free (&type1) ;
         GrB_free (&type2) ;
-        OK (GxB_Type_new (&type2, 0, "mygunktype",
-            "typedef int64_t mygunktype ;")) ;
+        OK (GxB_Type_new (&type2, 0, "gb_mygunktype",
+            "typedef int64_t gb_mygunktype ;")) ;
         GrB_free (&type2) ;
 
         OK (GxB_set (GxB_JIT_C_CONTROL, GxB_JIT_OFF)) ;
         OK (GxB_set (GxB_JIT_C_CONTROL, GxB_JIT_LOAD)) ;
         GrB_Info expected = GrB_INVALID_VALUE ;
-        ERR (GxB_Type_new (&type1, 0, "mygunktype",
-            "typedef int32_t mygunktype ;")) ;
+        ERR (GxB_Type_new (&type1, 0, "gb_mygunktype",
+            "typedef int32_t gb_mygunktype ;")) ;
         OK (GxB_set (GxB_JIT_C_CONTROL, GxB_JIT_ON)) ;
     }
     else
     {
         printf ("JIT off\n") ;
         GrB_Info expected = GrB_NULL_POINTER ;
-        ERR (GxB_UnaryOp_new (&op1, NULL, GrB_BOOL, GrB_BOOL, "mygunk",
+        ERR (GxB_UnaryOp_new (&op1, NULL, GrB_BOOL, GrB_BOOL, "gb_mygunk",
             MYGUNK1_DEFN)) ;
-        ERR (GxB_UnaryOp_new (&op2, NULL, GrB_BOOL, GrB_BOOL, "mygunk",
+        ERR (GxB_UnaryOp_new (&op2, NULL, GrB_BOOL, GrB_BOOL, "gb_mygunk",
             MYGUNK2_DEFN)) ;
         expected = GrB_INVALID_VALUE ;
-        ERR (GxB_Type_new (&type1, 0, "mygunktype",
-            "typedef int32_t mygunktype ;")) ;
-        ERR (GxB_Type_new (&type2, 0, "mygunktype",
-            "typedef int64_t mygunktype ;")) ;
+        ERR (GxB_Type_new (&type1, 0, "gb_mygunktype",
+            "typedef int32_t gb_mygunktype ;")) ;
+        ERR (GxB_Type_new (&type2, 0, "gb_mygunktype",
+            "typedef int64_t gb_mygunktype ;")) ;
     }
 
     //--------------------------------------------------------------------------

@@ -2,14 +2,14 @@
 // GB_mex_plusplus: C<M> = accum(C,A*B) with user-defined plus_plus_fp32
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 #include "GB_mex.h"
 
-#define USAGE "C = GB_mex_plusplus (C, M, accum, [ ], A, B, desc, macrofy)"
+#define USAGE "C = GB_mex_plusplus (C, M, accum, [ ], A, B, desc)"
 
 #define FREE_ALL                                    \
 {                                                   \
@@ -24,10 +24,10 @@
     GB_mx_put_global (true) ;                       \
 }
 
-void myplus (float *z, const float *x, const float *y) ;
-void myplus (float *z, const float *x, const float *y) { (*z) = (*x)+(*y) ; }
+void gb_myplus (float *z, const float *x, const float *y) ;
+void gb_myplus (float *z, const float *x, const float *y) { (*z) = (*x)+(*y) ; }
 #define MYPLUS_DEFN \
-"void myplus (float *z, const float *x, const float *y) { (*z) = (*x)+(*y) ; }"
+"void gb_myplus (float *z, const float *x, const float *y) { (*z) = (*x)+(*y) ; }"
 
 void mexFunction
 (
@@ -49,7 +49,7 @@ void mexFunction
     GrB_Monoid MyAdd = NULL ;
 
     // check inputs
-    if (nargout > 1 || nargin < 6 || nargin > 8)
+    if (nargout > 1 || nargin < 6 || nargin > 7)
     {
         mexErrMsgTxt ("Usage: " USAGE) ;
     }
@@ -90,8 +90,8 @@ void mexFunction
     }
 
     // create the semiring
-    GxB_BinaryOp_new (&MyPlus, (GxB_binary_function) myplus,
-        GrB_FP32, GrB_FP32, GrB_FP32, "myplus", MYPLUS_DEFN) ;
+    GxB_BinaryOp_new (&MyPlus, (GxB_binary_function) gb_myplus,
+        GrB_FP32, GrB_FP32, GrB_FP32, "gb_myplus", MYPLUS_DEFN) ;
     float zero = 0 ;
     GrB_Monoid_new (&MyAdd, MyPlus, zero) ;
     GrB_Semiring_new (&MyPlusPlus, MyAdd, MyPlus) ;

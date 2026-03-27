@@ -2,7 +2,7 @@
 // GB_macrofy_user_op: construct a user defined operator
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -40,7 +40,7 @@ void GB_macrofy_user_op         // construct a user-defined operator
     //--------------------------------------------------------------------------
 
     GB_macrofy_typedefs (fp, NULL, NULL, NULL,
-        op->xtype, op->ytype, op->ztype) ;
+        op->xtype, op->ytype, op->ztype, op->theta_type) ;
 
     //--------------------------------------------------------------------------
     // construct the function prototype

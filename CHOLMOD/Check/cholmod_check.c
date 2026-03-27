@@ -216,7 +216,6 @@ static int check_common
     //--------------------------------------------------------------------------
 
     RETURN_IF_NULL_COMMON (FALSE) ;
-    int init_print = print ;
 
     P2 ("%s", "\n") ;
 

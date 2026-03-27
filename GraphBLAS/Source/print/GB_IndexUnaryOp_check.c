@@ -2,12 +2,13 @@
 // GB_IndexUnaryOp_check: check and print a index_unary operator
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 #include "GB.h"
+#include "get_set/GB_get_set.h"
 
 GrB_Info GB_IndexUnaryOp_check  // check a GraphBLAS index_unary operator
 (
@@ -65,6 +66,13 @@ GrB_Info GB_IndexUnaryOp_check  // check a GraphBLAS index_unary operator
     { 
         GBPR0 ("    IndexUnaryOp has an invalid name_len\n") ;
         return (GrB_INVALID_OBJECT) ;
+    }
+
+    // name given by GrB_set, or 'GrB_*' name for built-in operators
+    const char *given_name = GB_op_name_get ((GB_Operator) op) ;
+    if (given_name != NULL)
+    { 
+        GBPR0 ("    IndexUnaryOp given name: [%s]\n", given_name) ;
     }
 
     GrB_Info info ;

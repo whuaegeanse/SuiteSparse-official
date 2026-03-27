@@ -2,12 +2,15 @@
 // GB_Semiring_new: create a new semiring
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 // The semiring struct is already allocated on input.
+
+// The multiply operator can be any GrB_BinaryOp, including ones created from a
+// GxB_IndexBinaryOp.
 
 #include "GB.h"
 #include "semiring/GB_Semiring_new.h"
@@ -60,8 +63,8 @@ GrB_Info GB_Semiring_new            // create a semiring
         size_t add_len  = strlen (semiring->add->op->name) ;
         size_t mult_len = strlen (semiring->multiply->name) ;
         semiring->name_len = (int32_t) (add_len + mult_len + 1) ;
-        semiring->name = GB_MALLOC (semiring->name_len + 1, char,
-            &(semiring->name_size)) ;
+        semiring->name = GB_MALLOC_MEMORY (semiring->name_len + 1,
+            sizeof (char), &(semiring->name_size)) ;
         if (semiring->name == NULL)
         { 
             // out of memory

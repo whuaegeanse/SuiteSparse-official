@@ -2,7 +2,7 @@
 // GB_op_name_get: get the user_name of any operator
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -1688,6 +1688,7 @@ const char *GB_op_name_get (GB_Operator op)
 
         case GB_USER_unop_code :
         case GB_USER_idxunop_code :
+        case GB_USER_idxbinop_code :
         case GB_USER_binop_code :   return (op->user_name) ;
 
         //----------------------------------------------------------------------

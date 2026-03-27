@@ -4,7 +4,7 @@ function codegen_ew
 % This function creates all files of the form GB_ew__*.[ch]
 % and one include file, GB_ew__include.h.
 
-% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 % SPDX-License-Identifier: Apache-2.0
 
 fprintf ('\newise binary operators:\n') ;
@@ -14,7 +14,7 @@ fprintf (fh, '//----------------------------------------------------------------
 fprintf (fh, '// GB_ew__include.h: definitions for GB_ew__*.c\n') ;
 fprintf (fh, '//------------------------------------------------------------------------------\n') ;
 fprintf (fh, '\n') ;
-fprintf (fh, '// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.\n') ;
+fprintf (fh, '// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.\n') ;
 fprintf (fh, '// SPDX-License-Identifier: Apache-2.0\n\n') ;
 fprintf (fh, '// This file has been automatically generated from Generator/GB_ew.h') ;
 fprintf (fh, '\n#include "math/GB_math.h"\n\n') ;
@@ -112,6 +112,7 @@ codegen_ew_template ('rdiv',         ...
     'GB_FC32_div (yarg, xarg)',         ... % GxB_FC32_t
     'GB_FC64_div (yarg, xarg)') ;       ... % GxB_FC64_t
 
+%{
 codegen_ew_template ('iseq',         ...
     [ ],                                ... % bool
     '((xarg) == (yarg))',               ... % int, uint
@@ -159,6 +160,7 @@ codegen_ew_template ('isle',         ...
     '((xarg) <= (yarg))',               ... % double
     [ ],                                ... % GxB_FC32_t
     [ ]) ;                              ... % GxB_FC64_t
+%}
 
 codegen_ew_template ('eq',           ...
     '((xarg) == (yarg))',               ... % bool

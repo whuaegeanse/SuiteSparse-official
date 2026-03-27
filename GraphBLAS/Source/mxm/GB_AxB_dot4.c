@@ -2,7 +2,7 @@
 // GB_AxB_dot4: compute C+=A'*B in-place
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -18,15 +18,13 @@
 
 // The ANY monoid is a special case: C is not modified at all.
 
-// JIT: done.
-
 //------------------------------------------------------------------------------
 
 #include "mxm/GB_mxm.h"
 #include "binaryop/GB_binop.h"
-#include "include/GB_unused.h"
 #include "jitifyer/GB_stringify.h"
 #ifndef GBCOMPACT
+#include "GB_control.h"
 #include "FactoryKernels/GB_AxB__include2.h"
 #endif
 
@@ -87,9 +85,8 @@ GrB_Info GB_AxB_dot4                // C+=A'*B, dot product method
     //--------------------------------------------------------------------------
 
     GrB_BinaryOp mult = semiring->multiply ;
-    GrB_Monoid add = semiring->add ;
-    ASSERT (mult->ztype == add->op->ztype) ;
-    ASSERT (C->type     == add->op->ztype) ;
+    ASSERT (mult->ztype == semiring->add->op->ztype) ;
+    ASSERT (C->type     == semiring->add->op->ztype) ;
 
     bool op_is_first  = mult->opcode == GB_FIRST_binop_code ;
     bool op_is_second = mult->opcode == GB_SECOND_binop_code ;
@@ -155,7 +152,6 @@ GrB_Info GB_AxB_dot4                // C+=A'*B, dot product method
     // C is always as-if-full.
 
     int64_t anvec = A->nvec ;
-    int64_t vlen  = A->vlen ;
     int64_t bnvec = B->nvec ;
     int naslice, nbslice ;
 
@@ -206,8 +202,8 @@ GrB_Info GB_AxB_dot4                // C+=A'*B, dot product method
         GB_FREE_WORKSPACE ;
         return (GrB_OUT_OF_MEMORY) ;
     }
-    GB_p_slice (A_slice, A->p, anvec, naslice, false) ;
-    GB_p_slice (B_slice, B->p, bnvec, nbslice, false) ;
+    GB_p_slice (A_slice, A->p, A->p_is_32, anvec, naslice, false) ;
+    GB_p_slice (B_slice, B->p, B->p_is_32, bnvec, nbslice, false) ;
 
     //--------------------------------------------------------------------------
     // convert C to non-iso
@@ -218,8 +214,8 @@ GrB_Info GB_AxB_dot4                // C+=A'*B, dot product method
     if (C_in_iso)
     { 
         // allocate but do not initialize C->x unless A or B are hypersparse.
-        // The initialization must be done if dot4 doesn't do the work;
-        // see GB_expand_iso below.
+        // The initialization must be done if dot4 doesn't do the work; see
+        // below for the check for (info == GrB_NO_VALUE).
         GB_OK (GB_convert_any_to_non_iso (C, initialized)) ;
     }
 
@@ -250,7 +246,10 @@ GrB_Info GB_AxB_dot4                // C+=A'*B, dot product method
 
         // disabled the ANY monoid
         #define GB_NO_ANY_MONOID
-        #include "mxm/factory/GB_AxB_factory.c"
+        if (builtin_semiring)
+        {
+            #include "mxm/factory/GB_AxB_factory.c"
+        }
     }
     #endif
 
@@ -282,7 +281,8 @@ GrB_Info GB_AxB_dot4                // C+=A'*B, dot product method
             GB_void cscalar [GB_VLA(csize)] ;
             int64_t cnz = GB_nnz_held (C) ;
             memcpy (cscalar, C->x, csize) ;
-            GB_expand_iso (C->x, cnz, cscalar, csize) ;
+            GB_OK (GB_iso_expand (C->x, cnz, cscalar, C->type)) ;
+            info = GrB_NO_VALUE ;
         }
         GBURBLE ("(punt) ") ;
     }

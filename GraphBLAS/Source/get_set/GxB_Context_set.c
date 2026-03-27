@@ -2,7 +2,7 @@
 // GxB_Context_set: set a field in Context (HISTORICAL; do not use for new code)
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -16,7 +16,7 @@
 GrB_Info GxB_Context_set_INT32      // set a parameter in a Context
 (
     GxB_Context Context,            // Context to modify
-    GxB_Context_Field field,        // parameter to change
+    int field,                      // parameter to change
     int32_t value                   // value to change it to
 )
 {
@@ -25,7 +25,7 @@ GrB_Info GxB_Context_set_INT32      // set a parameter in a Context
     // check inputs
     //--------------------------------------------------------------------------
 
-    GB_WHERE1 ("GxB_Context_set_INT32 (Context, field, value)") ;
+    GB_CHECK_INIT ;
     GB_RETURN_IF_NULL_OR_FAULTY (Context) ;
 
     //--------------------------------------------------------------------------
@@ -38,11 +38,6 @@ GrB_Info GxB_Context_set_INT32      // set a parameter in a Context
         case GxB_CONTEXT_NTHREADS :         // same as GxB_NTHREADS
 
             GB_Context_nthreads_max_set (Context, value) ;
-            break ;
-
-        case GxB_CONTEXT_GPU_ID :           // same as GxB_GPU_ID
-
-            GB_Context_gpu_id_set (Context, value) ;
             break ;
 
         default : 
@@ -60,7 +55,7 @@ GrB_Info GxB_Context_set_INT32      // set a parameter in a Context
 GrB_Info GxB_Context_set_FP64       // set a parameter in a Context
 (
     GxB_Context Context,            // Context to modify
-    GxB_Context_Field field,        // parameter to change
+    int field,                      // parameter to change
     double value                    // value to change it to
 )
 {
@@ -69,7 +64,7 @@ GrB_Info GxB_Context_set_FP64       // set a parameter in a Context
     // check inputs
     //--------------------------------------------------------------------------
 
-    GB_WHERE1 ("GxB_Context_set_FP64 (Context, field, value)") ;
+    GB_CHECK_INIT ;
     GB_RETURN_IF_NULL_OR_FAULTY (Context) ;
 
     //--------------------------------------------------------------------------
@@ -99,7 +94,7 @@ GrB_Info GxB_Context_set_FP64       // set a parameter in a Context
 GrB_Info GxB_Context_set            // set a parameter in a Context
 (
     GxB_Context Context,            // Context to modify
-    GxB_Context_Field field,        // parameter to change
+    int field,                      // parameter to change
     ...                             // value to change it to
 )
 {
@@ -108,7 +103,7 @@ GrB_Info GxB_Context_set            // set a parameter in a Context
     // check inputs
     //--------------------------------------------------------------------------
 
-    GB_WHERE1 ("GxB_Context_set (Context, field, value)") ;
+    GB_CHECK_INIT ;
     GB_RETURN_IF_NULL_OR_FAULTY (Context) ;
 
     //--------------------------------------------------------------------------
@@ -126,16 +121,6 @@ GrB_Info GxB_Context_set            // set a parameter in a Context
                 va_start (ap, field) ;
                 int value = va_arg (ap, int) ;
                 GB_Context_nthreads_max_set (Context, value) ;
-                va_end (ap) ;
-            }
-            break ;
-
-        case GxB_CONTEXT_GPU_ID :           // same as GxB_GPU_ID
-
-            {
-                va_start (ap, field) ;
-                int value = va_arg (ap, int) ;
-                GB_Context_gpu_id_set (Context, value) ;
                 va_end (ap) ;
             }
             break ;

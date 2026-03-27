@@ -1,10 +1,10 @@
 function codegen_aop
-%CODEGEN_ASSIGN create functions for all binary operators for assign/subassign
+%CODEGEN_AOP create functions for all binary operators for assign/subassign
 %
 % This function creates all files of the form GB_aop__*.[ch], including 260
 % functions (GB_aop__*.c) and one include file, GB_aop__include.h.
 
-% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 % SPDX-License-Identifier: Apache-2.0
 
 fprintf ('\nassign/subassign with accum operator:\n') ;
@@ -14,7 +14,7 @@ fprintf (fh, '//----------------------------------------------------------------
 fprintf (fh, '// GB_aop__include.h: definitions for GB_aop__*.c\n') ;
 fprintf (fh, '//------------------------------------------------------------------------------\n') ;
 fprintf (fh, '\n') ;
-fprintf (fh, '// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.\n') ;
+fprintf (fh, '// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.\n') ;
 fprintf (fh, '// SPDX-License-Identifier: Apache-2.0\n\n') ;
 fprintf (fh, '// This file has been automatically generated from Generator/GB_aop.h') ;
 fprintf (fh, '\n#include "math/GB_math.h"\n\n') ;
@@ -112,6 +112,7 @@ codegen_aop_template ('rdiv',         ...
     'GB_FC32_div (yarg, xarg)',         ... % GxB_FC32_t
     'GB_FC64_div (yarg, xarg)') ;       ... % GxB_FC64_t
 
+%{
 codegen_aop_template ('iseq',         ...
     [ ],                                ... % bool
     '((xarg) == (yarg))',               ... % int, uint
@@ -159,6 +160,7 @@ codegen_aop_template ('isle',         ...
     '((xarg) <= (yarg))',               ... % double
     [ ],                                ... % GxB_FC32_t
     [ ]) ;                              ... % GxB_FC64_t
+%}
 
 codegen_aop_template ('eq',           ...
     '((xarg) == (yarg))',               ... % bool
@@ -380,4 +382,5 @@ codegen_aop_method ('pow', 'GB_FC32_pow (xarg, yarg)'  , 'GxB_FC32_t') ;
 codegen_aop_method ('pow', 'GB_FC64_pow (xarg, yarg)'  , 'GxB_FC64_t') ;
 
 fprintf ('\n') ;
+
 

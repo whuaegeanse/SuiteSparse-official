@@ -2,7 +2,7 @@
 # SuiteSparse/Example/Makefile
 #-------------------------------------------------------------------------------
 
-# Example: Copyright (c) 2022-2023, Timothy A. Davis, All Rights Reserved.
+# Example: Copyright (c) 2022-2025, Timothy A. Davis, All Rights Reserved.
 # SPDX-License-Identifier: BSD-3-clause
 
 #-------------------------------------------------------------------------------
@@ -43,6 +43,7 @@ all: library
 
 demos: library
 	( cd build && ./my_demo )
+	( cd build && ./my_cxx_demo )
 
 # just compile after running cmake; do not run cmake again
 remake:

@@ -2,7 +2,7 @@
 # SuiteSparse/ParU/CMakeLists.txt:  cmake for ParU
 #-------------------------------------------------------------------------------
 
-# ParU, Copyright (c) 2022-2024, Mohsen Aznaveh and Timothy A. Davis,
+# ParU, Copyright (c) 2022-2025, Mohsen Aznaveh and Timothy A. Davis,
 # All Rights Reserved.
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -13,10 +13,10 @@
 # cmake 3.22 is required to find the BLAS in SuiteSparse_config
 cmake_minimum_required ( VERSION 3.22 )
 
-set ( PARU_DATE "Sept 5, 2024" )
+set ( PARU_DATE "FIXME, 2026" )
 set ( PARU_VERSION_MAJOR  1 CACHE STRING "" FORCE )
-set ( PARU_VERSION_MINOR  0 CACHE STRING "" FORCE )
-set ( PARU_VERSION_UPDATE 0 CACHE STRING "" FORCE )
+set ( PARU_VERSION_MINOR  1 CACHE STRING "" FORCE )
+set ( PARU_VERSION_UPDATE 1 CACHE STRING "" FORCE )
 
 message ( STATUS "Building PARU version: v"
     ${PARU_VERSION_MAJOR}.
@@ -65,7 +65,13 @@ if ( PARU_USE_OPENMP )
     endif ( )
     if ( OpenMP_CXX_FOUND AND OpenMP_C_FOUND )
         set ( PARU_HAS_OPENMP ON )
-        if (( OpenMP_CXX_VERSION VERSION_LESS 4.5 ) OR
+        if ( OpenMP_CXX_LIBRARIES MATCHES "libiomp" )
+            # cmake 3.22 has trouble determining the OpenMP versions for Intel;
+            # it does not set OpenMP_*_VERSION properly.  Just assume it is 4.5
+            # or later.  cmake 3.31.6 handles this OK, but this cmake script
+            # allows for cmake 3.22
+            message ( STATUS "Intel OpenMP: assume 4.5 or later" )
+        elseif (( OpenMP_CXX_VERSION VERSION_LESS 4.5 ) OR
             ( OpenMP_C_VERSION   VERSION_LESS 4.5 ) )
             message ( STATUS "ParU requires OpenMP 4.5 or later" )
             set ( PARU_HAS_OPENMP OFF )
@@ -97,22 +103,22 @@ endif ( )
 #-------------------------------------------------------------------------------
 
 if ( NOT SUITESPARSE_ROOT_CMAKELISTS )
-    find_package ( SuiteSparse_config 7.8.0
+    find_package ( SuiteSparse_config 7.12.0
         PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-        find_package ( SuiteSparse_config 7.8.0 REQUIRED )
+        find_package ( SuiteSparse_config 7.12.0 REQUIRED )
     endif ( )
 
-    find_package ( CHOLMOD 5.3.0
+    find_package ( CHOLMOD 5.3.4
         PATHS ${CMAKE_SOURCE_DIR}/../CHOLMOD/build NO_DEFAULT_PATH )
     if ( NOT CHOLMOD_FOUND )
-        find_package ( CHOLMOD 5.3.0 REQUIRED )
+        find_package ( CHOLMOD 5.3.4 REQUIRED )
     endif ( )
 
-    find_package ( UMFPACK 6.3.5
+    find_package ( UMFPACK 6.3.7
         PATHS ${CMAKE_SOURCE_DIR}/../UMFPACK/build NO_DEFAULT_PATH )
     if ( NOT UMFPACK_FOUND )
-        find_package ( UMFPACK 6.3.5 REQUIRED )
+        find_package ( UMFPACK 6.3.7 REQUIRED )
     endif ( )
 endif ( )
 
@@ -298,24 +304,34 @@ if ( BUILD_SHARED_LIBS )
         ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
         RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
         PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+
+    # create (temporary) export target file during build
+    export ( EXPORT ParUTargets
+        NAMESPACE SuiteSparse::
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/ParUTargets.cmake )
+
+    # install export target, config and version files for find_package
+    install ( EXPORT ParUTargets
+        NAMESPACE SuiteSparse::
+        DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/ParU )
 endif ( )
 
 if ( BUILD_STATIC_LIBS )
     install ( TARGETS ParU_static
-        EXPORT ParUTargets
+        EXPORT ParUTargets_static
         ARCHIVE       DESTINATION ${SUITESPARSE_LIBDIR}
         PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+
+    # create (temporary) export target file during build
+    export ( EXPORT ParUTargets_static
+        NAMESPACE SuiteSparse::
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/ParUTargets_static.cmake )
+
+    # install export target, config and version files for find_package
+    install ( EXPORT ParUTargets_static
+        NAMESPACE SuiteSparse::
+        DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/ParU )
 endif ( )
-
-# create (temporary) export target file during build
-export ( EXPORT ParUTargets
-    NAMESPACE SuiteSparse::
-    FILE ${CMAKE_CURRENT_BINARY_DIR}/ParUTargets.cmake )
-
-# install export target, config and version files for find_package
-install ( EXPORT ParUTargets
-    NAMESPACE SuiteSparse::
-    DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/ParU )
 
 # generate config file to be used in common build tree
 set ( SUITESPARSE_IN_BUILD_TREE ON )
@@ -436,7 +452,8 @@ if ( SUITESPARSE_DEMOS )
             SuiteSparse::SuiteSparseConfig OpenMP::OpenMP_CXX )
         target_link_libraries ( paru_benchmark
             PUBLIC SuiteSparse::CHOLMOD SuiteSparse::UMFPACK
-            SuiteSparse::SuiteSparseConfig OpenMP::OpenMP_CXX )
+            SuiteSparse::SuiteSparseConfig OpenMP::OpenMP_CXX
+            ${BLAS_LIBRARIES} )
 
         add_executable ( paru_democ "Demo/paru_democ.c" )
         if ( BUILD_SHARED_LIBS )
@@ -472,3 +489,4 @@ endif ( )
 #-------------------------------------------------------------------------------
 
 include ( SuiteSparseReport )
+

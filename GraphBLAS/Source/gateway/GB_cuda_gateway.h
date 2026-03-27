@@ -2,7 +2,7 @@
 // GB_cuda_gateway.h: definitions for interface to GB_cuda_* functions
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2019, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -44,6 +44,7 @@ typedef struct
     size_t  pool_size ;
     size_t  max_pool_size ;
     void *memory_resource ;
+    // TODO: add something about the streams for this device
 }
 GB_cuda_device ;
 
@@ -74,7 +75,7 @@ static inline int GB_ngpus_to_use
     else if (gpu_hack == 1)
     {
         // always use all available GPU(s)
-        // fixme for CUDA: allow 1 to gpu_count to be requested
+        // FIXME for CUDA: allow 1 to gpu_count to be requested
         return (gpu_count) ;
     }
     else
@@ -93,11 +94,15 @@ static inline int GB_ngpus_to_use
 //------------------------------------------------------------------------------
 
 GrB_Info GB_cuda_init (void) ;
+GrB_Info GB_cuda_finalize (void) ;
 
 bool GB_cuda_get_device_count   // true if OK, false if failure
 (
     int *gpu_count              // return # of GPUs in the system
 ) ;
+
+GrB_Info GB_cuda_stream_pool_init (void) ;
+GrB_Info GB_cuda_stream_pool_finalize (void) ;
 
 bool GB_cuda_warmup (int device) ;
 
@@ -210,9 +215,7 @@ bool GB_cuda_select_branch
 
 GrB_Info GB_cuda_select_bitmap
 (
-    int8_t *Cb,
-    int64_t *cnvals,
-    const bool C_iso,
+    GrB_Matrix C,
     const GrB_Matrix A,
     const bool flipij,
     const GB_void *ythunk,
@@ -226,7 +229,9 @@ GrB_Info GB_cuda_select_sparse
     const GrB_IndexUnaryOp op,
     const bool flipij,
     const GrB_Matrix A,
-    const GB_void *ythunk
+    const GB_void *athunk,
+    const GB_void *ythunk,
+    GB_Werk Werk
 ) ;
 
 bool GB_cuda_type_branch            // return true if the type is OK on GPU

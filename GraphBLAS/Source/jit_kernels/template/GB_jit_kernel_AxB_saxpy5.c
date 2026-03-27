@@ -2,7 +2,7 @@
 // GB_jit_kernel_AxB_saxpy5: C+=A*B, C is full, A bitmap/full, B sparse/hyper
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -82,6 +82,29 @@ GB_JIT_GLOBAL GB_JIT_KERNEL_AXB_SAXPY5_PROTO (GB_jit_kernel) ;
             }
 
         #endif
+
+        //----------------------------------------------------------------------
+        // saxpy5 method with RISC-V vectors
+        //----------------------------------------------------------------------
+
+        #if GB_COMPILER_SUPPORTS_RVV1
+
+            #include <riscv_vector.h>
+
+            GB_TARGET_RVV1 static inline void GB_AxB_saxpy5_unrolled_rvv
+            (
+                GrB_Matrix C,
+                const GrB_Matrix A,
+                const GrB_Matrix B,
+                const int ntasks,
+                const int nthreads,
+                const int64_t *B_slice
+            )
+            {
+                #include "template/GB_AxB_saxpy5_lv.c"
+            }
+
+        #endif
     
     #endif
 
@@ -118,6 +141,7 @@ GB_JIT_GLOBAL GB_JIT_KERNEL_AXB_SAXPY5_PROTO (GB_jit_kernel) ;
 
 GB_JIT_GLOBAL GB_JIT_KERNEL_AXB_SAXPY5_PROTO (GB_jit_kernel)
 {
+    GB_GET_CALLBACKS ;
 
     #if GB_A_IS_PATTERN || GB_A_ISO
     {
@@ -164,6 +188,16 @@ GB_JIT_GLOBAL GB_JIT_KERNEL_AXB_SAXPY5_PROTO (GB_jit_kernel)
             {
                 // x86_64 with AVX2
                 GB_AxB_saxpy5_unrolled_avx2 (C, A, B, ntasks, nthreads,
+                    B_slice) ;
+                return (GrB_SUCCESS) ;
+            }
+            #endif
+
+            #if GB_COMPILER_SUPPORTS_RVV1
+            if (cpu_has_rvv1)
+            {
+                // RISC-V64 with RVV1.0
+                GB_AxB_saxpy5_unrolled_rvv (C, A, B, ntasks, nthreads,
                     B_slice) ;
                 return (GrB_SUCCESS) ;
             }

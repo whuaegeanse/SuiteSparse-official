@@ -2,12 +2,10 @@
 // GB_extractTuples: extract all the tuples from a matrix
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
-
-// JIT: not needed.  Only one variant possible.
 
 // Extracts all tuples from a matrix, like [I,J,X] = find (A).  If any
 // parameter I, J and/or X is NULL, then that component is not extracted.  The
@@ -20,23 +18,25 @@
 
 // If A is iso and X is not NULL, the iso scalar Ax [0] is expanded into X.
 
+// FUTURE: pass in parameters I_offset and J_offset to add to I and J
+
 #include "GB.h"
 #include "extractTuples/GB_extractTuples.h"
 
 #define GB_FREE_ALL                             \
 {                                               \
-    GB_Matrix_free (&T) ;                       \
-    GB_FREE_WORK (&Ap, Ap_size) ;               \
-    GB_FREE_WORK (&X_bitmap, X_bitmap_size) ;   \
+    GB_FREE_MEMORY (&Cp, Cp_size) ;               \
 }
 
 GrB_Info GB_extractTuples       // extract all tuples from a matrix
 (
-    GrB_Index *I_out,           // array for returning row indices of tuples
-    GrB_Index *J_out,           // array for returning col indices of tuples
+    void *I_out,                // array for returning row indices of tuples
+    bool I_is_32_out,           // if true, I is 32-bit; else 64 bit
+    void *J_out,                // array for returning col indices of tuples
+    bool J_is_32_out,           // if true, J is 32-bit; else 64 bit
     void *X,                    // array for returning values of tuples
-    GrB_Index *p_nvals,         // I,J,X size on input; # tuples on output
-    const GB_Type_code xcode,   // type of array X
+    uint64_t *p_nvals,          // I,J,X size on input; # tuples on output
+    const GrB_Type xtype,       // type of array X
     const GrB_Matrix A,         // matrix to extract tuples from
     GB_Werk Werk
 )
@@ -47,28 +47,20 @@ GrB_Info GB_extractTuples       // extract all tuples from a matrix
     //--------------------------------------------------------------------------
 
     GrB_Info info ;
-    struct GB_Matrix_opaque T_header ;
-    GrB_Matrix T = NULL ;
-    GB_void *restrict X_bitmap = NULL ; size_t X_bitmap_size = 0 ;
-    int64_t *restrict Ap       = NULL ; size_t Ap_size = 0 ;
-
+    void *Cp = NULL ; size_t Cp_size = 0 ;
     ASSERT_MATRIX_OK (A, "A to extract", GB0) ;
+    ASSERT_TYPE_OK (xtype, "xtype to extract", GB0) ;
     ASSERT (p_nvals != NULL) ;
 
     // delete any lingering zombies and assemble any pending tuples;
     // allow A to remain jumbled
     GB_MATRIX_WAIT_IF_PENDING_OR_ZOMBIES (A) ;
 
+    // get the types
     GB_BURBLE_DENSE (A, "(A %s) ") ;
-    ASSERT (xcode <= GB_UDT_code) ;
+    const GB_Type_code xcode = xtype->code ;
     const GB_Type_code acode = A->type->code ;
     const size_t asize = A->type->size ;
-
-    // xcode and A must be compatible
-    if (!GB_code_compatible (xcode, acode))
-    { 
-        return (GrB_DOMAIN_MISMATCH) ;
-    }
 
     const int64_t anz = GB_nnz (A) ;
     if (anz == 0)
@@ -97,16 +89,21 @@ GrB_Info GB_extractTuples       // extract all tuples from a matrix
     // handle the CSR/CSC format
     //--------------------------------------------------------------------------
 
-    GrB_Index *I, *J ;
+    void *I, *J ;
+    bool I_is_32, J_is_32 ;
     if (A->is_csc)
     { 
         I = I_out ;
         J = J_out ;
+        I_is_32 = I_is_32_out ;
+        J_is_32 = J_is_32_out ;
     }
     else
     { 
         I = J_out ;
         J = I_out ;
+        I_is_32 = J_is_32_out ;
+        J_is_32 = I_is_32_out ;
     }
 
     //--------------------------------------------------------------------------
@@ -120,15 +117,10 @@ GrB_Info GB_extractTuples       // extract all tuples from a matrix
         // allocate workspace
         //----------------------------------------------------------------------
 
-        bool need_typecast = (X != NULL) && (xcode != acode) ;
-        if (need_typecast)
-        { 
-            // X must be typecasted
-            int64_t anzmax = GB_IMAX (anz, 1) ;
-            X_bitmap = GB_MALLOC_WORK (anzmax*asize, GB_void, &X_bitmap_size) ;
-        }
-        Ap = GB_MALLOC_WORK (A->vdim+1, int64_t, &Ap_size) ;
-        if (Ap == NULL || (need_typecast && X_bitmap == NULL))
+        bool Cp_is_32 = GB_determine_p_is_32 (true, anz) ;   // OK
+        size_t cpsize = (Cp_is_32) ? sizeof (uint32_t) : sizeof (uint64_t) ;
+        Cp = GB_MALLOC_MEMORY (A->vdim+1, cpsize, &Cp_size) ;
+        if (Cp == NULL)
         { 
             // out of memory
             GB_FREE_ALL ;
@@ -139,36 +131,24 @@ GrB_Info GB_extractTuples       // extract all tuples from a matrix
         // extract the tuples
         //----------------------------------------------------------------------
 
-        // TODO: pass xcode to GB_convert_bitmap_worker and let it do the
-        // typecasting.  This works for now, however.
+        // Extract the pattern and the values, typecasting if needed.  If A is
+        // iso or X is NULL, GB_convert_b2s only does the symbolic work.
 
-        // if A is iso, GB_convert_bitmap_worker expands the iso scalar
-        // into its result, X or X_bitmap
+        // FUTURE: either extract the tuples directly from the bitmap, without
+        // the need for Cp, or revise GB_convert_b2s to take in offsets
+        // to add to I and J.
 
-        GB_OK (GB_convert_bitmap_worker (Ap, (int64_t *) I, (int64_t *) J,
-            (GB_void *) (need_typecast ? X_bitmap : X), NULL, A, Werk)) ;
+        GB_OK (GB_convert_b2s (Cp, I, J, (GB_void *) X, NULL,
+            Cp_is_32, I_is_32, J_is_32, xtype, A, Werk)) ;
 
-        //----------------------------------------------------------------------
-        // typecast X if needed
-        //----------------------------------------------------------------------
-
-        if (need_typecast)
+        if (A->iso && X != NULL)
         { 
-            // typecast the values from X_bitmap into X, using a temporary
-            // full anz-by-1 matrix T
-            ASSERT (X != NULL) ;
-            ASSERT (xcode != acode) ;
-            GB_CLEAR_STATIC_HEADER (T, &T_header) ;
-            GB_OK (GB_new (&T, // full, existing header
-                A->type, anz, 1, GB_Ap_null, true, GxB_FULL, 0, 0)) ;
-            T->x = X_bitmap ;
-            T->x_shallow = true ;
-            T->magic = GB_MAGIC ;
-            T->plen = -1 ;
-            T->nvec = 1 ;
-            ASSERT_MATRIX_OK (T, "T to cast_array", GB0) ;
-            GB_OK (GB_cast_array ((GB_void *) X, xcode, T, nthreads)) ;
-            GB_Matrix_free (&T) ;
+            // A is iso but a non-iso X has been requested;
+            // typecast the iso scalar and expand it into X
+            const size_t xsize = xtype->size ;
+            GB_void scalar [GB_VLA(xsize)] ;
+            GB_cast_scalar (scalar, xcode, A->x, acode, asize) ;
+            GB_OK (GB_iso_expand (X, anz, scalar, xtype)) ;
         }
 
     }
@@ -185,6 +165,7 @@ GrB_Info GB_extractTuples       // extract all tuples from a matrix
 
         if (I != NULL)
         {
+            GB_IDECL (I, , u) ; GB_IPTR (I, I_is_32) ;
             if (A->i == NULL)
             {
                 // A is full; construct the row indices
@@ -193,12 +174,18 @@ GrB_Info GB_extractTuples       // extract all tuples from a matrix
                 #pragma omp parallel for num_threads(nthreads) schedule(static)
                 for (p = 0 ; p < anz ; p++)
                 { 
-                    I [p] = (p % avlen) ;
+                    int64_t i = (p % avlen) ;
+                    // I [p] = i ;
+                    GB_ISET (I, p, i) ;
                 }
             }
             else
             { 
-                GB_memcpy (I, A->i, anz * sizeof (int64_t), nthreads) ;
+                // A is sparse or hypersparse; copy/cast A->i into I
+                GB_cast_int (
+                    I,       I_is_32 ? GB_UINT32_code : GB_UINT64_code,
+                    A->i, A->i_is_32 ? GB_UINT32_code : GB_UINT64_code,
+                    anz, nthreads_max) ;
             }
         }
 
@@ -207,8 +194,8 @@ GrB_Info GB_extractTuples       // extract all tuples from a matrix
         //----------------------------------------------------------------------
 
         if (J != NULL)
-        {
-            GB_OK (GB_extract_vector_list ((int64_t *) J, A, Werk)) ;
+        { 
+            GB_OK (GB_extract_vector_list (J, J_is_32, A, Werk)) ;
         }
 
         //----------------------------------------------------------------------
@@ -219,11 +206,12 @@ GrB_Info GB_extractTuples       // extract all tuples from a matrix
         {
             if (A->iso)
             { 
-                // typecast the scalar and expand it into X
-                size_t xsize = GB_code_size (xcode, asize) ;
+                // A is iso but a non-iso X has been requested;
+                // typecast the iso scalar and expand it into X
+                const size_t xsize = xtype->size ;
                 GB_void scalar [GB_VLA(xsize)] ;
                 GB_cast_scalar (scalar, xcode, A->x, acode, asize) ;
-                GB_expand_iso (X, anz, scalar, xsize) ;
+                GB_OK (GB_iso_expand (X, anz, scalar, xtype)) ;
             }
             else if (xcode == acode)
             { 
@@ -241,7 +229,7 @@ GrB_Info GB_extractTuples       // extract all tuples from a matrix
     }
 
     //--------------------------------------------------------------------------
-    // free workspace and return result 
+    // free workspace and return result
     //--------------------------------------------------------------------------
 
     *p_nvals = anz ;            // number of tuples extracted

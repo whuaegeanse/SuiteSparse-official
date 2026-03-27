@@ -1,9 +1,9 @@
 function codegen_aop_template (binop, bfunc, ifunc, ffunc, dfunc, fcfunc, dcfunc)
-%CODEGEN_ASSIGNOP_TEMPLATE create aop functions
+%CODEGEN_AOP_TEMPLATE create aop functions
 %
 % Generate functions for a binary operator, for all types, for assign/subassign
 
-% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 % SPDX-License-Identifier: Apache-2.0
 
 fprintf ('\n%-9s', binop) ;
@@ -38,4 +38,5 @@ end
 if (~isempty (dcfunc))
     codegen_aop_method (binop, dcfunc, 'GxB_FC64_t') ;
 end
+
 

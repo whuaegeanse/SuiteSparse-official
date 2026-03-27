@@ -2,15 +2,21 @@
 // GB_ew: ewise kernels for each built-in binary operator
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
-#include "GB.h"
 #include "GB_control.h"
-#include "ewise/GB_emult.h"
-#include "slice/GB_ek_slice.h"
+#if defined (GxB_NO_FC32)
+#define GB_TYPE_ENABLED 0
+#else
+#define GB_TYPE_ENABLED 1
+#endif
+
+#if GB_TYPE_ENABLED
+#include "GB.h"
+#include "emult/GB_emult.h"
 #include "assign/GB_bitmap_assign_methods.h"
 #include "FactoryKernels/GB_ew__include.h"
 
@@ -34,6 +40,8 @@
 
 // C matrix:
 #define GB_C_TYPE GxB_FC32_t
+
+#define GB_Cp_IS_32 Cp_is_32
 
 // disable this operator and use the generic case if these conditions hold
 #if (defined(GxB_NO_PAIR) || defined(GxB_NO_FC32) || defined(GxB_NO_PAIR_FC32))
@@ -98,7 +106,7 @@ GrB_Info GB (_AaddB__pair_fc32)
     // for the "easy mask" condition:
     bool M_is_A = GB_all_aliased (M, A) ;
     bool M_is_B = GB_all_aliased (M, B) ;
-    #include "ewise/template/GB_add_template.c"
+    #include "add/template/GB_add_template.c"
     return (GrB_SUCCESS) ;
     #endif
 }
@@ -106,4 +114,8 @@ GrB_Info GB (_AaddB__pair_fc32)
 //------------------------------------------------------------------------------
 // eWiseUnion: C=A+B, C<M>=A+B, C<!M>=A+B
 //------------------------------------------------------------------------------
+
+#else
+GB_EMPTY_PLACEHOLDER
+#endif
 

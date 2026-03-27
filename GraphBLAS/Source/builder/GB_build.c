@@ -2,7 +2,7 @@
 // GB_build: build a matrix
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -43,6 +43,8 @@
 // GraphBLAS spec does not require this condition to cause an error so that is
 // not done here.  If dup is not associative, the GraphBLAS spec states that
 // the results are not defined.
+
+// The dup operator cannot be based on a GxB_IndexBinaryOp.
 
 // SuiteSparse:GraphBLAS provides a well-defined order of assembly, however.
 // For a CSC format, entries in [I,J,X] are first sorted in increasing order of
@@ -100,14 +102,16 @@
 GrB_Info GB_build               // build matrix
 (
     GrB_Matrix C,               // matrix to build
-    const GrB_Index *I,         // row indices of tuples
-    const GrB_Index *J,         // col indices of tuples (NULL for vector)
+    const void *I,              // row indices of tuples
+    const void *J,              // col indices of tuples (NULL for vector)
     const void *X,              // values, size 1 if iso
-    const GrB_Index nvals,      // number of tuples
+    const uint64_t nvals,       // number of tuples
     const GrB_BinaryOp dup,     // binary op to assemble duplicates (or NULL)
     const GrB_Type xtype,       // type of X array
     const bool is_matrix,       // true if C is a matrix, false if GrB_Vector
     const bool X_iso,           // if true the C is iso and X has size 1 entry
+    bool I_is_32,               // if true, I is 32-bit; else 64-bit
+    bool J_is_32,               // if true, J is 32-bit; else 64-bit
     GB_Werk Werk
 )
 {
@@ -118,7 +122,10 @@ GrB_Info GB_build               // build matrix
 
     // check C
     GrB_Info info ;
+    struct GB_Matrix_opaque T_header ;
+    GrB_Matrix T = NULL ;
     ASSERT (C != NULL) ;
+    GB_RETURN_IF_OUTPUT_IS_READONLY (C) ;
     if (GB_nnz (C) > 0 || GB_PENDING (C))
     { 
         // The matrix has existing entries.  This is required by the GraphBLAS
@@ -166,7 +173,7 @@ GrB_Info GB_build               // build matrix
     { 
         // problem too large
         GB_ERROR (GrB_INVALID_VALUE, "Problem too large: nvals " GBu
-            " exceeds " GBu, nvals, GB_NMAX) ;
+            " exceeds " GBu, nvals, (uint64_t) GB_NMAX) ;
     }
 
     //--------------------------------------------------------------------------
@@ -250,20 +257,25 @@ GrB_Info GB_build               // build matrix
     // build the matrix T
     //--------------------------------------------------------------------------
 
+    // Determine the Tp_is_32, Tj_is_32, and Ti_is_32 settings for the new
+    // matrix, assuming that nvals is not reduced by a massive # of duplicates.
+    bool Tp_is_32, Tj_is_32, Ti_is_32 ;
+    GB_determine_pji_is_32 (&Tp_is_32, &Tj_is_32, &Ti_is_32,
+        GxB_HYPERSPARSE, nvals, C->vlen, C->vdim, Werk) ;
+
     // T is always built as hypersparse.  Its type is the same as the z output
     // of the z=dup(x,y) operator if dup is present, or xtype if dup is NULL.
     // If C->type differs from T->type, it is typecasted by
     // GB_transplant_conform.
 
-    // X must be treated as read-only, so GB_builder is not allowed to
-    // transplant it into T->x.
+    // I, J, and X must be treated as readonly, so GB_builder is not allowed
+    // to transplant them into T->x.
 
-    int64_t *no_I_work = NULL ; size_t I_work_size = 0 ;
-    int64_t *no_J_work = NULL ; size_t J_work_size = 0 ;
+    void *no_I_work = NULL ; size_t I_work_size = 0 ;
+    void *no_J_work = NULL ; size_t J_work_size = 0 ;
     GB_void *no_X_work = NULL ; size_t X_work_size = 0 ;
-    struct GB_Matrix_opaque T_header ;
-    GrB_Matrix T = NULL ;
-    GB_CLEAR_STATIC_HEADER (T, &T_header) ;
+
+    GB_CLEAR_MATRIX_HEADER (T, &T_header) ;
     GrB_Type ttype = (discard_duplicates) ? xtype : dup->ztype ;
 
     GB_OK (GB_builder (
@@ -282,15 +294,18 @@ GrB_Info GB_build               // build matrix
         false,          // known_no_duplicates: not yet known
         0,              // I_work, J_work, and X_work not used here
         is_matrix,      // true if T is a GrB_Matrix
-        (int64_t *) ((C->is_csc) ? I : J),  // size nvals
-        (int64_t *) ((C->is_csc) ? J : I),  // size nvals, or NULL for vector
+        C->is_csc ? I : J,  // size nvals
+        C->is_csc ? J : I,  // size nvals, or NULL for vector
         (const GB_void *) X,                // values, size nvals or 1 if iso
         X_iso,          // true if X is iso
         nvals,          // number of tuples
         dup2,           // operator to assemble duplicates (may be NULL)
         xtype,          // type of the X array
         true,           // burble is OK
-        Werk
+        Werk,
+        C->is_csc ? I_is_32 : J_is_32,  // if true, I is 32-bit; else 64-bit
+        C->is_csc ? J_is_32 : I_is_32,  // if true, J is 32-bit; else 64-bit
+        Tp_is_32, Tj_is_32, Ti_is_32    // integer sizes to create T
     )) ;
 
     //--------------------------------------------------------------------------
@@ -305,7 +320,7 @@ GrB_Info GB_build               // build matrix
         // match nvals, then duplicates have been detected.  In the v2.0 C API,
         // this is an error condition.  If the user application wants the C
         // matrix returned with duplicates discarded, use dup = GxB_IGNORE_DUP
-        // instead. 
+        // instead.
         GB_FREE_ALL ;
         GB_ERROR (GrB_INVALID_VALUE, "Duplicates appear (" GBd ") but dup "
             "is NULL", ((int64_t) nvals) - tnvals) ;
@@ -321,15 +336,15 @@ GrB_Info GB_build               // build matrix
     // created an iso-valued matrix T, but this is not yet known.  X_iso is
     // false for these methods.  Since it has not yet been conformed to its
     // final sparsity structure, the matrix T is hypersparse, not bitmap.  It
-    // has no zombies or pending tuples, so GB_all_entries_are_iso does need to handle
-    // those cases.  T->x [0] is the new iso value of T.
+    // has no zombies or pending tuples, so GB_all_entries_are_iso does not
+    // need to handle those cases.  T->x [0] is the new iso value of T.
 
     if (!X_iso && GB_all_entries_are_iso (T))
     { 
         // All entries in T are the same; convert T to iso
         GBURBLE ("(post iso) ") ;
         T->iso = true ;
-        GB_OK (GB_convert_any_to_iso (T, NULL)) ;
+        GB_OK (GB_convert_any_to_iso (T, NULL)) ;   // OK
     }
 
     //--------------------------------------------------------------------------
@@ -340,6 +355,7 @@ GrB_Info GB_build               // build matrix
     ASSERT (!GB_ZOMBIES (T)) ;
     ASSERT (!GB_JUMBLED (T)) ;
     ASSERT (!GB_PENDING (T)) ;
-    return (GB_transplant_conform (C, C->type, &T, Werk)) ;
+    GB_OK (GB_transplant_conform (C, C->type, &T, Werk)) ;
+    return (GrB_SUCCESS) ;
 }
 

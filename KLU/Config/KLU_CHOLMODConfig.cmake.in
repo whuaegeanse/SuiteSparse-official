@@ -75,7 +75,12 @@ if ( NOT KLU_FOUND OR NOT CHOLMOD_FOUND )
 endif ( )
 
 
-include ( ${CMAKE_CURRENT_LIST_DIR}/KLU_CHOLMODTargets.cmake )
+if ( @BUILD_SHARED_LIBS@ )
+    include ( ${CMAKE_CURRENT_LIST_DIR}/KLU_CHOLMODTargets.cmake )
+endif ( )
+if ( @BUILD_STATIC_LIBS@ )
+    include ( ${CMAKE_CURRENT_LIST_DIR}/KLU_CHOLMODTargets_static.cmake )
+endif ( )
 
 # The following is only for backward compatibility with FindKLU_CHOLMOD.
 

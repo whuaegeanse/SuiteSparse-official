@@ -158,14 +158,29 @@ inline double spqr_private_larfg (int32_t n, double *X, cholmod_common *cc)
 
 inline Complex spqr_private_larfg (int64_t n, Complex *X, cholmod_common *cc)
 {
-    Complex tau = 0 ;
-    SUITESPARSE_LAPACK_zlarfg (n, X, X + 1, 1, &tau, cc->blas_ok) ;
+    SUITESPARSE_COMPLEX_DOUBLE t ;
+    memset ((void *) &t, 0, sizeof (SUITESPARSE_COMPLEX_DOUBLE)) ;
+    void *x0 = (void *) X ;
+    void *x1 = (void *) (X + 1) ;
+    SUITESPARSE_COMPLEX_DOUBLE *y0 = (SUITESPARSE_COMPLEX_DOUBLE *) x0 ;
+    SUITESPARSE_COMPLEX_DOUBLE *y1 = (SUITESPARSE_COMPLEX_DOUBLE *) x1 ;
+    SUITESPARSE_LAPACK_zlarfg (n, y0, y1, 1, &t, cc->blas_ok) ;
+    Complex tau ;
+    memcpy (&tau, &t, sizeof (SUITESPARSE_COMPLEX_DOUBLE)) ;
     return (tau) ;
 }
+
 inline Complex spqr_private_larfg (int32_t n, Complex *X, cholmod_common *cc)
 {
-    Complex tau = 0 ;
-    SUITESPARSE_LAPACK_zlarfg (n, X, X + 1, 1, &tau, cc->blas_ok) ;
+    SUITESPARSE_COMPLEX_DOUBLE t ;
+    memset ((void *) &t, 0, sizeof (SUITESPARSE_COMPLEX_DOUBLE)) ;
+    void *x0 = (void *) X ;
+    void *x1 = (void *) (X + 1) ;
+    SUITESPARSE_COMPLEX_DOUBLE *y0 = (SUITESPARSE_COMPLEX_DOUBLE *) x0 ;
+    SUITESPARSE_COMPLEX_DOUBLE *y1 = (SUITESPARSE_COMPLEX_DOUBLE *) x1 ;
+    SUITESPARSE_LAPACK_zlarfg (n, y0, y1, 1, &t, cc->blas_ok) ;
+    Complex tau ;
+    memcpy (&tau, &t, sizeof (SUITESPARSE_COMPLEX_DOUBLE)) ;
     return (tau) ;
 }
 
@@ -221,16 +236,25 @@ inline void spqr_private_larf (int64_t m, int64_t n, Complex *V, Complex tau,
 {
     char left = 'L' ;
     Complex conj_tau = spqr_conj (tau) ;
-    SUITESPARSE_LAPACK_zlarf (&left, m, n, V, 1, &conj_tau, C, ldc, W,
-        cc->blas_ok) ;
+    SUITESPARSE_COMPLEX_DOUBLE ct ;
+    memcpy (&ct, &conj_tau, sizeof (SUITESPARSE_COMPLEX_DOUBLE)) ;
+    SUITESPARSE_COMPLEX_DOUBLE *v = (SUITESPARSE_COMPLEX_DOUBLE *) V ;
+    SUITESPARSE_COMPLEX_DOUBLE *c = (SUITESPARSE_COMPLEX_DOUBLE *) C ;
+    SUITESPARSE_COMPLEX_DOUBLE *w = (SUITESPARSE_COMPLEX_DOUBLE *) W ;
+    SUITESPARSE_LAPACK_zlarf (&left, m, n, v, 1, &ct, c, ldc, w, cc->blas_ok) ;
 }
+
 inline void spqr_private_larf (int32_t m, int32_t n, Complex *V, Complex tau,
     Complex *C, int32_t ldc, Complex *W, cholmod_common *cc)
 {
     char left = 'L' ;
     Complex conj_tau = spqr_conj (tau) ;
-    SUITESPARSE_LAPACK_zlarf (&left, m, n, V, 1, &conj_tau, C, ldc, W,
-        cc->blas_ok) ;
+    SUITESPARSE_COMPLEX_DOUBLE ct ;
+    memcpy (&ct, &conj_tau, sizeof (SUITESPARSE_COMPLEX_DOUBLE)) ;
+    SUITESPARSE_COMPLEX_DOUBLE *v = (SUITESPARSE_COMPLEX_DOUBLE *) V ;
+    SUITESPARSE_COMPLEX_DOUBLE *c = (SUITESPARSE_COMPLEX_DOUBLE *) C ;
+    SUITESPARSE_COMPLEX_DOUBLE *w = (SUITESPARSE_COMPLEX_DOUBLE *) W ;
+    SUITESPARSE_LAPACK_zlarf (&left, m, n, v, 1, &ct, c, ldc, w, cc->blas_ok) ;
 }
 
 template <typename Entry, typename Int> void spqr_private_apply1

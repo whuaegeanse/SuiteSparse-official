@@ -33,7 +33,7 @@ AC_CHECK_FUNC(fmax, [], AC_CHECK_LIB(m, fmax))
 
 # Check for C++ STL.
 # If found, this will add -lstdc++ to LIBS.
-# FIXME: This is a workaround to allow linking CUDA libraries to a C binary.
+# Fixme: This is a workaround to allow linking CUDA libraries to a C binary.
 AC_CHECK_LIB(stdc++, __gxx_personality_v0)
 
 # create Makefile.in from Makefile.am

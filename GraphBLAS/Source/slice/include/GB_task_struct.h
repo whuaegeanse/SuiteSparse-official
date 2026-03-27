@@ -2,7 +2,7 @@
 // GB_task_struct.h: parallel task descriptor
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -43,25 +43,6 @@ typedef struct          // task descriptor
     int64_t len ;       // fine task handles a subvector of this length
 }
 GB_task_struct ;
-
-//------------------------------------------------------------------------------
-// GB_GET_VECTOR: get the content of a vector for a coarse/fine task
-//------------------------------------------------------------------------------
-
-#define GB_GET_VECTOR(pX_start, pX_fini, pX, pX_end, Xp, kX, Xvlen)         \
-    int64_t pX_start, pX_fini ;                                             \
-    if (fine_task)                                                          \
-    {                                                                       \
-        /* A fine task operates on a slice of X(:,k) */                     \
-        pX_start = TaskList [taskid].pX ;                                   \
-        pX_fini  = TaskList [taskid].pX_end ;                               \
-    }                                                                       \
-    else                                                                    \
-    {                                                                       \
-        /* vectors are never sliced for a coarse task */                    \
-        pX_start = GBP (Xp, kX, Xvlen) ;                                    \
-        pX_fini  = GBP (Xp, kX+1, Xvlen) ;                                  \
-    }
 
 #endif
 

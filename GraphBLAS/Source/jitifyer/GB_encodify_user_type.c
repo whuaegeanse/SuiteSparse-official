@@ -2,7 +2,7 @@
 // GB_encodify_user_type: encode a user type
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -37,7 +37,7 @@ uint64_t GB_encodify_user_type      // encode a user defined type
     // primary encoding of the user type
     //--------------------------------------------------------------------------
 
-    encoding->kcode = GB_JIT_KERNEL_USERTYPE ;
+    GB_encodify_kcode (encoding, GB_JIT_KERNEL_USERTYPE) ;
     encoding->code = 0 ;
 
     //--------------------------------------------------------------------------

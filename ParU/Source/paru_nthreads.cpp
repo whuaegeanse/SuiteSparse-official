@@ -2,7 +2,7 @@
 ///////////////////////////////// paru_nthreads ////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-// ParU, Copyright (c) 2022-2024, Mohsen Aznaveh and Timothy A. Davis,
+// ParU, Copyright (c) 2022-2025, Mohsen Aznaveh and Timothy A. Davis,
 // All Rights Reserved.
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -13,17 +13,17 @@ int32_t paru_nthreads (ParU_Control Control)
     if (Control == NULL)
     {
         // default # of threads
-        return (PARU_OPENMP_MAX_THREADS) ;
+        return (PARU_omp_get_max_threads ( )) ;
     }
     int32_t nthreads = Control->paru_max_threads ;
     if (nthreads == PARU_DEFAULT_MAX_THREADS)
     {
         // default # of threads
-        return (PARU_OPENMP_MAX_THREADS) ;
+        return (PARU_omp_get_max_threads ( )) ;
     }
     else
     {
-        return std::min (nthreads, PARU_OPENMP_MAX_THREADS) ;
+        return std::min (nthreads, PARU_omp_get_max_threads ( )) ;
     }
 }
 

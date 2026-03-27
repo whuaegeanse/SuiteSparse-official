@@ -2,7 +2,7 @@
 # SuiteSparse/Example/CMakeLists.txt:  cmake for Example user library, "my"
 #-------------------------------------------------------------------------------
 
-# Copyright (c) 2022-2023, Timothy A. Davis, All Rights Reserved.
+# Copyright (c) 2022-2025, Timothy A. Davis, All Rights Reserved.
 # SPDX-License-Identifier: BSD-3-clause
 
 # See the section below, "help with building this Example ..." for how to tell
@@ -28,9 +28,9 @@ cmake_minimum_required ( VERSION 3.22 )
 #   set ( CMAKE_PREFIX_PATH /opt/SuiteSparse )
 #
 # The following is added, just to simplify building this Example if it is
-# located inside SuiteSparse itself and compiled with SUITESPARSE_LOCAL_INSTALL set to ON.
-# Normally you would not use this in a stand-alone library that relies on
-# SuiteSparse:
+# located inside SuiteSparse itself and compiled with SUITESPARSE_LOCAL_INSTALL
+# set to ON.  Normally you would not use this in a stand-alone library that
+# relies on SuiteSparse:
 
     set ( CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_SOURCE_DIR}/.. )
 
@@ -53,10 +53,10 @@ message ( STATUS "MY prefix path:    ${CMAKE_PREFIX_PATH}" )
 #-------------------------------------------------------------------------------
 
 # cmake inserts the date and version number into Include/my.h:
-set ( MY_DATE "Oct 10, 2024" )
+set ( MY_DATE "Nov 1, 2025" )
 set ( MY_VERSION_MAJOR 1 )
 set ( MY_VERSION_MINOR 8 )
-set ( MY_VERSION_PATCH 3 )
+set ( MY_VERSION_PATCH 10 )
 
 message ( STATUS "Building MY library version: v"
     ${MY_VERSION_MAJOR}.
@@ -69,6 +69,7 @@ message ( STATUS "Building MY library version: v"
 
 if ( WIN32 )
     set ( CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS true )
+    add_compile_definitions ( _CRT_SECURE_NO_WARNINGS )
 endif ( )
 
 option ( BUILD_SHARED_LIBS "OFF: do not build shared libraries.  ON (default): build shared libraries" ON )
@@ -87,29 +88,25 @@ project ( my
 #-------------------------------------------------------------------------------
 
 # look for all SuiteSparse packages:
-find_package ( SuiteSparse_config 7.8.3 REQUIRED )
-find_package ( AMD 3.3.3 REQUIRED )
-find_package ( BTF 2.3.2 REQUIRED )
-find_package ( CAMD 3.3.3 REQUIRED )
-find_package ( CCOLAMD 3.3.4 REQUIRED )
-find_package ( CHOLMOD 5.3.0 REQUIRED )
-find_package ( COLAMD 3.3.4 REQUIRED )
-find_package ( CXSparse 4.4.1 REQUIRED )
-find_package ( GraphBLAS 9.3.1 )
-find_package ( KLU 2.3.5 REQUIRED )
-find_package ( KLU_CHOLMOD 2.3.5 REQUIRED )
-find_package ( LDL 3.3.2 REQUIRED )
-find_package ( LAGraph 1.1.4 )
-find_package ( SuiteSparse_Mongoose 3.3.4 REQUIRED )
-find_package ( ParU 1.0.0 REQUIRED )
-find_package ( RBio 4.3.4 REQUIRED )
-find_package ( SPEX 3.2.1 REQUIRED )    # requires GMP and MPFR
-find_package ( SPQR 4.3.4 REQUIRED )
-find_package ( UMFPACK 6.3.5 REQUIRED )
-
-# for GMP and MPFR
-find_package ( MPFR 4.0.2 REQUIRED )    # from SPEX/cmake_modules
-find_package ( GMP 6.1.2 REQUIRED )     # from SPEX/cmake_modules
+find_package ( SuiteSparse_config 7.12.0 REQUIRED )
+find_package ( AMD 3.3.4 REQUIRED )
+find_package ( BTF 2.3.3 REQUIRED )
+find_package ( CAMD 3.3.5 REQUIRED )
+find_package ( CCOLAMD 3.3.5 REQUIRED )
+find_package ( CHOLMOD 5.3.4 REQUIRED )
+find_package ( COLAMD 3.3.5 REQUIRED )
+find_package ( CXSparse 4.4.2 REQUIRED )
+find_package ( GraphBLAS 10.2.0 )
+find_package ( KLU 2.3.6 REQUIRED )
+find_package ( KLU_CHOLMOD 2.3.6 REQUIRED )
+find_package ( LAGraph 1.2.1 )
+find_package ( LDL 3.3.3 REQUIRED )
+find_package ( ParU 1.1.0 REQUIRED )
+find_package ( RBio 4.3.5 REQUIRED )
+find_package ( SPEX 3.2.4 REQUIRED )    # requires GMP and MPFR
+find_package ( SPQR 4.3.6 REQUIRED )
+find_package ( SuiteSparse_Mongoose 3.3.6 REQUIRED )
+find_package ( UMFPACK 6.3.7 REQUIRED )
 
 #-------------------------------------------------------------------------------
 # configure files
@@ -510,8 +507,8 @@ endif ( )
 # other libraries
 #-------------------------------------------------------------------------------
 
-# The "MY" library does not directly rely on the OpenMP, libm, BLAS, and
-# LAPACK, libraries.  However, if you wish to create a library that uses those
+# The "MY" library does not directly rely on the OpenMP, libm, BLAS, LAPACK,
+# MPFR, and GMP libraries.  However, if you wish to create a library that uses those
 # libraries, uncomment the corresponding section.  These direct dependencies
 # are left out of the MY CMakeLists.txt, as a test for the other SuiteSparse
 # cmake build system, to ensure that the libraries should be linked via the
@@ -572,8 +569,6 @@ if ( 0 )
     endif ( )
     include_directories ( ${LAPACK_INCLUDE_DIRS} )
 
-endif ( )
-
     # MPFR:
     message ( STATUS "MPFR library:        ${MPFR_LIBRARIES}" )
     if ( BUILD_SHARED_LIBS )
@@ -597,6 +592,8 @@ endif ( )
         target_link_libraries ( my_cxx_static PUBLIC ${GMP_STATIC} )
     endif ( )
     include_directories ( ${GMP_INCLUDE_DIR} )
+
+endif ( )
 
 #-------------------------------------------------------------------------------
 # installation location

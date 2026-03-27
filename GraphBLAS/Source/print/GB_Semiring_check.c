@@ -2,12 +2,13 @@
 // GB_Semiring_check: check and print a semiring
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 #include "GB.h"
+#include "get_set/GB_get_set.h"
 
 GrB_Info GB_Semiring_check          // check a GraphBLAS semiring
 (
@@ -59,7 +60,7 @@ GrB_Info GB_Semiring_check          // check a GraphBLAS semiring
     }
 
     GrB_Info info ;
-    info = GB_Monoid_check (add, "semiring->add", pr, f) ;
+    info = GB_Monoid_check (add, "semiring->add", pr, f, true) ;
     if (info != GrB_SUCCESS)
     { 
         GBPR0 ("    Semiring->add invalid\n") ;
@@ -71,6 +72,13 @@ GrB_Info GB_Semiring_check          // check a GraphBLAS semiring
     { 
         GBPR0 ("    Semiring->multiply invalid\n") ;
         return (GrB_INVALID_OBJECT) ;
+    }
+
+    // name given by GrB_set, or 'GrB_*' name for built-in objects
+    const char *given_name = GB_semiring_name_get (semiring) ;
+    if (given_name != NULL)
+    { 
+        GBPR0 ("    Semiring given name: [%s]\n", given_name) ;
     }
 
     // z = multiply(x,y); type of z must match monoid type

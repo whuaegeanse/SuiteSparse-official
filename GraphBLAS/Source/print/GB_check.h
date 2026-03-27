@@ -2,7 +2,7 @@
 // GB_check.h: check and optionally print an object
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -18,20 +18,23 @@
 #define GB4 GxB_SHORT_VERBOSE
 #define GB5 GxB_COMPLETE_VERBOSE
 
+// as above, but do not check zombie counts
+#define GB0_Z 6
+#define GB1_Z 7
+#define GB2_Z 8
+#define GB3_Z 9
+#define GB4_Z 10
+#define GB5_Z 11
+
 GrB_Info GB_entry_check     // print a single value
 (
     const GrB_Type type,    // type of value to print
     const void *x,          // value to print
     int pr,                 // print level
-    FILE *f                 // file to print to
-) ;
-
-GrB_Info GB_code_check          // print and check an entry using a type code
-(
-    const GB_Type_code code,    // type code of value to print
-    const void *x,              // entry to print
-    int pr,                     // print level
-    FILE *f                     // file to print to
+    FILE *f,                // file to print to
+    // for user-defined types only:
+    char **string_handle,   // string buffer for printing
+    size_t *string_size     // size of the string buffer
 ) ;
 
 GrB_Info GB_Type_check      // check a GraphBLAS Type
@@ -66,6 +69,15 @@ GrB_Info GB_IndexUnaryOp_check  // check a GraphBLAS index_unary operator
     FILE *f                 // file for output
 ) ;
 
+GrB_Info GB_IndexBinaryOp_check  // check a GraphBLAS index_binary operator
+(
+    const GxB_IndexBinaryOp op,  // GraphBLAS operator to print and check
+    const char *name,       // name of the operator
+    int pr,                 // print level
+    FILE *f                 // file for output
+) ;
+
+#ifndef GB_CUDA_FOLDER
 GrB_Info GB_SelectOp_check  // check a GraphBLAS select operator
 (
     const GxB_SelectOp op,  // GraphBLAS operator to print and check
@@ -73,6 +85,7 @@ GrB_Info GB_SelectOp_check  // check a GraphBLAS select operator
     int pr,                 // print level
     FILE *f                 // file for output
 ) ;
+#endif
 
 GrB_Info GB_Operator_check  // check a GraphBLAS operator
 (
@@ -87,7 +100,8 @@ GrB_Info GB_Monoid_check        // check a GraphBLAS monoid
     const GrB_Monoid monoid,    // GraphBLAS monoid to print and check
     const char *name,           // name of the monoid, optional
     int pr,                     // print level
-    FILE *f                     // file for output
+    FILE *f,                    // file for output
+    bool in_semiring            // if true, then called by GB_Semiring_check
 ) ;
 
 GrB_Info GB_Semiring_check          // check a GraphBLAS semiring
@@ -118,8 +132,7 @@ GrB_Info GB_matvec_check    // check a GraphBLAS matrix or vector
 (
     const GrB_Matrix A,     // GraphBLAS matrix to print and check
     const char *name,       // name of the matrix, optional
-    int pr,                 // print level; if negative, ignore nzombie
-                            // conditions and use GB_FLIP(pr) for diagnostics
+    int pr,                 // print level
     FILE *f,                // file for output
     const char *kind        // "matrix" or "vector"
 ) ;

@@ -112,18 +112,18 @@ int64_t ldl_l_valid_matrix ( int64_t n, int64_t Ap [ ], int64_t Ai [ ]) ;
 /* === LDL version ========================================================== */
 /* ========================================================================== */
 
-#define LDL_DATE "Mar 22, 2024"
+#define LDL_DATE "July 25, 2025"
 #define LDL_MAIN_VERSION   3
 #define LDL_SUB_VERSION    3
-#define LDL_SUBSUB_VERSION 2
+#define LDL_SUBSUB_VERSION 3
 
 #define LDL_VERSION_CODE(main,sub) SUITESPARSE_VER_CODE(main,sub)
 #define LDL_VERSION LDL_VERSION_CODE(3,3)
 
-#define LDL__VERSION SUITESPARSE__VERCODE(3,3,2)
+#define LDL__VERSION SUITESPARSE__VERCODE(3,3,3)
 #if !defined (SUITESPARSE__VERSION) || \
-    (SUITESPARSE__VERSION < SUITESPARSE__VERCODE(7,7,0))
-#error "LDL 3.3.2 requires SuiteSparse_config 7.7.0 or later"
+    (SUITESPARSE__VERSION < SUITESPARSE__VERCODE(7,11,0))
+#error "LDL 3.3.3 requires SuiteSparse_config 7.11.0 or later"
 #endif
 
 #endif

@@ -2,7 +2,7 @@
 // GrB_init: initialize GraphBLAS
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -12,14 +12,14 @@
 // and its RMM memory manager: use a mode of GxB_BLOCKING_GPU or
 // GxB_NONBLOCKING_GPU.
 
-// FIXME: rename GxB_*BLOCKING_GPU to GxB_*BLOCKING_CUDA.
+// FIXME for CUDA: rename GxB_*BLOCKING_GPU to GxB_*BLOCKING_CUDA.
 
 #include "GB.h"
 #include "init/GB_init.h"
 
 GrB_Info GrB_init           // start up GraphBLAS
 (
-    GrB_Mode mode           // blocking or non-blocking mode
+    int mode                // blocking or non-blocking mode
 )
 { 
 

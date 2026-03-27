@@ -2,7 +2,7 @@
 // GB_AxB_dot4_cij.c: C(i,j) += A(:,i)'*B(:,j) for dot4 method
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -39,15 +39,16 @@
             cij = (GB_C_TYPE) (t & 0x1L) ;
         }
         #elif GB_IS_PLUS_PAIR_8_SEMIRING
-        { 
+        {
             // (PLUS int8, uint8 monoids)_PAIR semirings
+            // only used by the JIT if int8 and uint8 FactoryKernels disabled
             uint64_t t = ((uint64_t) cij) + ainz ;
             cij = (GB_C_TYPE) (t & 0xFFL) ;
         }
         #elif GB_IS_PLUS_PAIR_16_SEMIRING
         {
             // (PLUS int16, uint16 monoids)_PAIR semirings
-            // this is only used by the JIT
+            // only used by the JIT if int16 and uint16 FactoryKernels disabled
             uint64_t t = ((uint64_t) cij) + ainz ;
             cij = (GB_C_TYPE) (t & 0xFFFFL) ;
         }
@@ -67,7 +68,7 @@
             // MIN_FIRSTJ semiring: take the 1st entry in A(:,i)
             if (ainz > 0)
             { 
-                int64_t k = Ai [pA] + GB_OFFSET ;
+                int64_t k = GB_IGET (Ai, pA) + GB_OFFSET ;
                 cij = GB_IMIN (cij, k) ;
             }
         }
@@ -76,7 +77,7 @@
             // MAX_FIRSTJ semiring: take last entry in A(:,i)
             if (ainz > 0)
             { 
-                int64_t k = Ai [pA_end-1] + GB_OFFSET ;
+                int64_t k = GB_IGET (Ai, pA_end-1) + GB_OFFSET ;
                 cij = GB_IMAX (cij, k) ;
             }
         }
@@ -85,7 +86,7 @@
             GB_PRAGMA_SIMD_REDUCTION_MONOID (cij)
             for (int64_t p = pA ; p < pA_end ; p++)
             { 
-                int64_t k = Ai [p] ;
+                int64_t k = GB_IGET (Ai, p) ;
                 GB_DOT (k, p, pB+k) ;   // cij += A(k,i)*B(k,j)
             }
         }
@@ -104,7 +105,7 @@
             // MIN_FIRSTJ semiring: take the first entry
             for (int64_t p = pA ; p < pA_end ; p++)
             {
-                int64_t k = Ai [p] ;
+                int64_t k = GB_IGET (Ai, p) ;
                 if (Bb [pB+k])
                 { 
                     cij = GB_IMIN (cij, k + GB_OFFSET) ;
@@ -117,7 +118,7 @@
             // MAX_FIRSTJ semiring: take the last entry
             for (int64_t p = pA_end-1 ; p >= pA ; p--)
             {
-                int64_t k = Ai [p] ;
+                int64_t k = GB_IGET (Ai, p) ;
                 if (Bb [pB+k])
                 { 
                     cij = GB_IMAX (cij, k + GB_OFFSET) ;
@@ -130,7 +131,7 @@
             GB_PRAGMA_SIMD_REDUCTION_MONOID (cij)
             for (int64_t p = pA ; p < pA_end ; p++)
             {
-                int64_t k = Ai [p] ;
+                int64_t k = GB_IGET (Ai, p) ;
                 if (Bb [pB+k])
                 { 
                     GB_DOT (k, p, pB+k) ; // cij+=A(k,i)*B(k,j)

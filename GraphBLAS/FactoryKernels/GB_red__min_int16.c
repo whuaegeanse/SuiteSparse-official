@@ -2,13 +2,20 @@
 // GB_red:  hard-coded functions for reductions
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
-#include "GB.h"
 #include "GB_control.h"
+#if defined (GxB_NO_INT16)
+#define GB_TYPE_ENABLED 0
+#else
+#define GB_TYPE_ENABLED 1
+#endif
+
+#if GB_TYPE_ENABLED
+#include "GB.h"
 #include "FactoryKernels/GB_red__include.h"
 
 // reduction operator and type:
@@ -17,19 +24,18 @@
 #define GB_GETA_AND_UPDATE(z,Ax,p) if (Ax [p] < z) { z = Ax [p] ; }
 
 // A matrix (no typecasting to Z type here)
-#define GB_A_TYPE int16_t
+#define GB_A_TYPE  int16_t
 #define GB_DECLAREA(aij) int16_t aij
 #define GB_GETA(aij,Ax,pA,A_iso) aij = Ax [pA]
 
 // monoid properties:
-#define GB_Z_TYPE int16_t
+#define GB_Z_TYPE  int16_t
 #define GB_DECLARE_IDENTITY(z) int16_t z = INT16_MAX
 #define GB_DECLARE_IDENTITY_CONST(z) const int16_t z = INT16_MAX
 
 #define GB_MONOID_IS_TERMINAL 1
 #define GB_TERMINAL_CONDITION(z,zterminal) (z == INT16_MIN)
 #define GB_IF_TERMINAL_BREAK(z,zterminal) if (z == INT16_MIN) { break ; }
-#define GB_DECLARE_TERMINAL_CONST(zterminal) const int16_t zterminal = INT16_MIN
 
 // panel size
 #define GB_PANEL 16
@@ -74,4 +80,8 @@ GrB_Info GB (_red__min_int16)
     return (GrB_SUCCESS) ;
     #endif
 }
+
+#else
+GB_EMPTY_PLACEHOLDER
+#endif
 

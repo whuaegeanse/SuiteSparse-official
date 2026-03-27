@@ -2,16 +2,22 @@
 // GB_as:  assign/subassign kernels with no accum
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2024, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 // C(I,J)<M> = A
 
-#include "GB.h"
 #include "GB_control.h"
-#include "slice/GB_ek_slice.h"
+#if defined (GxB_NO_FC32)
+#define GB_TYPE_ENABLED 0
+#else
+#define GB_TYPE_ENABLED 1
+#endif
+
+#if GB_TYPE_ENABLED
+#include "GB.h"
 #include "FactoryKernels/GB_as__include.h"
 
 // A and C matrices
@@ -19,8 +25,8 @@
 #define GB_C_TYPE GxB_FC32_t
 #define GB_DECLAREC(cwork) GxB_FC32_t cwork
 #define GB_COPY_aij_to_cwork(cwork,Ax,pA,A_iso) cwork = Ax [A_iso ? 0 : (pA)]
-#define GB_COPY_aij_to_C(Cx,pC,Ax,pA,A_iso,cwork) Cx [pC] = (A_iso) ? cwork : Ax [pA]
-#define GB_COPY_scalar_to_C(Cx,pC,cwork) Cx [pC] = cwork
+#define GB_COPY_aij_to_C(Cx,pC,Ax,pA,A_iso,cwork,C_iso) Cx [pC] = (A_iso) ? cwork : Ax [pA]
+#define GB_COPY_cwork_to_C(Cx,pC,cwork,C_iso) Cx [pC] = cwork
 #define GB_AX_MASK(Ax,pA,asize) GB_MCAST (Ax, pA, sizeof (GxB_FC32_t))
 
 // disable this operator and use the generic case if these conditions hold
@@ -36,12 +42,15 @@
 // C<M> = scalar, when C is dense
 //------------------------------------------------------------------------------
 
+#undef  GB_SCALAR_ASSIGN
+#define GB_SCALAR_ASSIGN 1
+
 GrB_Info GB (_subassign_05d__fc32)
 (
     GrB_Matrix C,
     const GrB_Matrix M,
     const bool Mask_struct,
-    const GB_void *scalar,      // of type C->type
+    const GB_void *scalar,      // of type C->type, already typecasted
     GB_Werk Werk
 )
 { 
@@ -59,6 +68,9 @@ GrB_Info GB (_subassign_05d__fc32)
 //------------------------------------------------------------------------------
 // C<A> = A, when C is dense
 //------------------------------------------------------------------------------
+
+#undef  GB_SCALAR_ASSIGN
+#define GB_SCALAR_ASSIGN 0
 
 GrB_Info GB (_subassign_06d__fc32)
 (
@@ -101,4 +113,8 @@ GrB_Info GB (_subassign_25__fc32)
     return (GrB_SUCCESS) ;
     #endif
 }
+
+#else
+GB_EMPTY_PLACEHOLDER
+#endif
 

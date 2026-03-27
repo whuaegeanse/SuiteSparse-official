@@ -2,7 +2,7 @@
 // GB_calloc_memory: wrapper for calloc (actually uses malloc and memset)
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -30,7 +30,7 @@ static inline void *GB_calloc_helper
     p = GB_Global_malloc_function (*size) ;
 
     #ifdef GB_MEMDUMP
-    printf ("hard calloc %p %ld\n", p, *size) ; // MEMDUMP
+    GBMDUMP ("calloc  %p %8ld: ", p, *size) ;
     GB_Global_memtable_dump ( ) ;
     #endif
 
@@ -38,6 +38,7 @@ static inline void *GB_calloc_helper
     { 
         // clear the block of memory with a parallel memset
         int nthreads_max = GB_Context_nthreads_max ( ) ;
+        // FIXME for CUDA: need to know if this is on the GPU or CPU
         GB_memset (p, 0, (*size), nthreads_max) ;
     }
 
@@ -48,6 +49,7 @@ static inline void *GB_calloc_helper
 // GB_calloc_memory
 //------------------------------------------------------------------------------
 
+#if 0
 void *GB_calloc_memory      // pointer to allocated block of memory
 (
     size_t nitems,          // number of items to allocate
@@ -55,6 +57,9 @@ void *GB_calloc_memory      // pointer to allocated block of memory
     // output
     size_t *size_allocated  // # of bytes actually allocated
 )
+#endif
+
+GB_CALLBACK_CALLOC_MEMORY_PROTO (GB_calloc_memory)
 {
 
     //--------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 // GxB_Context_set_*: set a field in a Context
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -16,8 +16,8 @@
 GrB_Info GxB_Context_set_Scalar
 (
     GxB_Context Context,
-    GrB_Scalar value,
-    GrB_Field field
+    GrB_Scalar scalar,
+    int field
 )
 {
 
@@ -25,29 +25,29 @@ GrB_Info GxB_Context_set_Scalar
     // check inputs
     //--------------------------------------------------------------------------
 
-    GB_WHERE1 ("GxB_Context_set_Scalar (Context, value, field)") ;
+    GrB_Info info ;
+    GB_CHECK_INIT ;
     GB_RETURN_IF_NULL_OR_FAULTY (Context) ;
-    GB_RETURN_IF_NULL_OR_FAULTY (value) ;
+    GB_RETURN_IF_NULL_OR_INVALID (scalar) ;
     ASSERT_CONTEXT_OK (Context, "Context to set", GB0) ;
 
     //--------------------------------------------------------------------------
     // set the field
     //--------------------------------------------------------------------------
 
-    GrB_Info info ;
     int32_t ivalue = 0 ;
     double dvalue = 0 ;
 
     switch ((int) field)
     {
 
-        case GxB_CONTEXT_NTHREADS :         // same as GxB_NTHREADS
-        case GxB_CONTEXT_GPU_ID :           // same as GxB_GPU_ID
-            info = GrB_Scalar_extractElement_INT32 (&ivalue, value) ;
+        case GxB_CONTEXT_NGPUS : 
+        case GxB_CONTEXT_NTHREADS : 
+            info = GrB_Scalar_extractElement_INT32 (&ivalue, scalar) ;
             break ;
 
-        case GxB_CONTEXT_CHUNK :            // same as GxB_CHUNK
-            info = GrB_Scalar_extractElement_FP64 (&dvalue, value) ;
+        case GxB_CONTEXT_CHUNK : 
+            info = GrB_Scalar_extractElement_FP64 (&dvalue, scalar) ;
             break ;
 
         default : 
@@ -64,15 +64,15 @@ GrB_Info GxB_Context_set_Scalar
     {
 
         default:
-        case GxB_CONTEXT_NTHREADS :         // same as GxB_NTHREADS
+        case GxB_CONTEXT_NTHREADS : 
 
             GB_Context_nthreads_max_set (Context, ivalue) ;
             break ;
 
-        case GxB_CONTEXT_GPU_ID :           // same as GxB_GPU_ID
+        case GxB_CONTEXT_NGPUS : 
 
-            GB_Context_gpu_id_set (Context, ivalue) ;
-            break ;
+            // set # of gpus to the given ivalue, and GPU ids to 0:ivalue-1
+            return (GB_Context_gpu_ids_set (Context, NULL, ivalue)) ;
 
         case GxB_CONTEXT_CHUNK :            // same as GxB_CHUNK
 
@@ -91,7 +91,7 @@ GrB_Info GxB_Context_set_String
 (
     GxB_Context Context,
     char * value,
-    GrB_Field field
+    int field
 )
 { 
 
@@ -99,7 +99,7 @@ GrB_Info GxB_Context_set_String
     // check inputs
     //--------------------------------------------------------------------------
 
-    GB_WHERE1 ("GxB_Context_set_String (Context, value, field)") ;
+    GB_CHECK_INIT ;
     GB_RETURN_IF_NULL_OR_FAULTY (Context) ;
     GB_RETURN_IF_NULL (value) ;
     ASSERT_CONTEXT_OK (Context, "Context to get option", GB0) ;
@@ -126,7 +126,7 @@ GrB_Info GxB_Context_set_INT
 (
     GxB_Context Context,
     int32_t value,
-    GrB_Field field
+    int field
 )
 {
 
@@ -134,7 +134,7 @@ GrB_Info GxB_Context_set_INT
     // check inputs
     //--------------------------------------------------------------------------
 
-    GB_WHERE1 ("GxB_Context_set_INT (Context, value, field)") ;
+    GB_CHECK_INIT ;
     GB_RETURN_IF_NULL_OR_FAULTY (Context) ;
     ASSERT_CONTEXT_OK (Context, "Context to set", GB0) ;
 
@@ -150,9 +150,10 @@ GrB_Info GxB_Context_set_INT
             GB_Context_nthreads_max_set (Context, value) ;
             break ;
 
-        case GxB_CONTEXT_GPU_ID :           // same as GxB_GPU_ID
+        case GxB_CONTEXT_NGPUS : 
 
-            GB_Context_gpu_id_set (Context, value) ;
+            // set # of gpus to the given value, and GPU ids to 0:value-1
+            return (GB_Context_gpu_ids_set (Context, NULL, value)) ;
             break ;
 
         default : 
@@ -170,10 +171,26 @@ GrB_Info GxB_Context_set_VOID
 (
     GxB_Context Context,
     void * value,
-    GrB_Field field,
+    int field,
     size_t size
 )
 { 
-    return (GrB_INVALID_VALUE) ;
+    if (field == GxB_CONTEXT_GPU_IDS)
+    {
+        int32_t ngpus = GB_Context_gpu_ids_get (Context, NULL) ;
+        if (size < ngpus * sizeof (int32_t))
+        { 
+            return (GrB_INVALID_VALUE) ;
+        }
+        else
+        { 
+            return (GB_Context_gpu_ids_set (Context, (int32_t *) value,
+                ngpus)) ;
+        }
+    }
+    else
+    { 
+        return (GrB_INVALID_VALUE) ;
+    }
 }
 

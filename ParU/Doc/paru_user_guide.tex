@@ -43,7 +43,7 @@ using OpenMP tasking, a shared-memory programming model for modern multicore
 architectures. The package is written in C++ and real sparse matrices are
 supported.
 
-ParU, Copyright (c) 2022-2024, Mohsen Aznaveh and Timothy A. Davis,
+ParU, Copyright (c) 2022-2025, Mohsen Aznaveh and Timothy A. Davis,
 All Rights Reserved.
 SPDX-License-Identifier: GPL-3.0-or-later
 \end{abstract}
@@ -1835,24 +1835,33 @@ analysis and factorization of the matrix:
 \end{itemize}
 
 %-------------------------------------------------------------------------------
-\section{Requirements and Availability}
+\section{Requirements, Availability, and Performance Considerations}
 \label{summary}
 %-------------------------------------------------------------------------------
 
-ParU requires several Collected Algorithms of the ACM:
-CHOLMOD \cite{ChenDavisHagerRajamanickam09,DavisHager09},
-AMD \cite{AmestoyDavisDuff96,AmestoyDavisDuff03},
-COLAMD \cite{DavisGilbertLarimoreNg00_algo,DavisGilbertLarimoreNg00}
-and UMFPACK \cite{10.1145/992200.992206} for its ordering/analysis phase and
-for its basic sparse matrix data structure, and the BLAS \cite{dddh:90} for
-dense matrix computations on its frontal matrices.  An efficient implementation
-of the BLAS is strongly recommended, such as the Intel MKL, the AMD ACML,
-OpenBLAS, FLAME \cite{GotoVanDeGeijn08}. or vendor-provide BLAS.
-ParU relies heavily on nested parallelism, by making parallel calls to
-the BLAS, each of which can themselves be parallel.  This is supported by the
-Intel MKL BLAS library with an Intel-specific method
-(\verb'mkl_set_num_threads_local') to tell the BLAS how many threads to use.
-As a result, tor best performance, the Intel MKL BLAS is required.
+ParU requires several Collected Algorithms of the ACM: CHOLMOD
+\cite{ChenDavisHagerRajamanickam09,DavisHager09}, AMD
+\cite{AmestoyDavisDuff96,AmestoyDavisDuff03}, COLAMD
+\cite{DavisGilbertLarimoreNg00_algo,DavisGilbertLarimoreNg00} and UMFPACK
+\cite{10.1145/992200.992206} for its ordering/analysis phase and for its basic
+sparse matrix data structure, and the BLAS \cite{dddh:90} for dense matrix
+computations on its frontal matrices.  An efficient implementation of the BLAS
+is strongly recommended, such as the Intel MKL, the AMD ACML, OpenBLAS, FLAME
+\cite{GotoVanDeGeijn08}. or other vendor-provided BLAS.  ParU relies heavily on
+nested parallelism, by making parallel calls to the BLAS, each of which can
+themselves be parallel.  This is supported by the Intel MKL BLAS library with
+an Intel-specific method (\verb'mkl_set_num_threads_local') and by an OpenBLAS
+method (\verb'openblas_set_num_threads_local', in v0.3.27 or later) to tell the
+BLAS how many threads to use.  As a result, for best performance, the Intel MKL
+BLAS or OpenBLAS (v0.3.27 or later) is required.
+If a different BLAS library is used, it should be a single-threaded library,
+since ParU will call it from many of its own threads, simultaneously.
+
+Do NOT use the
+\verb'OMP_PLACES' environment variable if using the Intel MKL BLAS.  Leave it
+unset.  Otherwise, using it with ParU will lead to only a single thread
+employed inside the BLAS, even when ParU expects it to be multithreaded,
+and performance will suffer as a result.
 
 ParU also relies heavily on OpenMP tasking to factorize multiple frontal
 matrices at the same time, where each frontal matrix can also be factorized by
@@ -1863,6 +1872,10 @@ Windows and Mac, we have found that the OpenMP library can hang.  As a result,
 on those platforms, nested parallelism is disabled when using \verb'gcc'.
 If using \verb'gcc', use a recent compiler (version 7.5.0 fails; 12.2.0
 works).
+
+We do not recommend using hyperthreading with ParU.
+Use at most one thread per core.  This will result in
+the best performance.
 
 You can query ParU at run time to determine which BLAS library it is using, and
 whether or not it is compiled to use parallel or sequential factorization of

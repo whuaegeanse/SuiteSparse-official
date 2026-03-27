@@ -2,7 +2,7 @@
 // GB_mxm_shared_definitions.h: common macros for A*B kernels
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -66,7 +66,7 @@
 #define GB_IS_MAX_FIRSTJ_SEMIRING 0
 #endif
 
-// 1 if the semiring has an AVX512 or AVX2 implementation
+// 1 if the semiring has an AVX512, AVX2, or RVV1.0 implementation
 #ifndef GB_SEMIRING_HAS_AVX_IMPLEMENTATION
 #define GB_SEMIRING_HAS_AVX_IMPLEMENTATION 0
 #endif

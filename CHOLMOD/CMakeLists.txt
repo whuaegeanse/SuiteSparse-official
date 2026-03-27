@@ -12,10 +12,10 @@
 # cmake 3.22 is required to find the BLAS/LAPACK
 cmake_minimum_required ( VERSION 3.22 )
 
-set ( CHOLMOD_DATE "June 20, 2024" )
+set ( CHOLMOD_DATE "July 25, 2025" )
 set ( CHOLMOD_VERSION_MAJOR 5 CACHE STRING "" FORCE )
 set ( CHOLMOD_VERSION_MINOR 3 CACHE STRING "" FORCE )
-set ( CHOLMOD_VERSION_SUB   0 CACHE STRING "" FORCE )
+set ( CHOLMOD_VERSION_SUB   4 CACHE STRING "" FORCE )
 
 message ( STATUS "Building CHOLMOD version: v"
     ${CHOLMOD_VERSION_MAJOR}.
@@ -112,22 +112,22 @@ endif ( )
 #-------------------------------------------------------------------------------
 
 if ( NOT SUITESPARSE_ROOT_CMAKELISTS )
-    find_package ( SuiteSparse_config 7.8.0
+    find_package ( SuiteSparse_config 7.11.0
         PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-        find_package ( SuiteSparse_config 7.8.0 REQUIRED )
+        find_package ( SuiteSparse_config 7.11.0 REQUIRED )
     endif ( )
 
-    find_package ( AMD 3.3.2
+    find_package ( AMD 3.3.4
         PATHS ${CMAKE_SOURCE_DIR}/../AMD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::AMD )
-        find_package ( AMD 3.3.2 REQUIRED )
+        find_package ( AMD 3.3.4 REQUIRED )
     endif ( )
 
-    find_package ( COLAMD 3.3.3
+    find_package ( COLAMD 3.3.5
         PATHS ${CMAKE_SOURCE_DIR}/../COLAMD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::COLAMD )
-        find_package ( COLAMD 3.3.3 REQUIRED )
+        find_package ( COLAMD 3.3.5 REQUIRED )
     endif ( )
 endif ( )
 
@@ -231,16 +231,16 @@ endif ( )
 
     if ( CHOLMOD_CAMD AND NOT SUITESPARSE_ROOT_CMAKELISTS )
         # find CAMD and CCOLAMD
-        find_package ( CAMD 3.3.2
+        find_package ( CAMD 3.3.5
             PATHS ${CMAKE_SOURCE_DIR}/../CAMD/build NO_DEFAULT_PATH )
         if ( NOT TARGET SuiteSparse::CAMD )
-            find_package ( CAMD 3.3.2 )
+            find_package ( CAMD 3.3.5 )
         endif ( )
 
-        find_package ( CCOLAMD 3.3.3
+        find_package ( CCOLAMD 3.3.5
             PATHS ${CMAKE_SOURCE_DIR}/../CCOLAMD/build NO_DEFAULT_PATH )
         if ( NOT TARGET SuiteSparse::CCOLAMD )
-            find_package ( CCOLAMD 3.3.3 )
+            find_package ( CCOLAMD 3.3.5 )
         endif ( )
 
         if ( NOT CAMD_FOUND OR NOT CCOLAMD_FOUND )
@@ -383,12 +383,16 @@ if ( BUILD_SHARED_LIBS )
         OUTPUT_NAME cholmod
         SOVERSION ${CHOLMOD_VERSION_MAJOR}
         PUBLIC_HEADER "Include/cholmod.h"
-        WINDOWS_EXPORT_ALL_SYMBOLS ON
-        LINKER_LANGUAGE C )
+        WINDOWS_EXPORT_ALL_SYMBOLS ON )
 
     if ( CHOLMOD_HAS_CUDA )
-        set_target_properties ( CHOLMOD PROPERTIES CUDA_SEPARABLE_COMPILATION ON )
-        set_target_properties ( CHOLMOD PROPERTIES POSITION_INDEPENDENT_CODE ON )
+        set_target_properties ( CHOLMOD PROPERTIES
+            POSITION_INDEPENDENT_CODE ON
+            CUDA_SEPARABLE_COMPILATION ON
+            LINKER_LANGUAGE CUDA )
+    else ( )
+        set_target_properties ( CHOLMOD PROPERTIES
+            LINKER_LANGUAGE C )
     endif ( )
 
     if ( ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.25" )
@@ -411,8 +415,7 @@ if ( BUILD_STATIC_LIBS )
         C_STANDARD 11
         C_STANDARD_REQUIRED ON
         OUTPUT_NAME cholmod
-        PUBLIC_HEADER "Include/cholmod.h"
-        LINKER_LANGUAGE C )
+        PUBLIC_HEADER "Include/cholmod.h" )
 
     if ( MSVC OR ("${CMAKE_C_SIMULATE_ID}" STREQUAL "MSVC") )
         set_target_properties ( CHOLMOD_static PROPERTIES
@@ -420,8 +423,19 @@ if ( BUILD_STATIC_LIBS )
     endif ( )
 
     if ( CHOLMOD_HAS_CUDA )
-        set_target_properties ( CHOLMOD_static PROPERTIES CUDA_SEPARABLE_COMPILATION on )
-        set_target_properties ( CHOLMOD_static PROPERTIES POSITION_INDEPENDENT_CODE on )
+        # Dependencies that are linking to this static library would need to
+        # use the CUDA compiler as the linker driver. Ideally, CMake would do
+        # that automatically. Until that is fixed in CMake, set the
+        # CUDA_RESOLVE_DEVICE_SYMBOLS property ON.
+        set_target_properties ( CHOLMOD_static PROPERTIES
+            POSITION_INDEPENDENT_CODE ON
+            CUDA_SEPARABLE_COMPILATION ON
+            CUDA_RESOLVE_DEVICE_SYMBOLS ON
+            CUDA_RUNTIME_LIBRARY Static
+            LINKER_LANGUAGE CUDA )
+    else ( )
+        set_target_properties ( CHOLMOD_static PROPERTIES
+            LINKER_LANGUAGE C )
     endif ( )
 
     if ( ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.25" )
@@ -573,15 +587,9 @@ endif ( )
 
 # CHOLMOD_CUDA
 if ( CHOLMOD_HAS_CUDA )
-#   cmake now configures cholmod.h with "#define CHOLMOD_HAS_CUDA" if CHOLMOD is
-#   being compiled with CUDA, so the -DCHOLMOD_HAS_CUDA flag is no longer needed.
-#   if ( BUILD_SHARED_LIBS )
-#       target_compile_definitions ( CHOLMOD PUBLIC "CHOLMOD_HAS_CUDA" )
-#   endif ( )
-#   set ( CHOLMOD_CFLAGS "${CHOLMOD_CFLAGS} -DCHOLMOD_HAS_CUDA" )
-#   if ( BUILD_STATIC_LIBS )
-#       target_compile_definitions ( CHOLMOD_static PUBLIC "CHOLMOD_HAS_CUDA" )
-#   endif ( )
+    if ( NOT CHOLMOD_HAS_OPENMP )
+      message ( FATAL_ERROR "CHOLMOD_CUDA requires OpenMP. But it has been disabled, or no working OpenMP could be found." )
+    endif ()
     if ( BUILD_SHARED_LIBS )
         target_link_libraries ( CHOLMOD PRIVATE CUDA::nvrtc CUDA::cudart_static CUDA::cublas )
         target_include_directories ( CHOLMOD INTERFACE
@@ -589,7 +597,7 @@ if ( CHOLMOD_HAS_CUDA )
     endif ( )
     if ( BUILD_STATIC_LIBS )
         target_link_libraries ( CHOLMOD_static PRIVATE CUDA::nvrtc CUDA::cudart_static )
-        # FIXME: Ok to hardcode CUDA library names like this?
+        # Fixme: Ok to hardcode CUDA library names like this?
         list ( APPEND CHOLMOD_STATIC_LIBS "-L${CUDAToolkit_LIBRARY_DIR};-lcuda;-lcudart_static" )
         if ( TARGET CUDA::cublas_static )
             target_link_libraries ( CHOLMOD_static PRIVATE CUDA::cublas_static )
@@ -643,23 +651,33 @@ if ( BUILD_SHARED_LIBS )
         ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
         RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
         PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+
+    # create (temporary) export target file during build
+    export ( EXPORT CHOLMODTargets
+        NAMESPACE SuiteSparse::
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/CHOLMODTargets.cmake )
+
+    # install export target, config and version files for find_package
+    install ( EXPORT CHOLMODTargets
+        NAMESPACE SuiteSparse::
+        DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/CHOLMOD )
 endif ( )
 if ( BUILD_STATIC_LIBS )
     install ( TARGETS CHOLMOD_static
-        EXPORT CHOLMODTargets
+        EXPORT CHOLMODTargets_static
         ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
         PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+
+    # create (temporary) export target file during build
+    export ( EXPORT CHOLMODTargets_static
+        NAMESPACE SuiteSparse::
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/CHOLMODTargets_static.cmake )
+
+    # install export target, config and version files for find_package
+    install ( EXPORT CHOLMODTargets_static
+        NAMESPACE SuiteSparse::
+        DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/CHOLMOD )
 endif ( )
-
-# create (temporary) export target file during build
-export ( EXPORT CHOLMODTargets
-    NAMESPACE SuiteSparse::
-    FILE ${CMAKE_CURRENT_BINARY_DIR}/CHOLMODTargets.cmake )
-
-# install export target, config and version files for find_package
-install ( EXPORT CHOLMODTargets
-    NAMESPACE SuiteSparse::
-    DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/CHOLMOD )
 
 # generate config file to be used in common build tree
 set ( SUITESPARSE_IN_BUILD_TREE on )

@@ -2,7 +2,7 @@
 // GB_macrofy_user_type: construct a user defined type
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -39,7 +39,7 @@ void GB_macrofy_user_type       // construct a user-defined type
     // construct the typedef
     //--------------------------------------------------------------------------
 
-    GB_macrofy_typedefs (fp, NULL, NULL, NULL, type, NULL, NULL) ;
+    GB_macrofy_typedefs (fp, NULL, NULL, NULL, type, NULL, NULL, NULL) ;
     fprintf (fp, "#define GB_USER_TYPE_DEFN GB_%s_USER_DEFN\n", type->name) ;
 }
 

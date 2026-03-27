@@ -1,50 +1,18 @@
 //------------------------------------------------------------------------------
-// GB_assert_kernels.h: assertions
+// GB_assert_kernels.h: assertions for JIT kernels
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
+// These methods are for JIT kernels.
+// For outside of JIT kernels, see ok/GB_assert_library.h.
+
 //------------------------------------------------------------------------------
 // debugging definitions
 //------------------------------------------------------------------------------
-
-// the JIT run time kernels use abort directly from libc:
-#undef  GB_ABORT
-#define GB_ABORT /* abort ( ) */ ;
-
-#undef ASSERT
-
-#ifdef GB_DEBUG
-
-    // assert X is true
-    #define ASSERT(X)                                                       \
-    {                                                                       \
-        if (!(X))                                                           \
-        {                                                                   \
-            GBDUMP ("JIT assertion failed: " __FILE__ " line %d\n", __LINE__) ;\
-            GB_ABORT ;                                                      \
-        }                                                                   \
-    }
-
-#else
-
-    // debugging disabled
-    #define ASSERT(X)
-
-#endif
-
-// ASSERT_OK* debugging disabled in the JIT kernels
-#undef  ASSERT_OK
-#define ASSERT_OK(X)
-
-#undef  ASSERT_OK_OR_NULL
-#define ASSERT_OK_OR_NULL(X)
-
-#undef  GB_IMPLIES
-#define GB_IMPLIES(p,q) (!(p) || (q))
 
 // The JIT kernels do not trigger the 'gotcha'.
 #undef  GB_GOTCHA
@@ -71,6 +39,7 @@
 #undef  ASSERT_TYPE_OK_OR_NULL
 #undef  ASSERT_BINARYOP_OK
 #undef  ASSERT_INDEXUNARYOP_OK
+#undef  ASSERT_INDEXBINARYOP_OK
 #undef  ASSERT_BINARYOP_OK_OR_NULL
 #undef  ASSERT_UNARYOP_OK
 #undef  ASSERT_UNARYOP_OK_OR_NULL
@@ -93,6 +62,7 @@
 #define ASSERT_TYPE_OK_OR_NULL(t,name,pr)
 #define ASSERT_BINARYOP_OK(op,name,pr)
 #define ASSERT_INDEXUNARYOP_OK(op,name,pr)
+#define ASSERT_INDEXBINARYOP_OK(op,name,pr)
 #define ASSERT_BINARYOP_OK_OR_NULL(op,name,pr)
 #define ASSERT_UNARYOP_OK(op,name,pr)
 #define ASSERT_UNARYOP_OK_OR_NULL(op,name,pr)
@@ -111,3 +81,36 @@
 #define ASSERT_DESCRIPTOR_OK(d,name,pr)
 #define ASSERT_DESCRIPTOR_OK_OR_NULL(d,name,pr)
 
+#if 0
+// For tracking down 64-bit integers when not expected;
+// this is meant for development only.
+#undef  ASSERT_MATRIX_OK
+#undef  ASSERT_MATRIX_OK_OR_NULL
+#undef  ASSERT_VECTOR_OK
+#undef  ASSERT_VECTOR_OK_OR_NULL
+
+#define ASSERT_MATRIX_OK(A,name,pr) \
+{ \
+    if ((A) != NULL && GB_IS_SPARSE((A))) \
+    { \
+        if (!((A)->p_is_32) || !((A)->i_is_32))  \
+        { \
+            printf ("Hey JIT: %s %d: %s (%d,%d)\n", \
+            __FILE__, __LINE__, name, (A)->p_is_32, (A)->i_is_32) ; \
+        } \
+    } \
+    else if ((A) != NULL && GB_IS_HYPERSPARSE((A))) \
+    { \
+        if (!((A)->p_is_32) || !((A)->i_is_32) || !((A)->j_is_32))  \
+        { \
+            printf ("Hey JIT: %s %d: %s (%d,%d,%d)\n", \
+            __FILE__, __LINE__, name, \
+            (A)->p_is_32, (A)->j_is_32, (A)->i_is_32) ; \
+        } \
+    } \
+}
+
+#define ASSERT_MATRIX_OK_OR_NULL(A,name,pr) ASSERT_MATRIX_OK (A,name,pr)
+#define ASSERT_VECTOR_OK_OR_NULL(A,name,pr) ASSERT_MATRIX_OK (A,name,pr)
+#define ASSERT_VECTOR_OK(A,name,pr) ASSERT_MATRIX_OK (A,name,pr)
+#endif

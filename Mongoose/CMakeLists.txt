@@ -35,11 +35,11 @@
 
 cmake_minimum_required ( VERSION 3.22 )
 
-set ( Mongoose_DATE "June 20, 2024" )
-set ( Mongoose_NUMERIC_DATE "2024-06-20" )
+set ( Mongoose_DATE "Nov 1, 2025" )
+set ( Mongoose_NUMERIC_DATE "2025-11-01" )
 set ( Mongoose_VERSION_MAJOR 3 CACHE STRING "" FORCE )
 set ( Mongoose_VERSION_MINOR 3 CACHE STRING "" FORCE )
-set ( Mongoose_VERSION_PATCH 4 CACHE STRING "" FORCE )
+set ( Mongoose_VERSION_PATCH 6 CACHE STRING "" FORCE )
 
 message ( STATUS "Building Mongoose version: v"
     ${Mongoose_VERSION_MAJOR}.
@@ -69,10 +69,10 @@ include ( SuiteSparsePolicy )
 #-------------------------------------------------------------------------------
 
 if ( NOT SUITESPARSE_ROOT_CMAKELISTS )
-    find_package ( SuiteSparse_config 7.8.0
+    find_package ( SuiteSparse_config 7.11.0
         PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-        find_package ( SuiteSparse_config 7.8.0 REQUIRED )
+        find_package ( SuiteSparse_config 7.11.0 REQUIRED )
     endif ( )
 endif ( )
 
@@ -233,6 +233,7 @@ if ( BUILD_SHARED_LIBS )
 
     set_target_properties ( Mongoose PROPERTIES
         OUTPUT_NAME suitesparse_mongoose
+        VERSION ${Mongoose_VERSION_MAJOR}.${Mongoose_VERSION_MINOR}.${Mongoose_VERSION_PATCH}
         SOVERSION ${Mongoose_VERSION_MAJOR}
         PUBLIC_HEADER "Include/Mongoose.hpp"
         WINDOWS_EXPORT_ALL_SYMBOLS ON
@@ -379,7 +380,7 @@ if ( BUILD_TESTING )
     endif ( )
     target_link_libraries ( mongoose_test_reference PRIVATE SuiteSparse::SuiteSparseConfig )
     set_target_properties ( mongoose_test_reference PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TESTING_OUTPUT_PATH} )
-    # FIXME: Is there a test that is using this executable?
+    # Fixme: Is there a test that is using this executable?
 
     # Unit Tests
     add_executable ( mongoose_unit_test_io
@@ -555,25 +556,35 @@ if ( BUILD_SHARED_LIBS )
         ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
         RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
         PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+
+    # create (temporary) export target file during build
+    export ( EXPORT SuiteSparse_MongooseTargets
+        NAMESPACE SuiteSparse::
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/SuiteSparse_MongooseTargets.cmake )
+
+    # install export target, config and version files for find_package
+    install ( EXPORT SuiteSparse_MongooseTargets
+        NAMESPACE SuiteSparse::
+        DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/SuiteSparse_Mongoose )
 endif ( )
 if ( BUILD_STATIC_LIBS )
     install ( TARGETS Mongoose_static
-        EXPORT SuiteSparse_MongooseTargets
+        EXPORT SuiteSparse_MongooseTargets_static
         ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
         PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+
+    # create (temporary) export target file during build
+    export ( EXPORT SuiteSparse_MongooseTargets_static
+        NAMESPACE SuiteSparse::
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/SuiteSparse_MongooseTargets_static.cmake )
+
+    # install export target, config and version files for find_package
+    install ( EXPORT SuiteSparse_MongooseTargets_static
+        NAMESPACE SuiteSparse::
+        DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/SuiteSparse_Mongoose )
 endif ( )
 install ( TARGETS mongoose_exe
     RUNTIME DESTINATION ${SUITESPARSE_BINDIR} )
-
-# create (temporary) export target file during build
-export ( EXPORT SuiteSparse_MongooseTargets
-    NAMESPACE SuiteSparse::
-    FILE ${CMAKE_CURRENT_BINARY_DIR}/SuiteSparse_MongooseTargets.cmake )
-
-# install export target, config and version files for find_package
-install ( EXPORT SuiteSparse_MongooseTargets
-    NAMESPACE SuiteSparse::
-    DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/SuiteSparse_Mongoose )
 
 # generate config file to be used in common build tree
 set ( SUITESPARSE_IN_BUILD_TREE ON )

@@ -2,7 +2,7 @@
 // GB_file.h: portable file I/O
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -22,22 +22,6 @@
 #else
 #define GB_DEV_NULL " > /dev/null"
 #endif
-
-bool GB_file_open_and_lock  // true if successful, false on error
-(
-    // input
-    char *filename,     // full path to file to open
-    // output
-    FILE **fp_handle,   // file pointer of open file (NULL on error)
-    int *fd_handle      // file descriptor of open file (-1 on error)
-) ;
-
-bool GB_file_unlock_and_close   // true if successful, false on error
-(
-    // input/output
-    FILE **fp_handle,       // file pointer, set to NULL on output
-    int *fd_handle          // file descriptor, set to -1 on output
-) ;
 
 bool GB_file_mkdir (char *path) ;
 

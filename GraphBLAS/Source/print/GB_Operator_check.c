@@ -2,7 +2,7 @@
 // GB_Operator_check: check and print any operator
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -46,6 +46,10 @@ GrB_Info GB_Operator_check  // check a GraphBLAS operator
     else if (GB_IS_INDEXUNARYOP_CODE (opcode))
     { 
         return (GB_IndexUnaryOp_check ((GrB_IndexUnaryOp) op, name, pr, f)) ;
+    }
+    else if (GB_IS_INDEXBINARYOP_CODE (opcode))
+    {
+        return (GB_IndexBinaryOp_check ((GxB_IndexBinaryOp) op, name, pr, f)) ;
     }
     else if (GB_IS_SELECTOP_CODE (opcode))
     { 

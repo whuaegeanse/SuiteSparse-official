@@ -13,10 +13,10 @@
 
 cmake_minimum_required ( VERSION 3.22 )
 
-set ( SPEX_DATE "Aug 20, 2024" )
+set ( SPEX_DATE "July 25, 2025" )
 set ( SPEX_VERSION_MAJOR 3 CACHE STRING "" FORCE )
 set ( SPEX_VERSION_MINOR 2 CACHE STRING "" FORCE )
-set ( SPEX_VERSION_SUB   1 CACHE STRING "" FORCE )
+set ( SPEX_VERSION_SUB   4 CACHE STRING "" FORCE )
 
 message ( STATUS "Building SPEX version: v"
     ${SPEX_VERSION_MAJOR}.
@@ -74,22 +74,22 @@ endif ( )
 #-------------------------------------------------------------------------------
 
 if ( NOT SUITESPARSE_ROOT_CMAKELISTS )
-    find_package ( SuiteSparse_config 7.8.2
+    find_package ( SuiteSparse_config 7.11.0
         PATHS ${CMAKE_SOURCE_DIR}/../SuiteSparse_config/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::SuiteSparseConfig )
-        find_package ( SuiteSparse_config 7.8.2 REQUIRED )
+        find_package ( SuiteSparse_config 7.11.0 REQUIRED )
     endif ( )
 
-    find_package ( AMD 3.3.3
+    find_package ( AMD 3.3.4
         PATHS ${CMAKE_SOURCE_DIR}/../AMD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::AMD )
-        find_package ( AMD 3.3.3 REQUIRED )
+        find_package ( AMD 3.3.4 REQUIRED )
     endif ( )
 
-    find_package ( COLAMD 3.3.4
+    find_package ( COLAMD 3.3.5
         PATHS ${CMAKE_SOURCE_DIR}/../COLAMD/build NO_DEFAULT_PATH )
     if ( NOT TARGET SuiteSparse::COLAMD )
-        find_package ( COLAMD 3.3.4 REQUIRED )
+        find_package ( COLAMD 3.3.5 REQUIRED )
     endif ( )
 endif ( )
 
@@ -282,23 +282,33 @@ if ( BUILD_SHARED_LIBS )
         ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
         RUNTIME DESTINATION ${SUITESPARSE_BINDIR}
         PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+
+    # create (temporary) export target file during build
+    export ( EXPORT SPEXTargets
+        NAMESPACE SuiteSparse::
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/SPEXTargets.cmake )
+
+    # install export target, config and version files for find_package
+    install ( EXPORT SPEXTargets
+        NAMESPACE SuiteSparse::
+        DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/SPEX )
 endif ( )
 if ( BUILD_STATIC_LIBS )
     install ( TARGETS SPEX_static
-        EXPORT SPEXTargets
+        EXPORT SPEXTargets_static
         ARCHIVE DESTINATION ${SUITESPARSE_LIBDIR}
         PUBLIC_HEADER DESTINATION ${SUITESPARSE_INCLUDEDIR} )
+
+    # create (temporary) export target file during build
+    export ( EXPORT SPEXTargets_static
+        NAMESPACE SuiteSparse::
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/SPEXTargets_static.cmake )
+
+    # install export target, config and version files for find_package
+    install ( EXPORT SPEXTargets_static
+        NAMESPACE SuiteSparse::
+        DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/SPEX )
 endif ( )
-
-# create (temporary) export target file during build
-export ( EXPORT SPEXTargets
-    NAMESPACE SuiteSparse::
-    FILE ${CMAKE_CURRENT_BINARY_DIR}/SPEXTargets.cmake )
-
-# install export target, config and version files for find_package
-install ( EXPORT SPEXTargets
-    NAMESPACE SuiteSparse::
-    DESTINATION ${SUITESPARSE_PKGFILEDIR}/cmake/SPEX )
 
 # generate config file to be used in common build tree
 set ( SUITESPARSE_IN_BUILD_TREE ON )

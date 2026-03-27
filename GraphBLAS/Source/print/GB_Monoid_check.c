@@ -2,19 +2,21 @@
 // GB_Monoid_check: check and print a monoid
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 #include "GB.h"
+#include "get_set/GB_get_set.h"
 
 GrB_Info GB_Monoid_check        // check a GraphBLAS monoid
 (
     const GrB_Monoid monoid,    // GraphBLAS monoid to print and check
     const char *name,           // name of the monoid, optional
     int pr,                     // print level
-    FILE *f                     // file for output
+    FILE *f,                    // file for output
+    bool in_semiring            // if true, then called by GB_Semiring_check
 )
 {
 
@@ -55,6 +57,13 @@ GrB_Info GB_Monoid_check        // check a GraphBLAS monoid
         return (GrB_INVALID_OBJECT) ;
     }
 
+    // name given by GrB_set, or 'GrB_*' name for built-in objects
+    const char *given_name = GB_monoid_name_get (monoid) ;
+    if (given_name != NULL)
+    { 
+        GBPR0 ("    Monoid given name: [%s]\n", given_name) ;
+    }
+
     if (monoid->op->xtype != monoid->op->ztype ||
         monoid->op->ytype != monoid->op->ztype)
     { 
@@ -71,9 +80,14 @@ GrB_Info GB_Monoid_check        // check a GraphBLAS monoid
     // print the identity and terminal values
     if (pr != GxB_SILENT)
     { 
+        char *string = NULL ;
+        size_t string_size = 0 ;
+
         // print the identity value, if present
         GBPR ("    identity: [ ") ;
-        info = GB_entry_check (monoid->op->ztype, monoid->identity, pr, f) ;
+        info = GB_entry_check (monoid->op->ztype, monoid->identity, pr, f,
+            &string, &string_size) ;
+        GB_FREE_MEMORY (&string, string_size) ;
         if (info != GrB_SUCCESS) return (info) ;
         GBPR (" ] ") ;
 
@@ -81,11 +95,13 @@ GrB_Info GB_Monoid_check        // check a GraphBLAS monoid
         if (monoid->terminal != NULL)
         { 
             GBPR ("terminal: [ ") ;
-            info = GB_entry_check (monoid->op->ztype, monoid->terminal, pr, f) ;
+            info = GB_entry_check (monoid->op->ztype, monoid->terminal, pr, f,
+                &string, &string_size) ;
+            GB_FREE_MEMORY (&string, string_size) ;
             if (info != GrB_SUCCESS) return (info) ;
             GBPR (" ]") ;
         }
-        GBPR ("\n") ;
+        if (!in_semiring) GBPR ("\n") ;
     }
 
     return (GrB_SUCCESS) ;

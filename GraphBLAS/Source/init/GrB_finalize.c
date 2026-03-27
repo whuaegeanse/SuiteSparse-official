@@ -2,7 +2,7 @@
 // GrB_finalize: finalize GraphBLAS
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2025, All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
@@ -18,6 +18,16 @@
 GrB_Info GrB_finalize ( )
 { 
     GB_jitifyer_finalize ( ) ;
+
+    #if defined ( GRAPHBLAS_HAS_CUDA )
+    {
+        // finalize the GPUs
+//      GB_OK (GB_cuda_finalize ( )) ;
+    }
+    #endif
+
+    GB_Global_lock_destroy ( ) ;
+
     return (GrB_SUCCESS) ;
 }
 
